@@ -1,0 +1,20 @@
+# Banco local
+backend/itbi.db
+backend/cache/
+
+# Ambiente
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITBI · São Paulo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root[data-theme="dark"]{--bg:#111318;--surface:#1c1f28;--s2:#242836;--s3:#2c3045;--bd:#323650;--tx:#dde3f0;--mu:#6b748f;--su:#3d4460;--ac:#5b7fff;--acd:#5b7fff22;--gr:#2dd4a0;--yw:#f5c842;--re:#f26c6c;--sh:0 2px 16px #00000055;--ra:10px}
+:root[data-theme="light"]{--bg:#f4f6fb;--surface:#fff;--s2:#f0f3fa;--s3:#e8ecf7;--bd:#dde3f5;--tx:#1e2235;--mu:#7a84a0;--su:#c8d0e8;--ac:#3b6ef0;--acd:#3b6ef015;--gr:#0d9e6e;--yw:#c9920a;--re:#d94040;--sh:0 2px 16px #00000011;--ra:10px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px}
+header{background:var(--surface);border-bottom:1px solid var(--bd);padding:0 28px;height:56px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:200;box-shadow:var(--sh)}
+.logo{font-size:20px;font-weight:800;letter-spacing:-1px}.logo span{color:var(--ac)}
+.hdiv{width:1px;height:20px;background:var(--bd)}
+.hsub{font-size:12px;color:var(--mu)}
+.hr{margin-left:auto;display:flex;gap:8px;align-items:center}
+.bti{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:var(--mu);font-weight:500;transition:.15s}
+.bti:hover{color:var(--tx);border-color:var(--su)}
+.bta{background:var(--ac);color:#fff;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:600;transition:.15s}
+.bta:hover{opacity:.88}
+.page{max-width:1560px;margin:0 auto;padding:20px}
+.fbar{background:var(--surface);border:1px solid var(--bd);border-radius:var(--ra);padding:18px 20px;margin-bottom:16px}
+.frow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.ff{display:flex;flex-direction:column;gap:4px;min-width:130px;flex:1;position:relative}
+.ff.wide{min-width:180px;flex:2}
+.ff label{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px}
+.ff input,.ff select{background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:7px 10px;color:var(--tx);font-size:13px;outline:none;transition:border .15s;width:100%}
+.ff input:focus,.ff select:focus{border-color:var(--ac)}
+.faction{display:flex;gap:8px;align-items:flex-end;padding-bottom:1px}
+.bs{background:var(--ac);color:#fff;border:none;border-radius:7px;padding:8px 18px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;transition:.15s}
+.bs:hover{opacity:.88}
+.bc{background:transparent;color:var(--mu);border:1px solid var(--bd);border-radius:7px;padding:8px 14px;cursor:pointer;font-size:13px;transition:.15s}
+.bc:hover{border-color:var(--su);color:var(--tx)}
+.bold{background:var(--acd);color:var(--ac);border:1px solid var(--ac);border-radius:7px;padding:6px 13px;cursor:pointer;font-size:12px;font-weight:600;margin-top:8px;transition:.15s;display:none}
+.bold:hover{background:var(--ac);color:#fff}
+.acl{position:absolute;top:100%;left:0;right:0;z-index:99;background:var(--s2);border:1px solid var(--bd);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:var(--sh);margin-top:2px}
+.acl div{padding:8px 11px;font-size:13px;cursor:pointer}
+.acl div:hover{background:var(--s3)}
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--bd);border-radius:var(--ra);padding:16px}
+.kpi-l{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.kpi-v{font-size:20px;font-weight:800;letter-spacing:-.5px}
+.kpi-s{font-size:11px;color:var(--mu);margin-top:3px}
+.kpi.hi .kpi-v{color:var(--ac)}.kpi.po .kpi-v{color:var(--gr)}.kpi.wa .kpi-v{color:var(--yw)}
+.charts{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:16px}
+.cbox{background:var(--surface);border:1px solid var(--bd);border-radius:var(--ra);padding:18px}
+.cbox h4{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+.tbox{background:var(--surface);border:1px solid var(--bd);border-radius:var(--ra)}
+.thead2{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--bd);gap:10px;flex-wrap:wrap}
+.thead2 h4{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px}
+.tmeta{font-size:11px;color:var(--mu);margin-left:auto}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:880px}
+thead th{background:var(--s2);padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--bd);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--ac)}
+thead th.sa::after{content:' ▲';color:var(--ac)}
+thead th.sd::after{content:' ▼';color:var(--ac)}
+tbody tr{border-bottom:1px solid var(--bd);cursor:pointer;transition:background .1s}
+tbody tr:hover{background:var(--acd)}
+tbody tr:last-child{border-bottom:none}
+td{padding:9px 14px;font-size:13px;white-space:nowrap;vertical-align:middle}
+.tm{font-weight:600}.ts{color:var(--mu)}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;background:var(--s3);color:var(--mu)}
+.badge.cp{background:#5b7fff18;color:var(--ac)}.badge.ar{background:#f26c6c18;color:var(--re)}
+.hint{font-size:10px;color:var(--mu);opacity:.5;margin-left:4px}
+.empty{text-align:center;padding:60px;color:var(--mu)}
+.pag{display:flex;gap:5px;justify-content:center;padding:14px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--bd)}
+.pb{padding:5px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:12px;min-width:32px}
+.pb:hover{border-color:var(--ac)}.pb.act{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:700}
+.pb:disabled{opacity:.35;cursor:default}.pi{font-size:11px;color:var(--mu);margin:0 4px}
+/* Modal */
+.ov{position:fixed;inset:0;background:#00000088;backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.ov.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--bd);border-radius:14px;width:100%;max-width:740px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 80px #00000066;animation:su .2s ease}
+@keyframes su{from{transform:translateY(18px);opacity:0}to{transform:none;opacity:1}}
+.mh{display:flex;align-items:flex-start;padding:18px 22px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--surface);z-index:1;gap:12px}
+.mh h3{font-size:15px;font-weight:700;line-height:1.3}
+.mhsub{font-size:12px;color:var(--mu);margin-top:3px}
+.mcl{margin-left:auto;flex-shrink:0;background:var(--s2);border:1px solid var(--bd);border-radius:7px;width:30px;height:30px;cursor:pointer;font-size:15px;color:var(--mu);display:flex;align-items:center;justify-content:center;transition:.15s}
+.mcl:hover{color:var(--tx)}
+.mbody{padding:20px 22px}
+.ms{margin-bottom:20px}
+.mst{font-size:10px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mg.c3{grid-template-columns:1fr 1fr 1fr}
+.mf{background:var(--s2);border-radius:8px;padding:11px 13px}
+.mfl{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.mfv{font-size:13px;font-weight:600;color:var(--tx);word-break:break-word}
+.mfv.mo{color:var(--gr);font-size:15px}.mfv.mb{font-size:17px;font-weight:800}.mfv.mm{color:var(--mu)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:r .6s linear infinite}
+/* Checkbox */
+.cb-col{width:36px;text-align:center}
+input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--ac)}
+/* Export bar */
+.expbar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--ac);border-radius:40px;padding:10px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 40px #00000044;z-index:300;white-space:nowrap;animation:su .2s ease}
+.expbar-count{font-size:13px;font-weight:700;color:var(--ac)}
+.expbar-sub{font-size:11px;color:var(--mu)}
+.exp-divider{width:1px;height:20px;background:var(--bd)}
+.exp-btn{border:none;border-radius:20px;padding:7px 16px;cursor:pointer;font-size:12px;font-weight:700;transition:.15s;display:flex;align-items:center;gap:6px}
+.exp-xl{background:#1a7f4b;color:#fff}.exp-xl:hover{background:#166b3e}
+.exp-pdf{background:#c0392b;color:#fff}.exp-pdf:hover{background:#a93226}
+.exp-clear{background:transparent;color:var(--mu);border:1px solid var(--bd);border-radius:20px;padding:6px 12px;cursor:pointer;font-size:11px}.exp-clear:hover{color:var(--tx)}
+@keyframes r{to{transform:rotate(360deg)}}
+@media(max-width:768px){.charts{grid-template-columns:1fr}.mg{grid-template-columns:1fr}.mg.c3{grid-template-columns:1fr 1fr}}
+/* Mapa */
+.mapbox{background:var(--surface);border:1px solid var(--bd);border-radius:var(--ra);margin-bottom:16px;overflow:hidden}
+.mapbox-head{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--bd);gap:10px}
+.mapbox-head h4{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px}
+.map-toggle{margin-left:auto;background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:11px;color:var(--mu);transition:.15s}
+.map-toggle:hover{color:var(--tx)}
+.map-toggle.active{background:var(--ac);color:#fff;border-color:var(--ac)}
+#mapa{height:480px;display:none}
+.map-legend{display:flex;align-items:center;gap:16px;padding:10px 16px;border-top:1px solid var(--bd);flex-wrap:wrap}
+.map-legend span{font-size:11px;color:var(--mu)}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mu)}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.map-status{font-size:11px;color:var(--mu);margin-left:auto}
+.leaflet-popup-content-wrapper{background:var(--surface)!important;color:var(--tx)!important;border:1px solid var(--bd)!important;border-radius:10px!important;box-shadow:var(--sh)!important}
+.leaflet-popup-tip{background:var(--surface)!important}
+.popup-title{font-weight:700;font-size:13px;margin-bottom:6px}
+.popup-row{font-size:11px;color:var(--mu);margin-bottom:2px}
+.popup-row b{color:var(--tx)}
+.popup-btn{margin-top:8px;background:var(--ac);color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:11px;font-weight:600;width:100%}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">ITBI<span>·SP</span></div>
+  <div class="hdiv"></div>
+  <div class="hsub">Transações imobiliárias · 2006–2026</div>
+  <div class="hr">
+    <button class="bti" id="btn-theme" onclick="toggleTheme()">☀️ Claro</button>
+    <button class="bta" onclick="sync()">⟳ Sincronizar</button>
+  </div>
+</header>
+
+<div class="page">
+  <div class="fbar">
+    <div class="frow">
+      <div class="ff wide"><label>Logradouro</label><input id="fl" type="text" placeholder="Ex: Paulista, Augusta..." autocomplete="off"><div class="acl" id="acl" style="display:none"></div></div>
+      <div class="ff"><label>Número</label><input id="fn" type="text" placeholder="Ex: 100"></div>
+      <div class="ff wide"><label>Bairro</label><input id="fb" type="text" placeholder="Ex: Pinheiros, Moema..." autocomplete="off"><div class="acl" id="acb" style="display:none"></div></div>
+      <div class="ff"><label>CEP</label><input id="fc" type="text" placeholder="01310-100"></div>
+      <div class="ff"><label>Ano de</label><select id="famin"><option value="">Todos</option></select></div>
+      <div class="ff"><label>Ano até</label><select id="famax"><option value="">Todos</option></select></div>
+      <div class="ff"><label>Valor mín.</label><input id="fvmin" type="number" placeholder="R$ 0"></div>
+      <div class="ff"><label>Valor máx.</label><input id="fvmax" type="number" placeholder="R$ máximo"></div>
+      <div class="ff"><label>Natureza</label><input id="fnat" type="text" placeholder="Compra e venda..."></div>
+      <div class="faction"><button class="bs" onclick="buscar(1)">Buscar</button><button class="bc" onclick="limpar()">Limpar</button></div>
+    </div>
+    <button class="bold" id="bold" onclick="carregarAntigos()">← Incluir dados anteriores a 2020</button>
+  </div>
+
+  <div class="krow">
+    <div class="kpi hi"><div class="kpi-l">Total transações</div><div class="kpi-v" id="kt">—</div><div class="kpi-s">no filtro atual</div></div>
+    <div class="kpi"><div class="kpi-l">Volume total</div><div class="kpi-v" id="kv">—</div><div class="kpi-s">valores declarados</div></div>
+    <div class="kpi po"><div class="kpi-l">Ticket médio</div><div class="kpi-v" id="km">—</div><div class="kpi-s">por transação</div></div>
+    <div class="kpi wa"><div class="kpi-l">Base ITBI total</div><div class="kpi-v" id="ki">—</div><div class="kpi-s">base de cálculo</div></div>
+    <div class="kpi"><div class="kpi-l">Maior transação</div><div class="kpi-v" id="kmax">—</div><div class="kpi-s">valor declarado</div></div>
+    <div class="kpi"><div class="kpi-l">Menor transação</div><div class="kpi-v" id="kmin">—</div><div class="kpi-s">valor declarado</div></div>
+  </div>
+
+  <div class="charts">
+    <div class="cbox"><h4>Transações por ano</h4><canvas id="cano" style="max-height:220px"></canvas></div>
+    <div class="cbox"><h4>Top 10 bairros</h4><canvas id="cbai" style="max-height:220px"></canvas></div>
+  </div>
+
+  <!-- Mapa -->
+  <div class="mapbox" id="mapbox">
+    <div class="mapbox-head">
+      <h4>🗺️ Mapa de Transações</h4>
+      <span style="font-size:11px;color:var(--mu)" id="map-info">Clique em "Mostrar Mapa" para carregar</span>
+      <button class="map-toggle" id="map-toggle-btn" onclick="toggleMapa()">Mostrar Mapa</button>
+    </div>
+    <div id="mapa"></div>
+    <div class="map-legend" id="map-legend" style="display:none">
+      <span>Tamanho = nº de transações</span>
+      <div class="leg-item"><div class="leg-dot" style="background:#fee5d9"></div> 1–5</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#fc9272"></div> 6–20</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#de2d26"></div> 21–100</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#7b0000"></div> 100+</div>
+      <div class="leg-item" style="margin-left:auto"><div class="leg-dot" style="background:var(--ac)"></div> Clique → filtra por CEP</div>
+      <span class="map-status" id="map-status"></span>
+    </div>
+  </div>
+
+  <div class="tbox">
+    <div class="thead2">
+      <h4>Resultados</h4>
+      <span style="font-size:11px;color:var(--mu)">Clique para detalhes · marque linhas para exportar</span>
+      <div class="tmeta" id="tmeta"></div>
+      <button onclick="exportarTudo('excel')" style="background:#1a7f4b;color:#fff;border:none;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px">📊 Excel</button>
+      <button onclick="exportarTudo('pdf')" style="background:#c0392b;color:#fff;border:none;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px">📄 PDF</button>
+    </div>
+    <div class="twrap">
+      <table>
+        <thead><tr>
+          <th class="cb-col"><input type="checkbox" id="cb-all" title="Selecionar tudo" onchange="toggleAll(this)"></th>
+          <th onclick="srt('ano_referencia')" data-col="ano_referencia">Ano/Mês</th>
+          <th onclick="srt('data_transacao')" data-col="data_transacao">Data</th>
+          <th onclick="srt('logradouro')" data-col="logradouro">Logradouro</th>
+          <th onclick="srt('numero')" data-col="numero">Nº</th>
+          <th onclick="srt('bairro')" data-col="bairro">Bairro</th>
+          <th onclick="srt('valor_declarado')" data-col="valor_declarado">Valor Declarado</th>
+          <th onclick="srt('valor_financiado')" data-col="valor_financiado">Financiado</th>
+          <th onclick="srt('valor_itbi')" data-col="valor_itbi">Base ITBI</th>
+          <th onclick="srt('area_construida')" data-col="area_construida">Área Constr.</th>
+          <th onclick="srt('natureza_transacao')" data-col="natureza_transacao">Natureza</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" style="display:none"><div style="font-size:36px;margin-bottom:8px">🔎</div><div>Nenhum resultado encontrado</div></div>
+    <div class="pag" id="pag"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="ov" id="modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="mh">
+      <div><h3 id="mtit"></h3><div class="mhsub" id="msub"></div></div>
+      <button class="mcl" onclick="document.getElementById('modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="mbody" id="mbody"></div>
+  </div>
+</div>
+
+<!-- Export Bar -->
+<div class="expbar" id="expbar" style="display:none">
+  <span class="expbar-count" id="exp-count">0 selecionados</span>
+  <span class="expbar-sub">linhas marcadas</span>
+  <div class="exp-divider"></div>
+  <button class="exp-btn exp-xl" onclick="exportar('excel')">📊 Excel</button>
+  <button class="exp-btn exp-pdf" onclick="exportar('pdf')">📄 PDF</button>
+  <div class="exp-divider"></div>
+  <button class="exp-clear" onclick="deselecionarTudo()">✕ Limpar</button>
+</div>
+
+<script>
+// URL da API: usa o mesmo host em produção, localhost no dev
+const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8000'
+  : window.location.origin;
+let CH={},PG=1,SC='ano_referencia',SD='desc',allAnos=[],acT={};
+
+// Formatação
+function brl(v){
+  if(v==null||v===''||v===undefined)return'—';
+  const n=Number(v);
+  if(isNaN(n)||n===0)return'—';
+  return'R$\u00a0'+Math.round(n).toLocaleString('pt-BR');
+}
+function brlC(v){
+  if(!v||isNaN(Number(v))||Number(v)===0)return'—';
+  const n=Number(v);
+  if(n>=1e9)return'R$\u00a0'+(n/1e9).toLocaleString('pt-BR',{maximumFractionDigits:1})+'Bi';
+  if(n>=1e6)return'R$\u00a0'+(n/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+'Mi';
+  if(n>=1e3)return'R$\u00a0'+(n/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0})+'k';
+  return brl(v);
+}
+function ar(v){if(!v)return'—';const n=Number(v);return isNaN(n)?'—':n.toLocaleString('pt-BR',{maximumFractionDigits:1})+'\u00a0m²'}
+function s(v){return v||'—'}
+
+// Theme
+function toggleTheme(){
+  const d=document.documentElement,dk=d.dataset.theme==='dark';
+  d.dataset.theme=dk?'light':'dark';
+  document.getElementById('btn-theme').textContent=dk?'🌙 Escuro':'☀️ Claro';
+  if(Object.keys(CH).length)buscar(PG);
+}
+
+// Init
+window.addEventListener('DOMContentLoaded',async()=>{
+  await loadStatus();buscar(1);
+  setupAC('fl','acl','logradouro');setupAC('fb','acb','bairro');
+  ['fl','fb','fc','fn','fvmin','fvmax','fnat'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')buscar(1);}));
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('modal').classList.remove('open');});
+
+async function loadStatus(){
+  try{
+    const s=await fetch(`${API}/api/status`).then(r=>r.json());
+    allAnos=s.anos_processados.map(a=>a.ano).sort((a,b)=>a-b);
+    const mn=document.getElementById('famin'),mx=document.getElementById('famax');
+    allAnos.forEach(a=>{mn.innerHTML+=`<option value="${a}">${a}</option>`;mx.innerHTML+=`<option value="${a}">${a}</option>`;});
+    const dMin=allAnos.includes(2020)?2020:allAnos[0]||2020;
+    const dMax=Math.max(...allAnos);
+    mn.value=dMin;mx.value=dMax;
+    if(dMin>allAnos[0])document.getElementById('bold').style.display='inline-flex';
+  }catch(e){}
+}
+
+function carregarAntigos(){
+  document.getElementById('famin').value=allAnos[0]||'';
+  document.getElementById('bold').style.display='none';
+  buscar(1);
+}
+
+function getP(extra={}){
+  const v=id=>document.getElementById(id)?.value?.trim()||'';
+  const p=new URLSearchParams();
+  if(v('fl'))p.append('logradouro',v('fl'));
+  if(v('fn'))p.append('numero',v('fn'));
+  if(v('fb'))p.append('bairro',v('fb'));
+  if(v('fc'))p.append('cep',v('fc'));
+  if(v('famin'))p.append('ano_min',v('famin'));
+  if(v('famax'))p.append('ano_max',v('famax'));
+  if(v('fvmin'))p.append('valor_min',v('fvmin'));
+  if(v('fvmax'))p.append('valor_max',v('fvmax'));
+  if(v('fnat'))p.append('natureza',v('fnat'));
+  Object.entries(extra).forEach(([k,v])=>p.append(k,v));
+  return p;
+}
+
+function limpar(){
+  ['fl','fb','fc','fn','fvmin','fvmax','fnat'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  loadStatus().then(()=>buscar(1));
+}
+
+function srt(col){
+  SC===col?SD=SD==='asc'?'desc':'asc':(SC=col,SD='desc');
+  document.querySelectorAll('thead th').forEach(th=>{th.classList.remove('sa','sd');if(th.dataset.col===col)th.classList.add(SD==='asc'?'sa':'sd');});
+  buscar(PG);
+}
+
+async function buscar(p=1){
+  PG=p;
+  const params=getP({pagina:p,por_pagina:50,sort:SC,dir:SD});
+  try{
+    const[d,r]=await Promise.all([
+      fetch(`${API}/api/transacoes?${params}`).then(x=>x.json()),
+      fetch(`${API}/api/resumo?${getP()}`).then(x=>x.json()),
+    ]);
+    renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[]);renderTable(d);
+    if(mapaVisivel) setTimeout(carregarPontos, 300);
+  }catch(e){alert('Erro ao conectar com a API em localhost:8000');}
+}
+
+function renderKPI(g){
+  document.getElementById('kt').textContent=(g.total_transacoes||0).toLocaleString('pt-BR');
+  document.getElementById('kv').textContent=brlC(g.volume_total);
+  document.getElementById('km').textContent=brlC(g.ticket_medio);
+  document.getElementById('ki').textContent=brlC(g.itbi_total);
+  document.getElementById('kmax').textContent=brlC(g.valor_maximo);
+  document.getElementById('kmin').textContent=brlC(g.valor_minimo);
+}
+
+function renderCharts(ano,bai){
+  Object.values(CH).forEach(c=>c.destroy());CH={};
+  const dk=document.documentElement.dataset.theme==='dark';
+  const gr=dk?'#2c3045':'#e8ecf7',tc=dk?'#6b748f':'#7a84a0';
+  const pal=['#5b7fff','#a78bfa','#2dd4a0','#f5c842','#f26c6c','#22d3ee','#f472b6','#fb923c','#a3e635','#e879f9'];
+  CH.ano=new Chart(document.getElementById('cano').getContext('2d'),{type:'bar',data:{labels:ano.map(r=>r.ano_referencia),datasets:[{data:ano.map(r=>r.transacoes),backgroundColor:'#5b7fff33',borderColor:'#5b7fff',borderWidth:1.5,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:gr},ticks:{color:tc,font:{size:10}}},y:{grid:{color:gr},ticks:{color:tc,font:{size:10}}}}}});
+  const bb=bai.slice(0,10);
+  CH.bai=new Chart(document.getElementById('cbai').getContext('2d'),{type:'bar',data:{labels:bb.map(r=>r.bairro||'S/D'),datasets:[{data:bb.map(r=>r.transacoes),backgroundColor:pal,borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.parsed.x.toLocaleString('pt-BR')+' transações'}}},onClick:(e,els)=>{if(!els.length)return;const bairro=bb[els[0].index]?.bairro;if(bairro&&bairro!=='S/D'){document.getElementById('fb').value=bairro;buscar(1);}},scales:{x:{grid:{color:gr},ticks:{color:tc,font:{size:10}}},y:{grid:{display:false},ticks:{color:tc,font:{size:10},cursor:'pointer'}}}}});
+}
+
+function renderTable({dados,total,pagina,paginas,por_pagina}){
+  const tb=document.getElementById('tbody'),meta=document.getElementById('tmeta'),emp=document.getElementById('empty');
+  tb.innerHTML='';
+  if(!dados||dados.length===0){emp.style.display='block';meta.textContent='';renderPag(0,1,1);return;}
+  emp.style.display='none';
+  meta.textContent=`${((pagina-1)*por_pagina+1).toLocaleString('pt-BR')}–${Math.min(pagina*por_pagina,total).toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')}`;
+  dados.forEach(d=>{
+    const am=d.ano_referencia?`${d.ano_referencia}${d.mes_referencia?'/'+String(d.mes_referencia).padStart(2,'0'):''}`: '—';
+    const nat=(d.natureza_transacao||'').replace(/^\d+\./,'').trim();
+    const nc=nat.toLowerCase().includes('compra')?'cp':nat.toLowerCase().includes('arremata')?'ar':'';
+    const tr=document.createElement('tr');
+    const cbChecked = selectedIds.has(d.id) ? 'checked' : '';
+    tr.innerHTML=`<td class="cb-col"><input type="checkbox" class="row-cb" data-id="${d.id}" ${cbChecked} onclick="event.stopPropagation();toggleRow(this)"></td><td class="ts">${am}</td><td class="ts">${s(d.data_transacao)}</td><td class="tm">${s(d.logradouro)}<span class="hint">›</span></td><td class="ts">${s(d.numero)}</td><td class="ts">${s(d.bairro)}</td><td class="tm">${brl(d.valor_declarado)}</td><td class="ts">${d.valor_financiado&&Number(d.valor_financiado)>0?brl(d.valor_financiado):'—'}</td><td class="ts">${brl(d.valor_itbi)}</td><td class="ts">${ar(d.area_construida)}</td><td><span class="badge ${nc}">${nat||'—'}</span></td>`;
+    tr.addEventListener('click',()=>openModal(d));
+    tb.appendChild(tr);
+  });
+  renderPag(total,pagina,paginas);
+}
+
+function openModal(d){
+  const am=d.ano_referencia?`${d.ano_referencia}${d.mes_referencia?'/'+String(d.mes_referencia).padStart(2,'0'):''}`: '';
+  document.getElementById('mtit').textContent=d.logradouro?`${d.logradouro}${d.numero?', '+d.numero:''}`: 'Imóvel sem endereço';
+  document.getElementById('msub').textContent=[d.bairro,d.cep,am,d.data_transacao].filter(Boolean).join(' · ');
+  const F=(l,v,cls='')=>`<div class="mf"><div class="mfl">${l}</div><div class="mfv ${cls}">${v}</div></div>`;
+  document.getElementById('mbody').innerHTML=`
+<div class="ms"><div class="mst">Valores</div><div class="mg c3">
+${F('Valor Declarado',brl(d.valor_declarado),'mo mb')}
+${F('Base de Cálculo (ITBI)',brl(d.valor_itbi),'mo')}
+${F('Valor Venal Ref.',brl(d.valor_venal_ref))}
+${F('Valor Financiado',brl(d.valor_financiado))}
+${F('Proporção Transmitida',d.proporcao_transmitida?Number(d.proporcao_transmitida).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%':'—')}
+${F('Tipo de Financiamento',s(d.tipo_financiamento))}
+</div></div>
+<div class="ms"><div class="mst">Localização</div><div class="mg c3">
+${F('Logradouro',s(d.logradouro))}${F('Número',s(d.numero))}${F('Complemento',s(d.complemento))}
+${F('Bairro',s(d.bairro))}${F('CEP',s(d.cep))}${F('SQL (Cadastro)',s(d.sql_terreno))}
+</div></div>
+<div class="ms"><div class="mst">Imóvel</div><div class="mg c3">
+${F('Área do Terreno',ar(d.area_terreno))}${F('Área Construída',ar(d.area_construida))}
+${F('Testada',d.testada?Number(d.testada).toLocaleString('pt-BR',{maximumFractionDigits:2})+' m':'—')}
+${F('Fração Ideal',s(d.fracao_ideal))}${F('Uso (IPTU)',s(d.descricao_uso||d.tipo_uso))}${F('Padrão (IPTU)',s(d.padrao_iptu))}
+${F('Situação SQL',s(d.situacao_sql))}${F('ACC (IPTU)',s(d.acc_iptu))}
+</div></div>
+<div class="ms"><div class="mst">Transação</div><div class="mg c3">
+${F('Natureza',s(d.natureza_transacao))}${F('Data',s(d.data_transacao))}${F('Ano / Mês',am||'—')}
+${F('Cartório',s(d.cartorio_registro))}${F('Matrícula',s(d.matricula_imovel))}
+</div></div>`;
+  document.getElementById('modal').classList.add('open');
+}
+
+function renderPag(total,pagina,paginas){
+  const el=document.getElementById('pag');el.innerHTML='';
+  if(paginas<=1)return;
+  const b=(l,p,act,dis)=>{const btn=document.createElement('button');btn.className='pb'+(act?' act':'');btn.textContent=l;btn.disabled=!!dis;btn.onclick=()=>buscar(p);return btn;};
+  el.appendChild(b('«',1,false,pagina===1));el.appendChild(b('‹',pagina-1,false,pagina===1));
+  const rng=(s,e)=>{for(let i=s;i<=e;i++)el.appendChild(b(i,i,i===pagina));};
+  const sp=()=>el.appendChild(Object.assign(document.createElement('span'),{textContent:'…',className:'pi'}));
+  if(paginas<=7)rng(1,paginas);
+  else if(pagina<=4){rng(1,5);sp();el.appendChild(b(paginas,paginas));}
+  else if(pagina>=paginas-3){el.appendChild(b(1,1));sp();rng(paginas-4,paginas);}
+  else{el.appendChild(b(1,1));sp();rng(pagina-1,pagina+1);sp();el.appendChild(b(paginas,paginas));}
+  el.appendChild(b('›',pagina+1,false,pagina===paginas));el.appendChild(b('»',paginas,false,pagina===paginas));
+  el.appendChild(Object.assign(document.createElement('span'),{className:'pi',textContent:`${pagina}/${paginas}`}));
+}
+
+function setupAC(iid,lid,ep){
+  const inp=document.getElementById(iid),lst=document.getElementById(lid);
+  inp.addEventListener('input',()=>{
+    clearTimeout(acT[iid]);const q=inp.value.trim();
+    if(q.length<3){lst.style.display='none';return;}
+    acT[iid]=setTimeout(async()=>{
+      const it=await fetch(`${API}/api/autocomplete/${ep}?q=${encodeURIComponent(q)}`).then(r=>r.json()).catch(()=>[]);
+      lst.innerHTML='';
+      if(!it.length){lst.style.display='none';return;}
+      it.forEach(i=>{const d=document.createElement('div');d.textContent=i;d.onclick=()=>{inp.value=i;lst.style.display='none';};lst.appendChild(d);});
+      lst.style.display='block';
+    },280);
+  });
+  document.addEventListener('click',e=>{if(!inp.contains(e.target)&&!lst.contains(e.target))lst.style.display='none';});
+}
+
+// ── Seleção e Exportação ─────────────────────────────────────
+let selectedIds = new Set();
+
+function toggleAll(cb) {
+  document.querySelectorAll('.row-cb').forEach(c => {
+    c.checked = cb.checked;
+    const id = parseInt(c.dataset.id);
+    cb.checked ? selectedIds.add(id) : selectedIds.delete(id);
+  });
+  updateExpBar();
+}
+
+function toggleRow(cb) {
+  const id = parseInt(cb.dataset.id);
+  cb.checked ? selectedIds.add(id) : selectedIds.delete(id);
+  const allCbs = document.querySelectorAll('.row-cb');
+  document.getElementById('cb-all').checked = [...allCbs].every(c => c.checked);
+  updateExpBar();
+}
+
+function deselecionarTudo() {
+  selectedIds.clear();
+  document.querySelectorAll('.row-cb').forEach(c => c.checked = false);
+  document.getElementById('cb-all').checked = false;
+  updateExpBar();
+}
+
+function updateExpBar() {
+  const bar = document.getElementById('expbar');
+  const cnt = document.getElementById('exp-count');
+  if (selectedIds.size > 0) {
+    cnt.textContent = selectedIds.size.toLocaleString('pt-BR') + ' selecionados';
+    bar.style.display = 'flex';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function exportar(tipo) {
+  const p = getP();
+  if (selectedIds.size > 0) {
+    p.set('ids', [...selectedIds].join(','));
+  }
+  const url = `${API}/api/exportar/${tipo}?${p}`;
+  
+  // Cria link temporário e clica
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// Botões de exportação no header da tabela (exporta tudo do filtro)
+function exportarTudo(tipo) {
+  const url = `${API}/api/exportar/${tipo}?${getP()}`;
+  const a = document.createElement('a');
+  a.href = url; a.download = '';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ── Mapa ─────────────────────────────────────────────────────
+let mapaInst = null;
+let mapaVisivel = false;
+let mapaLayer = null;
+
+function toggleMapa() {
+  const btn = document.getElementById('map-toggle-btn');
+  const div = document.getElementById('mapa');
+  const leg = document.getElementById('map-legend');
+  mapaVisivel = !mapaVisivel;
+  div.style.display = mapaVisivel ? 'block' : 'none';
+  leg.style.display = mapaVisivel ? 'flex' : 'none';
+  btn.textContent = mapaVisivel ? 'Ocultar Mapa' : 'Mostrar Mapa';
+  btn.classList.toggle('active', mapaVisivel);
+  if (mapaVisivel) {
+    if (!mapaInst) iniciarMapa();
+    else carregarPontos();
+  }
+}
+
+function iniciarMapa() {
+  mapaInst = L.map('mapa', {zoomControl: true}).setView([-23.55, -46.63], 11);
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  L.tileLayer(
+    isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }
+  ).addTo(mapaInst);
+  carregarPontos();
+}
+
+function corPonto(count) {
+  if (count >= 100) return '#7b0000';
+  if (count >= 21)  return '#de2d26';
+  if (count >= 6)   return '#fc9272';
+  return '#fee5d9';
+}
+function tamanhoPonto(count) {
+  if (count >= 100) return 14;
+  if (count >= 21)  return 10;
+  if (count >= 6)   return 7;
+  return 5;
+}
+
+function fmtBRL_map(v) {
+  if (!v || v === 0) return '—';
+  if (v >= 1e6) return 'R$ ' + (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + 'Mi';
+  if (v >= 1e3) return 'R$ ' + (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0}) + 'k';
+  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+}
+
+let _mapaPolling = null;
+
+async function carregarPontos() {
+  if (!mapaInst) return;
+  const elStatus = document.getElementById('map-status');
+  const elInfo   = document.getElementById('map-info');
+  elStatus.textContent = '⏳ Carregando...';
+
+  try {
+    const p = getP();
+    const data = await fetch(`${API}/api/mapa?${p}`).then(r => r.json());
+
+    // Renderiza os pontos que já estão geocodificados
+    if (mapaLayer) mapaInst.removeLayer(mapaLayer);
+    mapaLayer = L.layerGroup();
+
+    data.pontos.forEach(pt => {
+      const raio = tamanhoPonto(pt.count);
+      const circle = L.circleMarker([pt.lat, pt.lng], {
+        radius: raio,
+        fillColor: corPonto(pt.count),
+        color: 'rgba(0,0,0,0.25)',
+        weight: 0.5,
+        opacity: 1,
+        fillOpacity: 0.85,
+      });
+      const cepFmt = pt.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
+      circle.bindPopup(`
+        <div class="popup-title">${pt.bairro || cepFmt}</div>
+        <div class="popup-row">CEP: <b>${cepFmt}</b></div>
+        <div class="popup-row">Transações: <b>${pt.count.toLocaleString('pt-BR')}</b></div>
+        <div class="popup-row">Ticket médio: <b>${fmtBRL_map(pt.avg_valor)}</b></div>
+        <div class="popup-row">Volume total: <b>${fmtBRL_map(pt.sum_valor)}</b></div>
+        <button class="popup-btn" onclick="filtrarPorCEP('${pt.cep}')">Filtrar por este CEP</button>
+      `, {maxWidth: 220});
+      mapaLayer.addLayer(circle);
+    });
+    mapaLayer.addTo(mapaInst);
+
+    const geo = data.geocodificados || 0;
+    const pend = data.pendentes || 0;
+    const total = data.total_ceps || 0;
+
+    if (pend > 0) {
+      elStatus.textContent = `${geo} de ${total} CEPs no mapa`;
+      elInfo.textContent = `⏳ Geocodificando ${pend} CEPs em background...`;
+      // Polling automático a cada 4s enquanto houver pendentes
+      clearTimeout(_mapaPolling);
+      _mapaPolling = setTimeout(carregarPontos, 4000);
+    } else {
+      elStatus.textContent = `${geo} CEPs no mapa`;
+      elInfo.textContent = `✅ ${geo} pontos carregados`;
+      clearTimeout(_mapaPolling);
+    }
+
+    // Ajusta o mapa para cobrir os pontos
+    if (data.pontos.length > 0 && geo === data.pontos.length) {
+      const bounds = data.pontos.map(p => [p.lat, p.lng]);
+      mapaInst.fitBounds(bounds, {padding: [30, 30]});
+    }
+
+  } catch(e) {
+    elStatus.textContent = 'Erro ao carregar';
+    elInfo.textContent = 'Verifique se a API está rodando em localhost:8000';
+  }
+}
+
+function filtrarPorCEP(cep) {
+  const cepFmt = cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
+  document.getElementById('fc').value = cepFmt;
+  mapaInst?.closePopup();
+  buscar(1);
+  if (mapaVisivel) setTimeout(carregarPontos, 800);
+  // Scroll to filters
+  document.querySelector('.fbar').scrollIntoView({behavior:'smooth'});
+}
+
+// Recarrega mapa quando buscar
+const _buscarOrig = buscar;
+// ── Clique no gráfico de bairros ──────────────────────────────
+function setupChartClicks() {
+  // será chamado após renderCharts
+}
+
+async function sync(){
+  const btn=document.querySelector('.bta');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  try{await fetch(`${API}/api/sincronizar`,{method:'POST'});alert('Sincronização iniciada em background!');}
+  catch(e){alert('Erro na API.');}
+  setTimeout(()=>{btn.innerHTML='⟳ Sincronizar';btn.disabled=false;},3000);
+}
+</script>
+</body>
+</html>
