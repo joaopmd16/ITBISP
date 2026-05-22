@@ -428,6 +428,17 @@ def normalizar_df(df: pd.DataFrame, ano: int, mes: int | None) -> pd.DataFrame:
             return s if s not in ('nan', 'None', '') else None
         df["sql_terreno"] = df["sql_terreno"].apply(normalizar_sql)
 
+    # Normaliza CEP: sempre 8 dígitos com zero à esquerda (ex: "2806000" → "02806000")
+    if "cep" in df.columns:
+        def normalizar_cep(v):
+            if not v:
+                return None
+            digits = ''.join(c for c in str(v) if c.isdigit())
+            if not digits:
+                return None
+            return digits.zfill(8)
+        df["cep"] = df["cep"].apply(normalizar_cep)
+
     # Garante todas as colunas finais
     for col in COLUNAS_FINAIS:
         if col not in df.columns:

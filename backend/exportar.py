@@ -82,8 +82,9 @@ def buscar(filtros: dict, ids: list = None, limit: int = 100_000,
             cl, pr = _multi_like("bairro", filtros['bairro'])
             conds.append(cl); params.extend(pr)
         if filtros.get('cep'):
-            conds.append("cep LIKE ?")
-            params.append(f"{filtros['cep'].replace('-','')}%")
+            cep_digits = ''.join(c for c in filtros['cep'] if c.isdigit()).zfill(8)
+            conds.append("REPLACE(REPLACE(cep,'-',''),' ','') LIKE ?")
+            params.append(f"{cep_digits}%")
         if filtros.get('ano_min'):
             conds.append("ano_referencia >= ?")
             params.append(int(filtros['ano_min']))

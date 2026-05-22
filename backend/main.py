@@ -245,8 +245,10 @@ def buscar_transacoes(
         cl, pr = _multi_like("bairro", bairro)
         filters.append(cl); params.extend(pr)
     if cep:
-        filters.append("cep LIKE ?")
-        params.append(f"{cep.replace('-','')}%")
+        cep_digits = ''.join(c for c in cep if c.isdigit()).zfill(8) if cep.strip() else ''
+        if cep_digits:
+            filters.append("REPLACE(REPLACE(cep,'-',''),' ','') LIKE ?")
+            params.append(f"{cep_digits}%")
     if sql:
         # Remove pontuação para comparar só os dígitos
         sql_digits = ''.join(c for c in sql.strip() if c.isdigit())
@@ -315,8 +317,10 @@ def resumo(
         cl, pr = _multi_like("bairro", bairro)
         filters.append(cl); params.extend(pr)
     if cep:
-        filters.append("cep LIKE ?")
-        params.append(f"{cep.replace('-','')}%")
+        cep_digits = ''.join(c for c in cep if c.isdigit()).zfill(8) if cep.strip() else ''
+        if cep_digits:
+            filters.append("REPLACE(REPLACE(cep,'-',''),' ','') LIKE ?")
+            params.append(f"{cep_digits}%")
     if sql:
         sql_digits = ''.join(c for c in sql.strip() if c.isdigit())
         if sql_digits:

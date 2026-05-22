@@ -12,3 +12,11 @@ __pycache__/
 
 # Cache
 backend/cache/
+
+# Mídia
+*.mp4
+*.mp3
+*.mov
+
+# Design refs (submodule externo)
+design-refs/
