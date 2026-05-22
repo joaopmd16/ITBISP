@@ -1,22 +1,35 @@
-# Keys
+# ── Chaves SSH ──────────────────────────────
 *.key
 *.key.pub
 Oracle/
 
-# Python
-__pycache__/
-*.pyc
-
-# Database
-*.db
-
-# Cache
+# ── Banco e cache (gerados localmente) ──────
+backend/itbi.db
 backend/cache/
 
-# Mídia
+# ── Python ──────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.Python
+
+# ── Ambiente ────────────────────────────────
+.env
+
+# ── Mídia ────────────────────────────────────
 *.mp4
 *.mp3
 *.mov
 
-# Design refs (submodule externo)
+# ── OS ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Design refs (repo externo) ───────────────
 design-refs/

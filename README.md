@@ -1,11 +1,11 @@
-# Dashboard ITBI · São Paulo
+# 🏠 Dashboard ITBI · São Paulo
 
 Dashboard para consulta das transações imobiliárias com recolhimento de ITBI da Prefeitura de SP.
 Dados de **2006 a 2026**, atualizados mensalmente direto da fonte oficial.
 
 ---
 
-## Estrutura do projeto
+## 📁 Estrutura do projeto
 
 ```
 itbi-dashboard/
@@ -22,84 +22,86 @@ itbi-dashboard/
 
 ---
 
-## Rodar localmente (Windows)
+## 🚀 Como rodar localmente (Windows)
+
+### 1. Instalar dependências
 
 ```powershell
 cd D:\itbi-dashboard\backend
+pip install -r requirements.txt
+```
+
+### 2. Baixar os dados (primeira vez)
+
+```powershell
+# Todos os anos (10-20 min)
+python scraper.py
+
+# Ou só os recentes para testar rápido
+python scraper.py --anos 2024 2025 2026
+```
+
+### 3. Subir a API
+
+```powershell
 python -m uvicorn main:app --reload
 ```
 
-Acessa em: http://localhost:8000/app
+Acessa em: http://localhost:8000
 
 ---
 
-## Servidor Oracle Cloud (produção)
+## ☁️ Servidor Oracle Cloud (produção)
 
-**IP:** `137.131.160.254`  
-**URL:** http://137.131.160.254:8000/app  
+**IP:** `137.131.160.254`
+**URL:** http://137.131.160.254
+
 **Chave SSH:** `D:\itbi-dashboard\Oracle\ssh-key-2026-05-16.key`
 
 ### Conectar via SSH
 
 ```powershell
-ssh -i "D:\itbi-dashboard\Oracle\ssh-key-2026-05-16.key" ubuntu@137.131.160.254
+ssh -i "$env:USERPROFILE\.ssh\itbi-oracle.key" ubuntu@137.131.160.254
 ```
 
-### Conectar via VS Code
-
-Remote-SSH → `itbi-oracle` (já configurado em `~/.ssh/config`)
-
-### Comandos do serviço (rodar na VM)
-
-```bash
-# Ver status
-sudo systemctl status itbi
-
-# Reiniciar após mudanças no backend
-sudo systemctl restart itbi
-
-# Ver logs em tempo real
-sudo journalctl -u itbi -f
-
-# Parar / iniciar
-sudo systemctl stop itbi
-sudo systemctl start itbi
-```
-
-### Subir arquivos do PC para a VM (PowerShell Admin)
+### Subir arquivos para a VM
 
 ```powershell
-# Só o frontend (mais comum)
-scp -i "D:\itbi-dashboard\Oracle\ssh-key-2026-05-16.key" "D:\itbi-dashboard\frontend\index.html" ubuntu@137.131.160.254:~/frontend/
+# Frontend
+scp -i "$env:USERPROFILE\.ssh\itbi-oracle.key" "D:\itbi-dashboard\frontend\index.html" ubuntu@137.131.160.254:~/frontend/
 
-# Só o scraper (quando alterar regras de importação)
-scp -i "D:\itbi-dashboard\Oracle\ssh-key-2026-05-16.key" "D:\itbi-dashboard\backend\scraper.py" ubuntu@137.131.160.254:~/backend/
+# Backend
+scp -i "$env:USERPROFILE\.ssh\itbi-oracle.key" "D:\itbi-dashboard\backend\main.py" ubuntu@137.131.160.254:~/backend/
 
-# Backend inteiro
-scp -i "D:\itbi-dashboard\Oracle\ssh-key-2026-05-16.key" -r "D:\itbi-dashboard\backend" ubuntu@137.131.160.254:~/
+# Banco (após rodar scraper localmente)
+scp -i "$env:USERPROFILE\.ssh\itbi-oracle.key" "D:\itbi-dashboard\backend\itbi.db" ubuntu@137.131.160.254:~/backend/
+```
 
-# Tudo
-scp -i "D:\itbi-dashboard\Oracle\ssh-key-2026-05-16.key" -r "D:\itbi-dashboard\backend" "D:\itbi-dashboard\frontend" ubuntu@137.131.160.254:~/
+### Comandos do serviço (na VM)
+
+```bash
+sudo systemctl restart itbi
+sudo systemctl status itbi
+sudo journalctl -u itbi -f
 ```
 
 ---
 
-## Atualização dos dados (scraper)
+## 🔄 Atualização dos dados
 
 ```bash
-# Rodar na VM — baixa só o ano atual
-cd ~/backend
+# Na VM ou PC — baixa só o ano atual
 python3 scraper.py --anos 2026
 
-# Todos os anos (demora 10-20 min)
-python3 scraper.py
+# Todos os anos (rodar no PC, não na VM — pouca RAM)
+python scraper.py --forcar
 ```
 
 Ou via API: `POST /api/sincronizar`
 
 ---
 
-## API REST
+## 📡 API REST
 
 ```
 GET  /api/transacoes?logradouro=paulista&ano_min=2020
@@ -107,17 +109,16 @@ GET  /api/resumo?bairro=pinheiros
 GET  /api/autocomplete/logradouro?q=august
 GET  /api/autocomplete/bairro?q=pin
 GET  /api/status
-GET  /api/mapa
 GET  /api/exportar/excel
 GET  /api/exportar/pdf
 POST /api/sincronizar
 ```
 
-Documentação interativa: http://137.131.160.254:8000/docs
+Documentação interativa: http://137.131.160.254/docs
 
 ---
 
-## Banco de dados
+## 🗄️ Banco de dados
 
 ```sql
 CREATE TABLE transacoes (
@@ -130,7 +131,7 @@ CREATE TABLE transacoes (
     complemento         TEXT,
     bairro              TEXT,
     cep                 TEXT,
-    sql_terreno         TEXT,
+    sql_terreno         TEXT,      -- N° IPTU (código do imóvel)
     area_terreno        REAL,
     area_construida     REAL,
     valor_declarado     REAL,
