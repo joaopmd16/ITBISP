@@ -155,7 +155,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .pp-divider{height:1px;background:var(--line);margin:6px 0}
 
 /* ─── KPI cards ─── */
-.kgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
 .kcard{background:var(--surface);border-radius:var(--r-card);padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s}
 .kcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .kcard-top{display:flex;align-items:flex-start;justify-content:space-between}
@@ -402,7 +402,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 @keyframes spin{to{transform:rotate(360deg)}}
 
 @media(max-width:1100px){
-  .kgrid{grid-template-columns:repeat(2,1fr)}
+  .kgrid{grid-template-columns:repeat(3,1fr)}
   .charts-row{grid-template-columns:1fr}
   .fgrid{grid-template-columns:1fr}
   .mg{grid-template-columns:1fr 1fr}
@@ -607,13 +607,26 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="kcard">
           <div class="kcard-top">
             <div class="kico green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
             </div>
           </div>
           <div>
-            <div class="kval" id="ki">—</div>
-            <div class="klabel">Base ITBI</div>
-            <div class="kdelta up" id="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M7 17 17 7M7 7h10v10"/></svg><span>—</span><span class="vs">vs período anterior</span></div>
+            <div class="kval" id="km2t">—</div>
+            <div class="klabel">Preço médio m² (Terreno)</div>
+            <div class="kdelta" id="dm2t" style="color:var(--mu);font-size:11px;margin-top:6px">soma valor ÷ soma área</div>
+          </div>
+        </div>
+
+        <div class="kcard">
+          <div class="kcard-top">
+            <div class="kico pink">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+            </div>
+          </div>
+          <div>
+            <div class="kval" id="km2c">—</div>
+            <div class="klabel">Preço médio m² (Construída)</div>
+            <div class="kdelta" id="dm2c" style="color:var(--mu);font-size:11px;margin-top:6px">soma valor ÷ soma área</div>
           </div>
         </div>
       </div>
@@ -1175,7 +1188,7 @@ async function buscar(p=1){
       ]);
       lastResumo=r;
       renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[]);
-      renderTable(d);
+      renderTable(d);renderM2();
     }else{
       const d=await fetch(`${API}/api/transacoes?${params}`).then(x=>x.json());
       renderTable(d);
@@ -1188,7 +1201,7 @@ async function buscar(p=1){
     const demo=buildDemo();lastResumo=demo.resumo;
     renderKPI(demo.resumo.geral);
     renderCharts(demo.resumo.por_ano,demo.resumo.top_bairros);
-    renderTable(demo.tab);renderPills();updateOverSub(true);
+    renderTable(demo.tab);renderM2();renderPills();updateOverSub(true);
   }
 }
 
@@ -1206,12 +1219,11 @@ function renderKPI(g){
   const t=g.total_transacoes||0;
   const vol=bigK(g.volume_total);
   const tm=bigK(g.ticket_medio);
-  const ib=bigK(g.itbi_total);
 
   document.getElementById('kt').innerHTML=t.toLocaleString('pt-BR');
   document.getElementById('kv').innerHTML=`${vol.num}<span class="unit">${vol.unit}</span>`;
   document.getElementById('km').innerHTML=`R$ ${tm.num}<span class="unit">${tm.unit}</span>`;
-  document.getElementById('ki').innerHTML=`R$ ${ib.num}<span class="unit">${ib.unit}</span>`;
+
 
   // tab counts (rough — we only have one number)
   document.getElementById('cnt-all').textContent=bigK(t).num+bigK(t).unit;
@@ -1220,12 +1232,12 @@ function renderKPI(g){
 
   // synthetic deltas: use first/last year deltas as a quick proxy
   const ano=lastResumo?.por_ano||[];
-  let deltaT=12.4,deltaV=18.2,deltaM=4.1,deltaI=15.6;
+  let deltaT=12.4,deltaV=18.2,deltaM=4.1;
   if(ano.length>=2){
     const last=ano[ano.length-1].transacoes,prev=ano[ano.length-2].transacoes;
     if(prev>0)deltaT=((last-prev)/prev)*100;
   }
-  setDelta('dt',deltaT);setDelta('dv',deltaV);setDelta('dm',deltaM);setDelta('di',deltaI);
+  setDelta('dt',deltaT);setDelta('dv',deltaV);setDelta('dm',deltaM);
 
   // gauge: percent of max year
   const years=(lastResumo?.por_ano||[]);
@@ -1356,6 +1368,7 @@ function renderCharts(ano,bai){
 
 /* ─── tabela ─── */
 function renderTable({dados,total,pagina,paginas,por_pagina}){
+  lastDados=dados||[];
   const tb=document.getElementById('tbody'),meta=document.getElementById('tmeta'),emp=document.getElementById('empty');
   tb.innerHTML='';
   if(!dados||dados.length===0){emp.style.display='block';meta.textContent='';renderPag(0,1,1);return}
@@ -1567,6 +1580,40 @@ function setupAC(iid,lid,ep){
 
 /* ─── seleção / export ─── */
 let selectedIds=new Set();
+let lastDados=[];
+
+function _hasPropertyFilter(){
+  return !!(
+    _getTagValue('fl') ||
+    _getTagValue('fb') ||
+    document.getElementById('fc')?.value?.trim() ||
+    document.getElementById('fsql')?.value?.trim() ||
+    document.getElementById('fn')?.value?.trim()
+  );
+}
+
+function renderM2(){
+  let m2t=null,m2c=null;
+
+  if(selectedIds.size>0){
+    const sel=lastDados.filter(d=>selectedIds.has(d.id));
+    const sumV =sel.reduce((s,d)=>s+(Number(d.valor_declarado)||0),0);
+    const sumAt=sel.reduce((s,d)=>s+(Number(d.area_terreno)||0),0);
+    const sumAc=sel.reduce((s,d)=>s+(Number(d.area_construida)||0),0);
+    if(sumAt>0)m2t=sumV/sumAt;
+    if(sumAc>0)m2c=sumV/sumAc;
+  } else if(_hasPropertyFilter()){
+    m2t=lastResumo?.geral?.preco_m2_terreno??null;
+    m2c=lastResumo?.geral?.preco_m2_construida??null;
+  }
+
+  const m2tK=bigK(m2t),m2cK=bigK(m2c);
+  document.getElementById('km2t').innerHTML=m2t?`R$ ${m2tK.num}<span class="unit">${m2tK.unit}</span>`:'—';
+  document.getElementById('km2c').innerHTML=m2c?`R$ ${m2cK.num}<span class="unit">${m2cK.unit}</span>`:'—';
+  const sub=(v,tipo)=>v?'R$ '+Math.round(v).toLocaleString('pt-BR')+'/m² · '+tipo:'selecione ou filtre imóveis';
+  document.getElementById('dm2t').textContent=sub(m2t,selectedIds.size>0?selectedIds.size+' selecionados':'filtro ativo');
+  document.getElementById('dm2c').textContent=sub(m2c,selectedIds.size>0?selectedIds.size+' selecionados':'filtro ativo');
+}
 function toggleAll(cb){
   if(cb.checked){
     document.querySelectorAll('.row-cb').forEach(c=>{c.checked=true;selectedIds.add(parseInt(c.dataset.id))});
@@ -1574,16 +1621,16 @@ function toggleAll(cb){
     selectedIds.clear();
     document.querySelectorAll('.row-cb').forEach(c=>{c.checked=false});
   }
-  updateExpBar();
+  updateExpBar();renderM2();
 }
 function toggleRow(cb){
   const id=parseInt(cb.dataset.id);
   cb.checked?selectedIds.add(id):selectedIds.delete(id);
   const allCbs=document.querySelectorAll('.row-cb');
   document.getElementById('cb-all').checked=[...allCbs].every(c=>c.checked);
-  updateExpBar();
+  updateExpBar();renderM2();
 }
-function deselecionarTudo(){selectedIds.clear();document.querySelectorAll('.row-cb').forEach(c=>c.checked=false);document.getElementById('cb-all').checked=false;updateExpBar()}
+function deselecionarTudo(){selectedIds.clear();document.querySelectorAll('.row-cb').forEach(c=>c.checked=false);document.getElementById('cb-all').checked=false;updateExpBar();renderM2();}
 function updateExpBar(){
   const bar=document.getElementById('expbar'),cnt=document.getElementById('exp-count');
   if(selectedIds.size>0){cnt.textContent=selectedIds.size.toLocaleString('pt-BR')+' selecionados';bar.style.display='flex'}

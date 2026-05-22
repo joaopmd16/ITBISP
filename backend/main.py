@@ -114,7 +114,11 @@ def startup():
                            AVG(valor_declarado) AS ticket_medio,
                            MIN(valor_declarado) AS valor_minimo,
                            MAX(valor_declarado) AS valor_maximo,
-                           SUM(valor_itbi)      AS itbi_total
+                           SUM(valor_itbi)      AS itbi_total,
+                           CASE WHEN SUM(area_terreno)   > 0
+                                THEN SUM(valor_declarado) / SUM(area_terreno)   ELSE NULL END AS preco_m2_terreno,
+                           CASE WHEN SUM(area_construida) > 0
+                                THEN SUM(valor_declarado) / SUM(area_construida) ELSE NULL END AS preco_m2_construida
                     FROM transacoes {where}""", params_q).fetchone()
                 por_ano = conn.execute(f"""
                     SELECT ano_referencia, COUNT(*) as transacoes,
@@ -361,7 +365,11 @@ def resumo(
                 AVG(valor_declarado) AS ticket_medio,
                 MIN(valor_declarado) AS valor_minimo,
                 MAX(valor_declarado) AS valor_maximo,
-                SUM(valor_itbi)      AS itbi_total
+                SUM(valor_itbi)      AS itbi_total,
+                CASE WHEN SUM(area_terreno)   > 0
+                     THEN SUM(valor_declarado) / SUM(area_terreno)   ELSE NULL END AS preco_m2_terreno,
+                CASE WHEN SUM(area_construida) > 0
+                     THEN SUM(valor_declarado) / SUM(area_construida) ELSE NULL END AS preco_m2_construida
             FROM transacoes {where}
         """, params).fetchone()
 
