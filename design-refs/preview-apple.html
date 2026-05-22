@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview — Apple</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f5f5f7;
+  --white:#ffffff;
+  --ink:#1d1d1f;
+  --ink2:#424245;
+  --mu:#6e6e73;
+  --mu2:#aeaeb2;
+  --line:#d2d2d7;
+  --line2:#e8e8ed;
+  --blue:#0066cc;
+  --blue-h:#0077ed;
+  --blue-soft:#f0f5ff;
+}
+body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:17px;line-height:1.47;-webkit-font-smoothing:antialiased}
+
+/* NAV */
+nav{
+  background:rgba(255,255,255,0.82);
+  backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--line2);
+  height:48px;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.nav-brand{font-size:17px;font-weight:600;letter-spacing:-0.4px;color:var(--ink)}
+.nav-links{display:flex;gap:24px}
+.nav-link{font-size:13px;color:var(--mu);text-decoration:none;letter-spacing:-0.1px;cursor:pointer;transition:color .15s}
+.nav-link:hover,.nav-link.active{color:var(--blue)}
+.nav-actions{display:flex;align-items:center;gap:10px}
+.nav-pill{background:var(--blue);color:white;border:none;border-radius:980px;padding:6px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;letter-spacing:-0.1px;transition:background .15s}
+.nav-pill:hover{background:var(--blue-h)}
+.nav-ghost{background:transparent;color:var(--blue);border:none;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;letter-spacing:-0.1px}
+
+/* HERO BAND */
+.hero{background:var(--white);padding:56px 48px 40px;border-bottom:1px solid var(--line2)}
+.hero-inner{max-width:1200px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:32px}
+.hero-tag{font-size:12px;font-weight:600;color:var(--blue);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:12px}
+.hero-title{font-size:48px;font-weight:700;letter-spacing:-1.6px;color:var(--ink);line-height:1.05}
+.hero-sub{font-size:17px;color:var(--mu);margin-top:14px;letter-spacing:-0.3px;line-height:1.5;max-width:520px}
+.hero-meta{text-align:right;flex-shrink:0}
+.hero-total{font-size:40px;font-weight:700;letter-spacing:-1.2px;color:var(--ink);font-variant-numeric:tabular-nums}
+.hero-total-label{font-size:13px;color:var(--mu);margin-top:4px;letter-spacing:-0.1px}
+.hero-updated{font-size:11px;color:var(--mu2);margin-top:8px}
+
+/* KPI BAND */
+.kpi-band{background:var(--white);border-bottom:1px solid var(--line2);padding:0}
+.kpi-band-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.kpi{padding:24px 28px;border-right:1px solid var(--line2)}
+.kpi:last-child{border-right:none}
+.kpi-label{font-size:12px;color:var(--mu);font-weight:500;letter-spacing:-0.1px;margin-bottom:8px}
+.kpi-val{font-size:26px;font-weight:700;letter-spacing:-0.8px;color:var(--ink);font-variant-numeric:tabular-nums}
+.kpi-sub{font-size:12px;color:var(--mu);margin-top:5px;letter-spacing:-0.1px}
+.kpi-sub.up{color:#1a7f4b}
+.kpi-sub.down{color:#d70015}
+
+/* CONTENT BAND */
+.content{background:var(--bg);padding:40px 48px}
+.content-inner{max-width:1200px;margin:0 auto}
+
+/* SECTION TITLE */
+.section-title{font-size:21px;font-weight:600;letter-spacing:-0.5px;color:var(--ink);margin-bottom:16px}
+
+/* FILTROS */
+.filter-card{background:var(--white);border-radius:18px;border:1px solid var(--line2);padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.filter-label{font-size:12px;font-weight:600;color:var(--mu);letter-spacing:-0.1px;white-space:nowrap}
+.tag-wrap{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:160px}
+.tag{display:inline-flex;align-items:center;gap:4px;background:var(--blue-soft);border:1px solid rgba(0,102,204,0.2);border-radius:6px;padding:3px 10px;font-size:12px;color:var(--blue);font-weight:500;cursor:pointer}
+.tag-x{opacity:.5;margin-left:2px;font-size:10px}
+.tag-input{border:none;background:transparent;font-size:13px;color:var(--ink);font-family:inherit;outline:none;min-width:80px}
+.tag-input::placeholder{color:var(--mu2)}
+.f-input{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:14px;color:var(--ink);font-family:inherit;outline:none;width:120px;letter-spacing:-0.1px;transition:border-color .15s}
+.f-input:focus{border-color:var(--blue)}
+.f-input::placeholder{color:var(--mu2)}
+.f-divider{width:1px;height:24px;background:var(--line2);flex-shrink:0}
+.f-range{display:flex;align-items:center;gap:6px}
+.f-range span{font-size:13px;color:var(--mu2)}
+.f-actions{display:flex;gap:8px;margin-left:auto}
+.btn-primary{background:var(--blue);color:white;border:none;border-radius:980px;padding:8px 20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;letter-spacing:-0.1px;transition:background .15s}
+.btn-primary:hover{background:var(--blue-h)}
+.btn-secondary{background:transparent;color:var(--blue);border:none;border-radius:980px;padding:8px 16px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;letter-spacing:-0.1px}
+
+/* GRID 2 COL */
+.two-col{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px}
+
+/* CHART CARD */
+.card{background:var(--white);border-radius:18px;border:1px solid var(--line2);overflow:hidden}
+.card-header{padding:18px 22px 0}
+.card-title{font-size:12px;font-weight:600;color:var(--mu);letter-spacing:0.02em;text-transform:uppercase}
+.card-body{padding:16px 22px 20px}
+
+/* BARS */
+.bar-chart{display:flex;align-items:flex-end;gap:5px;height:88px;padding-top:8px}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:5px}
+.bar{width:100%;border-radius:4px 4px 0 0;background:var(--line2);transition:background .15s;cursor:pointer}
+.bar:hover{background:rgba(0,102,204,0.15)}
+.bar.peak{background:var(--blue)}
+.bar.peak:hover{background:var(--blue-h)}
+.bar-lbl{font-size:10px;color:var(--mu2);letter-spacing:-0.1px}
+
+/* PIE LIST */
+.pie-list{display:flex;flex-direction:column;gap:12px}
+.pie-row{display:flex;align-items:center;gap:10px}
+.pie-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pie-name{font-size:13px;color:var(--ink2);flex:1;letter-spacing:-0.1px}
+.pie-pct{font-size:13px;color:var(--mu);font-variant-numeric:tabular-nums;font-weight:500}
+.pie-track{flex:1;height:3px;background:var(--line2);border-radius:2px;max-width:70px}
+.pie-fill{height:3px;border-radius:2px}
+
+/* TABLE */
+.table-wrap{background:var(--white);border-radius:18px;border:1px solid var(--line2);overflow:hidden}
+.table-head{padding:14px 22px;border-bottom:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between}
+.table-head-title{font-size:14px;font-weight:600;letter-spacing:-0.2px;color:var(--ink)}
+.table-count{font-size:12px;color:var(--mu);background:var(--bg);border:1px solid var(--line2);border-radius:6px;padding:2px 8px;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;font-size:11px;font-weight:600;color:var(--mu);text-align:left;text-transform:uppercase;letter-spacing:0.04em;background:var(--bg);white-space:nowrap;cursor:pointer}
+th:hover{color:var(--ink2)}
+tbody tr{border-top:1px solid var(--line2);transition:background .1s}
+tbody tr:hover{background:var(--bg)}
+td{padding:11px 16px;font-size:14px;color:var(--ink2);letter-spacing:-0.1px}
+td.num{font-variant-numeric:tabular-nums;text-align:right;color:var(--ink);font-weight:500}
+td.num-blue{font-variant-numeric:tabular-nums;text-align:right;color:var(--blue);font-weight:600}
+td.num-green{font-variant-numeric:tabular-nums;text-align:right;color:#1a7f4b;font-weight:500}
+td.light{color:var(--mu);font-size:13px}
+.badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:500;background:var(--bg);color:var(--mu);border:1px solid var(--line2)}
+
+/* FOOTER BAND */
+.footer-band{background:var(--white);border-top:1px solid var(--line2);padding:20px 48px;margin-top:0}
+.footer-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.footer-txt{font-size:12px;color:var(--mu);letter-spacing:-0.1px}
+.export-row{display:flex;gap:8px}
+.export-btn{background:transparent;color:var(--blue);border:1px solid var(--line);border-radius:980px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:border-color .15s}
+.export-btn:hover{border-color:var(--blue)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">ITBI · São Paulo</div>
+  <div class="nav-links">
+    <span class="nav-link active">Transações</span>
+    <span class="nav-link">Mapa</span>
+    <span class="nav-link">Relatório</span>
+  </div>
+  <div class="nav-actions">
+    <button class="nav-ghost">Limpar filtros</button>
+    <button class="nav-pill">Exportar PDF</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-tag">Prefeitura de São Paulo</div>
+      <div class="hero-title">Transações<br>Imobiliárias</div>
+      <div class="hero-sub">Dados de ITBI de 2006 a 2026, atualizados mensalmente direto da fonte oficial.</div>
+    </div>
+    <div class="hero-meta">
+      <div class="hero-total">470.293</div>
+      <div class="hero-total-label">registros no banco</div>
+      <div class="hero-updated">Atualizado em 18/05/2026</div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI BAND -->
+<div class="kpi-band">
+  <div class="kpi-band-inner">
+    <div class="kpi">
+      <div class="kpi-label">Transações filtradas</div>
+      <div class="kpi-val">12.847</div>
+      <div class="kpi-sub up">↑ 8% vs ano anterior</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Volume total</div>
+      <div class="kpi-val">R$ 4,2Bi</div>
+      <div class="kpi-sub up">↑ 12% vs ano anterior</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Ticket médio</div>
+      <div class="kpi-val">R$ 327k</div>
+      <div class="kpi-sub">Estável</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Base ITBI total</div>
+      <div class="kpi-val">R$ 84Mi</div>
+      <div class="kpi-sub">Alíquota efetiva 2,0%</div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+  <div class="content-inner">
+
+    <!-- CHARTS -->
+    <div class="two-col" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Transações por ano</div></div>
+        <div class="card-body">
+          <div class="bar-chart">
+            <div class="bar-col"><div class="bar" style="height:28%"></div><div class="bar-lbl">2010</div></div>
+            <div class="bar-col"><div class="bar" style="height:35%"></div><div class="bar-lbl">2012</div></div>
+            <div class="bar-col"><div class="bar" style="height:42%"></div><div class="bar-lbl">2014</div></div>
+            <div class="bar-col"><div class="bar" style="height:38%"></div><div class="bar-lbl">2016</div></div>
+            <div class="bar-col"><div class="bar" style="height:55%"></div><div class="bar-lbl">2018</div></div>
+            <div class="bar-col"><div class="bar" style="height:63%"></div><div class="bar-lbl">2020</div></div>
+            <div class="bar-col"><div class="bar" style="height:79%"></div><div class="bar-lbl">2022</div></div>
+            <div class="bar-col"><div class="bar peak" style="height:100%"></div><div class="bar-lbl">2024</div></div>
+            <div class="bar-col"><div class="bar" style="height:44%"></div><div class="bar-lbl">2025</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Natureza</div></div>
+        <div class="card-body">
+          <div class="pie-list">
+            <div class="pie-row">
+              <div class="pie-dot" style="background:#0066cc"></div>
+              <div class="pie-name">Compra e Venda</div>
+              <div class="pie-track"><div class="pie-fill" style="width:72%;background:#0066cc"></div></div>
+              <div class="pie-pct">72%</div>
+            </div>
+            <div class="pie-row">
+              <div class="pie-dot" style="background:#34c759"></div>
+              <div class="pie-name">Cessão de Direitos</div>
+              <div class="pie-track"><div class="pie-fill" style="width:15%;background:#34c759"></div></div>
+              <div class="pie-pct">15%</div>
+            </div>
+            <div class="pie-row">
+              <div class="pie-dot" style="background:#ff9500"></div>
+              <div class="pie-name">Permuta</div>
+              <div class="pie-track"><div class="pie-fill" style="width:8%;background:#ff9500"></div></div>
+              <div class="pie-pct">8%</div>
+            </div>
+            <div class="pie-row">
+              <div class="pie-dot" style="background:#aeaeb2"></div>
+              <div class="pie-name">Outros</div>
+              <div class="pie-track"><div class="pie-fill" style="width:5%;background:#aeaeb2"></div></div>
+              <div class="pie-pct">5%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filter-card">
+      <div class="filter-label">Bairro</div>
+      <div class="tag-wrap">
+        <span class="tag">Pinheiros <span class="tag-x">×</span></span>
+        <span class="tag">Moema <span class="tag-x">×</span></span>
+        <input class="tag-input" placeholder="+ adicionar...">
+      </div>
+      <div class="f-divider"></div>
+      <div class="filter-label">Período</div>
+      <div class="f-range">
+        <input class="f-input" placeholder="2020" style="width:80px">
+        <span>–</span>
+        <input class="f-input" placeholder="2026" style="width:80px">
+      </div>
+      <div class="f-divider"></div>
+      <div class="filter-label">Valor</div>
+      <div class="f-range">
+        <input class="f-input" placeholder="Mín" style="width:90px">
+        <span>–</span>
+        <input class="f-input" placeholder="Máx" style="width:90px">
+      </div>
+      <div class="f-actions">
+        <button class="btn-secondary">Limpar</button>
+        <button class="btn-primary">Buscar</button>
+      </div>
+    </div>
+
+    <!-- TABELA -->
+    <div class="table-wrap">
+      <div class="table-head">
+        <span class="table-head-title">Resultados</span>
+        <span class="table-count">12.847 transações</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px"><input type="checkbox" style="accent-color:var(--blue)"></th>
+            <th>Ano / Mês ↕</th>
+            <th>Logradouro ↕</th>
+            <th>Bairro</th>
+            <th style="text-align:right">Valor declarado ↕</th>
+            <th style="text-align:right">Base ITBI</th>
+            <th>Natureza</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox" style="accent-color:var(--blue)"></td>
+            <td class="light">2024 / 03</td>
+            <td>R. Oscar Freire</td>
+            <td class="light">Jardins</td>
+            <td class="num-blue">R$ 2.400.000</td>
+            <td class="num-green">R$ 48.000</td>
+            <td><span class="badge">Compra e Venda</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" style="accent-color:var(--blue)"></td>
+            <td class="light">2024 / 02</td>
+            <td>Av. Brigadeiro Faria Lima</td>
+            <td class="light">Pinheiros</td>
+            <td class="num-blue">R$ 890.000</td>
+            <td class="num-green">R$ 17.800</td>
+            <td><span class="badge">Compra e Venda</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" style="accent-color:var(--blue)"></td>
+            <td class="light">2024 / 01</td>
+            <td>Av. Paulista</td>
+            <td class="light">Bela Vista</td>
+            <td class="num-blue">R$ 1.200.000</td>
+            <td class="num-green">R$ 24.000</td>
+            <td><span class="badge">Cessão de Direitos</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" style="accent-color:var(--blue)"></td>
+            <td class="light">2023 / 12</td>
+            <td>R. Haddock Lobo</td>
+            <td class="light">Cerqueira César</td>
+            <td class="num-blue">R$ 650.000</td>
+            <td class="num-green">R$ 13.000</td>
+            <td><span class="badge">Compra e Venda</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" style="accent-color:var(--blue)"></td>
+            <td class="light">2023 / 11</td>
+            <td>R. Itacolomi</td>
+            <td class="light">Higienópolis</td>
+            <td class="num-blue">R$ 480.000</td>
+            <td class="num-green">R$ 9.600</td>
+            <td><span class="badge">Compra e Venda</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER BAND -->
+<div class="footer-band">
+  <div class="footer-inner">
+    <div class="footer-txt">Fonte: Secretaria Municipal de Finanças de São Paulo · prefeitura.sp.gov.br</div>
+    <div class="export-row">
+      <button class="export-btn">Exportar Excel</button>
+      <button class="export-btn">Exportar PDF</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Keys
+*.key
+*.key.pub
+Oracle/
+
+# Python
+__pycache__/
+*.pyc
+
+# Database
+*.db
+
+# Cache
+backend/cache/

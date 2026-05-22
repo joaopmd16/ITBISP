@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview A — Executive Dark</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#08090a;
+  --s1:#111214;
+  --s2:#18191c;
+  --s3:#1f2023;
+  --s4:#26272b;
+  --border:#2a2b2f;
+  --border2:#33343a;
+  --ink:#f2f2f4;
+  --ink2:#c4c5cc;
+  --mu:#7c7e88;
+  --mu2:#4a4c54;
+  --accent:#5e6ad2;
+  --accent2:#828fff;
+  --accent-soft:rgba(94,106,210,0.12);
+  --good:#22c55e;
+  --good-soft:rgba(34,197,94,0.1);
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --violet:#7c3aed;
+  --teal:#0891b2;
+}
+body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+
+/* NAV */
+nav{background:rgba(8,9,10,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 32px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo-icon{width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white}
+.nav-logo-text{font-size:13px;font-weight:700;letter-spacing:-0.3px;color:var(--ink)}
+.nav-logo-sub{font-size:11px;color:var(--mu);font-weight:400;margin-left:2px}
+.nav-right{display:flex;align-items:center;gap:8px}
+.nav-badge{background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--mu);font-family:'JetBrains Mono',monospace}
+.nav-btn{background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.1px}
+
+/* LAYOUT */
+.wrap{max-width:1320px;margin:0 auto;padding:28px 32px}
+
+/* HEADER */
+.page-header{margin-bottom:28px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-0.6px;color:var(--ink)}
+.page-sub{font-size:13px;color:var(--mu);margin-top:3px;letter-spacing:-0.1px}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.kpi{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s}
+.kpi:hover{border-color:var(--border2)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
+.kpi.blue::before{background:var(--accent)}
+.kpi.green::before{background:var(--good)}
+.kpi.violet::before{background:var(--violet)}
+.kpi.amber::before{background:var(--amber)}
+.kpi.teal::before{background:var(--teal)}
+.kpi-label{font-size:11px;color:var(--mu);font-weight:500;letter-spacing:0.2px;text-transform:uppercase;margin-bottom:10px}
+.kpi-val{font-size:22px;font-weight:700;letter-spacing:-0.8px;color:var(--ink);font-family:'JetBrains Mono',monospace}
+.kpi.blue .kpi-val{color:var(--accent2)}
+.kpi.green .kpi-val{color:var(--good)}
+.kpi.violet .kpi-val{color:#a78bfa}
+.kpi.amber .kpi-val{color:var(--amber)}
+.kpi.teal .kpi-val{color:#22d3ee}
+.kpi-delta{font-size:11px;color:var(--mu);margin-top:6px;font-weight:500}
+.kpi-delta.up{color:var(--good)}
+
+/* FILTROS */
+.filters-bar{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.filter-group{display:flex;align-items:center;gap:8px}
+.filter-label{font-size:11px;color:var(--mu);font-weight:500;text-transform:uppercase;letter-spacing:0.2px;white-space:nowrap}
+.filter-input{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--ink);font-family:inherit;outline:none;width:140px;transition:border-color .2s}
+.filter-input:focus{border-color:var(--accent)}
+.filter-input::placeholder{color:var(--mu2)}
+.filter-divider{width:1px;height:28px;background:var(--border);margin:0 4px}
+.btn-buscar{background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-0.2px;margin-left:auto}
+.btn-limpar{background:transparent;color:var(--mu);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+
+/* SECTION HEADER */
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title{font-size:13px;font-weight:600;color:var(--ink2);letter-spacing:-0.2px}
+.section-count{font-size:11px;color:var(--mu);font-family:'JetBrains Mono',monospace;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:3px 8px}
+
+/* TABLE */
+.table-wrap{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:1px solid var(--border2)}
+th{padding:11px 16px;font-size:11px;font-weight:600;color:var(--mu);text-align:left;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;background:var(--s2)}
+th.sort{cursor:pointer;user-select:none}
+th.sort:hover{color:var(--ink2)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--s2)}
+td{padding:11px 16px;font-size:13px;color:var(--ink2)}
+td.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+td.val{color:var(--accent2);font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px;text-align:right}
+td.itbi{color:var(--good);font-family:'JetBrains Mono',monospace;font-size:12px;text-align:right}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500;background:var(--accent-soft);color:var(--accent2)}
+
+/* CHARTS PREVIEW */
+.charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:20px}
+.chart-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:20px}
+.chart-title{font-size:12px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:16px}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:80px}
+.bar{flex:1;border-radius:4px 4px 0 0;background:var(--s3);position:relative;transition:background .2s}
+.bar:hover{background:var(--accent-soft)}
+.bar.peak{background:var(--accent)}
+.bar-label{font-size:9px;color:var(--mu);text-align:center;margin-top:4px;font-family:'JetBrains Mono',monospace}
+.bars-wrap{display:flex;flex-direction:column}
+.pie-preview{display:flex;flex-direction:column;gap:8px}
+.pie-row{display:flex;align-items:center;gap:10px}
+.pie-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pie-name{font-size:12px;color:var(--ink2);flex:1}
+.pie-pct{font-size:12px;color:var(--mu);font-family:'JetBrains Mono',monospace}
+.pie-bar-bg{height:4px;background:var(--s3);border-radius:2px;flex:1}
+.pie-bar-fill{height:4px;border-radius:2px}
+
+/* TAG CHIPS */
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--accent-soft);border:1px solid rgba(94,106,210,0.25);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--accent2);font-weight:500}
+.chip-x{cursor:pointer;opacity:.6;font-size:10px}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">IT</div>
+    <div>
+      <span class="nav-logo-text">ITBI Dashboard</span>
+      <span class="nav-logo-sub">São Paulo</span>
+    </div>
+  </div>
+  <div class="nav-right">
+    <span class="nav-badge">470.293 registros</span>
+    <button class="nav-btn">Exportar PDF</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-header">
+    <div class="page-title">Transações Imobiliárias</div>
+    <div class="page-sub">Dados de 2006 – 2026 · Prefeitura de São Paulo</div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi blue">
+      <div class="kpi-label">Transações</div>
+      <div class="kpi-val">12.847</div>
+      <div class="kpi-delta up">↑ 8% vs ano anterior</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Volume Total</div>
+      <div class="kpi-val">R$ 4,2Bi</div>
+      <div class="kpi-delta up">↑ 12% vs ano anterior</div>
+    </div>
+    <div class="kpi violet">
+      <div class="kpi-label">Ticket Médio</div>
+      <div class="kpi-val">R$ 327k</div>
+      <div class="kpi-delta" style="color:var(--mu)">— estável</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-label">Maior Transação</div>
+      <div class="kpi-val">R$ 48Mi</div>
+      <div class="kpi-delta" style="color:var(--mu)">Pinheiros · 2024</div>
+    </div>
+    <div class="kpi teal">
+      <div class="kpi-label">Base ITBI Total</div>
+      <div class="kpi-val">R$ 84Mi</div>
+      <div class="kpi-delta" style="color:var(--mu)">Alíq. efetiva 2,0%</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Transações por ano</div>
+      <div class="bars-wrap">
+        <div class="bar-chart">
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><div class="bar" style="height:30%"></div><div class="bar-label">2018</div></div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><div class="bar" style="height:45%"></div><div class="bar-label">2019</div></div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><div class="bar" style="height:38%"></div><div class="bar-label">2020</div></div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><div class="bar" style="height:62%"></div><div class="bar-label">2021</div></div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><div class="bar" style="height:78%"></div><div class="bar-label">2022</div></div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><div class="bar" style="height:55%"></div><div class="bar-label">2023</div></div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><div class="bar peak" style="height:100%"></div><div class="bar-label">2024</div></div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><div class="bar" style="height:42%"></div><div class="bar-label">2025</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Natureza das transações</div>
+      <div class="pie-preview">
+        <div class="pie-row">
+          <div class="pie-dot" style="background:#5e6ad2"></div>
+          <div class="pie-name">Compra e Venda</div>
+          <div class="pie-bar-bg" style="max-width:80px"><div class="pie-bar-fill" style="width:72%;background:#5e6ad2"></div></div>
+          <div class="pie-pct">72%</div>
+        </div>
+        <div class="pie-row">
+          <div class="pie-dot" style="background:#22c55e"></div>
+          <div class="pie-name">Cessão de Direitos</div>
+          <div class="pie-bar-bg" style="max-width:80px"><div class="pie-bar-fill" style="width:15%;background:#22c55e"></div></div>
+          <div class="pie-pct">15%</div>
+        </div>
+        <div class="pie-row">
+          <div class="pie-dot" style="background:#f59e0b"></div>
+          <div class="pie-name">Permuta</div>
+          <div class="pie-bar-bg" style="max-width:80px"><div class="pie-bar-fill" style="width:8%;background:#f59e0b"></div></div>
+          <div class="pie-pct">8%</div>
+        </div>
+        <div class="pie-row">
+          <div class="pie-dot" style="background:#7c3aed"></div>
+          <div class="pie-name">Outros</div>
+          <div class="pie-bar-bg" style="max-width:80px"><div class="pie-bar-fill" style="width:5%;background:#7c3aed"></div></div>
+          <div class="pie-pct">5%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filters-bar">
+    <div class="filter-group">
+      <span class="filter-label">Bairro</span>
+      <div style="display:flex;gap:5px;align-items:center;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:4px 8px;min-width:180px">
+        <span class="chip">Pinheiros <span class="chip-x">×</span></span>
+        <span class="chip">Moema <span class="chip-x">×</span></span>
+      </div>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">Período</span>
+      <input class="filter-input" placeholder="2020" style="width:80px">
+      <span style="color:var(--mu);font-size:12px">até</span>
+      <input class="filter-input" placeholder="2026" style="width:80px">
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">Valor</span>
+      <input class="filter-input" placeholder="Min R$" style="width:100px">
+      <input class="filter-input" placeholder="Max R$" style="width:100px">
+    </div>
+    <button class="btn-limpar">Limpar</button>
+    <button class="btn-buscar">Buscar</button>
+  </div>
+
+  <!-- TABELA -->
+  <div class="section-hdr">
+    <span class="section-title">Resultados</span>
+    <span class="section-count">12.847 transações</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th><input type="checkbox" style="accent-color:var(--accent)"></th>
+          <th class="sort">Ano/Mês ↕</th>
+          <th class="sort">Logradouro ↕</th>
+          <th>Bairro</th>
+          <th class="sort" style="text-align:right">Valor Declarado ↕</th>
+          <th style="text-align:right">Base ITBI</th>
+          <th>Natureza</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><input type="checkbox" style="accent-color:var(--accent)"></td>
+          <td class="mono">2024/03</td>
+          <td>R. Oscar Freire</td>
+          <td>Jardins</td>
+          <td class="val">R$ 2.400.000</td>
+          <td class="itbi">R$ 48.000</td>
+          <td><span class="badge">Compra e Venda</span></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="accent-color:var(--accent)"></td>
+          <td class="mono">2024/02</td>
+          <td>Av. Brigadeiro Faria Lima</td>
+          <td>Pinheiros</td>
+          <td class="val">R$ 890.000</td>
+          <td class="itbi">R$ 17.800</td>
+          <td><span class="badge">Compra e Venda</span></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="accent-color:var(--accent)"></td>
+          <td class="mono">2024/01</td>
+          <td>Av. Paulista</td>
+          <td>Bela Vista</td>
+          <td class="val">R$ 1.200.000</td>
+          <td class="itbi">R$ 24.000</td>
+          <td><span class="badge">Cessão Direitos</span></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="accent-color:var(--accent)"></td>
+          <td class="mono">2023/12</td>
+          <td>R. Haddock Lobo</td>
+          <td>Cerqueira César</td>
+          <td class="val">R$ 650.000</td>
+          <td class="itbi">R$ 13.000</td>
+          <td><span class="badge">Compra e Venda</span></td>
+        </tr>
+        <tr>
+          <td><input type="checkbox" style="accent-color:var(--accent)"></td>
+          <td class="mono">2023/11</td>
+          <td>R. Itacolomi</td>
+          <td>Higienópolis</td>
+          <td class="val">R$ 480.000</td>
+          <td class="itbi">R$ 9.600</td>
+          <td><span class="badge">Compra e Venda</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="text-align:center;margin-top:32px;color:var(--mu);font-size:11px;letter-spacing:0.2px">
+    OPÇÃO A — Executive Dark · Linear + Revolut + Apple
+  </div>
+</div>
+
+</body>
+</html>
