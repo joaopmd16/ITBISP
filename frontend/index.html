@@ -1170,8 +1170,8 @@ async function loadStatus(){
 }
 function populateAnos(){
   const mn=document.getElementById('famin'),mx=document.getElementById('famax');
-  mn.innerHTML='<option value="">Todos</option>';
-  mx.innerHTML='<option value="">Todos</option>';
+  mn.innerHTML='';
+  mx.innerHTML='';
   allAnos.forEach(a=>{mn.innerHTML+=`<option value="${a}">${a}</option>`;mx.innerHTML+=`<option value="${a}">${a}</option>`});
 }
 
@@ -1629,7 +1629,7 @@ function _initTagInput(wrapId,inputId,listId,ep){
         lst.appendChild(dv);
       });
       lst.style.display='block';
-    },220);
+    },120);
   });
 
   inp.addEventListener('keydown',e=>{
@@ -1699,7 +1699,7 @@ function setupAC(iid,lid,ep){
       if(!it.length){lst.style.display='none';return}
       it.forEach(i=>{const dv=document.createElement('div');dv.textContent=i;dv.onclick=()=>{inp.value=i;lst.style.display='none'};lst.appendChild(dv)});
       lst.style.display='block';
-    },220);
+    },120);
   });
   document.addEventListener('click',e=>{if(!inp.contains(e.target)&&!lst.contains(e.target))lst.style.display='none'});
 }
