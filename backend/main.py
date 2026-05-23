@@ -72,6 +72,7 @@ def startup():
             PRAGMA temp_store   = MEMORY;
             PRAGMA mmap_size    = 67108864;
             CREATE INDEX IF NOT EXISTS idx_logradouro  ON transacoes(logradouro);
+            CREATE INDEX IF NOT EXISTS idx_logradouro_upper ON transacoes(UPPER(logradouro));
             CREATE INDEX IF NOT EXISTS idx_bairro      ON transacoes(bairro);
             CREATE INDEX IF NOT EXISTS idx_cep         ON transacoes(cep);
             CREATE INDEX IF NOT EXISTS idx_ano         ON transacoes(ano_referencia);
@@ -114,7 +115,11 @@ def startup():
                            AVG(valor_declarado) AS ticket_medio,
                            MIN(valor_declarado) AS valor_minimo,
                            MAX(valor_declarado) AS valor_maximo,
-                           SUM(valor_itbi)      AS itbi_total
+                           SUM(valor_itbi)      AS itbi_total,
+                           CASE WHEN SUM(area_terreno)   > 0
+                                THEN SUM(valor_declarado) / SUM(area_terreno)   ELSE NULL END AS preco_m2_terreno,
+                           CASE WHEN SUM(area_construida) > 0
+                                THEN SUM(valor_declarado) / SUM(area_construida) ELSE NULL END AS preco_m2_construida
                     FROM transacoes {where}""", params_q).fetchone()
                 por_ano = conn.execute(f"""
                     SELECT ano_referencia, COUNT(*) as transacoes,
@@ -361,7 +366,11 @@ def resumo(
                 AVG(valor_declarado) AS ticket_medio,
                 MIN(valor_declarado) AS valor_minimo,
                 MAX(valor_declarado) AS valor_maximo,
-                SUM(valor_itbi)      AS itbi_total
+                SUM(valor_itbi)      AS itbi_total,
+                CASE WHEN SUM(area_terreno)   > 0
+                     THEN SUM(valor_declarado) / SUM(area_terreno)   ELSE NULL END AS preco_m2_terreno,
+                CASE WHEN SUM(area_construida) > 0
+                     THEN SUM(valor_declarado) / SUM(area_construida) ELSE NULL END AS preco_m2_construida
             FROM transacoes {where}
         """, params).fetchone()
 
@@ -407,13 +416,31 @@ def resumo(
 
 @app.get("/api/autocomplete/logradouro")
 def autocomplete_logradouro(q: str = Query(..., min_length=3)):
+    uq = q.upper()
     with get_db() as conn:
+        # busca por prefixo — usa idx_logradouro_upper, muito rápido
         rows = conn.execute("""
             SELECT DISTINCT logradouro FROM transacoes
-            WHERE UPPER(logradouro) LIKE UPPER(?)
+            WHERE UPPER(logradouro) LIKE ? || '%'
             ORDER BY logradouro LIMIT 15
-        """, (f"%{q}%",)).fetchall()
-    return [r["logradouro"] for r in rows if r["logradouro"]]
+        """, (uq,)).fetchall()
+        results = [r["logradouro"] for r in rows if r["logradouro"]]
+
+        # se poucos resultados, complementa com busca "contains" (sem índice, mas limitada)
+        if len(results) < 8:
+            seen = set(results)
+            extra = conn.execute("""
+                SELECT DISTINCT logradouro FROM transacoes
+                WHERE UPPER(logradouro) LIKE '%' || ? || '%'
+                  AND UPPER(logradouro) NOT LIKE ? || '%'
+                ORDER BY logradouro LIMIT 10
+            """, (uq, uq)).fetchall()
+            for r in extra:
+                if r["logradouro"] and r["logradouro"] not in seen:
+                    results.append(r["logradouro"])
+                    if len(results) >= 15:
+                        break
+    return results
 
 
 @app.get("/api/autocomplete/bairro")

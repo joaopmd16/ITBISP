@@ -34,20 +34,20 @@
   --warn:#c98a16;
   --shadow:0 1px 2px #1a23410a, 0 4px 14px #1a23410a;
   --shadow-lg:0 14px 40px #1a234118;
-  --r-card:16px;
+  --r-card:20px;
   --r-pill:999px;
-  --r-input:10px;
+  --r-input:14px;
 }
 :root[data-theme="dark"]{
-  --bg:#1a1714;
-  --surface:#221e1a;
-  --surface-2:#2a2622;
-  --ink:#f0ebe1;
-  --ink-2:#c9c2b3;
-  --mu:#8a8275;
-  --mu-2:#5a5347;
-  --line:#332e28;
-  --line-2:#3f3a33;
+  --bg:#000000;
+  --surface:#0d0d0d;
+  --surface-2:#171717;
+  --ink:#f0f0f0;
+  --ink-2:#b0b0b0;
+  --mu:#666666;
+  --mu-2:#333333;
+  --line:#1f1f1f;
+  --line-2:#2a2a2a;
   --primary:#e08560;
   --primary-soft:#e0856022;
   --primary-ink:#f0a484;
@@ -61,6 +61,9 @@
   --warn:#e8b955;
   --shadow:0 1px 2px #0006, 0 6px 20px #0008;
   --shadow-lg:0 18px 50px #000a;
+  --r-card:20px;
+  --r-pill:999px;
+  --r-input:14px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -74,7 +77,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',
 .side{position:sticky;top:0;height:100vh;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px;z-index:50}
 .side-logo{width:38px;height:38px;border-radius:11px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 6px 18px color-mix(in srgb,var(--primary) 35%,transparent)}
 .side-logo svg{width:18px;height:18px}
-.nav-btn{width:40px;height:40px;border-radius:11px;background:none;border:none;color:var(--mu);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:all .15s}
+.nav-btn{width:40px;height:40px;border-radius:14px;background:none;border:none;color:var(--mu);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:all .15s}
 .nav-btn svg{width:18px;height:18px;stroke-width:1.6}
 .nav-btn:hover{color:var(--ink);background:var(--surface-2)}
 .nav-btn.active{color:var(--primary);background:var(--primary-soft)}
@@ -100,7 +103,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',
 .av.b2{background:#7c4dff}
 .av.b3{background:#e23f7e}
 .av.plus{background:var(--surface);color:var(--ink-2);border:1px dashed var(--line-2);font-size:11px;font-weight:500}
-.top-btn{background:var(--surface);border:1px solid var(--line);width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .15s;position:relative}
+.top-btn{background:var(--surface);border:1px solid var(--line);width:38px;height:38px;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .15s;position:relative}
 .top-btn:hover{border-color:var(--line-2);color:var(--ink)}
 .top-btn svg{width:16px;height:16px;stroke-width:1.7}
 .top-btn .badge-dot{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--surface)}
@@ -129,7 +132,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',
 .settings-shortcuts{display:flex;flex-direction:column;gap:8px}
 .shortcut-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)}
 kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-size:11px;font-family:'JetBrains Mono';color:var(--ink)}
-.btn-primary{background:var(--primary);color:#fff;border:none;border-radius:11px;padding:0 18px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:all .15s;box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 25%,transparent)}
+.btn-primary{background:var(--primary);color:#fff;border:none;border-radius:14px;padding:0 18px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:all .15s;box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 25%,transparent)}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px color-mix(in srgb,var(--primary) 32%,transparent)}
 .btn-primary:disabled{opacity:.7;cursor:wait;transform:none}
 
@@ -141,7 +144,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .over-title{font-size:24px;font-weight:700;letter-spacing:-.025em;color:var(--ink)}
 .over-sub{font-size:13px;color:var(--mu);margin-left:4px}
 .over-spacer{flex:1}
-.period-picker{background:var(--surface);border:1px solid var(--line);border-radius:11px;height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--ink);font-size:13px;font-weight:500;position:relative;transition:all .15s}
+.period-picker{background:var(--surface);border:1px solid var(--line);border-radius:14px;height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--ink);font-size:13px;font-weight:500;position:relative;transition:all .15s}
 .period-picker:hover{border-color:var(--line-2)}
 .period-picker svg{width:14px;height:14px;color:var(--mu)}
 .period-picker .chev{margin-left:4px;color:var(--mu);font-size:10px}
@@ -155,7 +158,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .pp-divider{height:1px;background:var(--line);margin:6px 0}
 
 /* ─── KPI cards ─── */
-.kgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
 .kcard{background:var(--surface);border-radius:var(--r-card);padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s}
 .kcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .kcard-top{display:flex;align-items:flex-start;justify-content:space-between}
@@ -273,7 +276,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 #pdf-toast .pdf-sub{font-size:11px;color:var(--mu);margin-top:1px}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* ─── tag input ─── */
-.tag-input-inner{display:flex;flex-wrap:wrap;gap:5px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:5px 10px;min-height:42px;cursor:text;transition:all .15s}
+.tag-input-inner{display:flex;flex-wrap:wrap;gap:5px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:5px 10px;min-height:44px;padding:5px 10px;min-height:42px;cursor:text;transition:all .15s}
 .tag-input-inner:focus-within{border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 4px var(--primary-soft)}
 .tag-input-inner input{border:none;background:none;outline:none;color:var(--ink);font-size:13px;font-family:inherit;flex:1;min-width:100px;padding:3px 2px}
 .tag-input-inner input::placeholder{color:var(--mu)}
@@ -284,11 +287,16 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .ffield input::placeholder{color:var(--mu)}
 .filt-body-foot{padding:18px 24px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}
 .filt-body-foot .hint{margin-left:auto;font-size:11px;color:var(--mu)}
-.btn-ghost-2{background:var(--surface-2);color:var(--ink-2);border:none;border-radius:10px;padding:0 16px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:background .15s}
+.btn-ghost-2{background:var(--surface-2);color:var(--ink-2);border:none;border-radius:14px;padding:0 16px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:background .15s}
 .btn-ghost-2:hover{background:var(--line)}
-.acl{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:99;background:var(--surface);border:1px solid var(--line);border-radius:10px;max-height:220px;overflow-y:auto;box-shadow:var(--shadow-lg);padding:6px}
-.acl div{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--ink-2);border-radius:7px}
-.acl div:hover{background:var(--primary-soft);color:var(--primary-ink)}
+.acl{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:99;background:var(--surface);border:1px solid var(--line);border-radius:14px;max-height:260px;overflow-y:auto;box-shadow:var(--shadow-lg);padding:6px}
+.acl div{padding:9px 12px;font-size:13px;cursor:pointer;color:var(--ink-2);border-radius:9px;display:flex;align-items:center;gap:10px;transition:background .1s}
+.acl div:hover{background:var(--surface-2);color:var(--ink)}
+.acl div.acl-selected{background:var(--primary-soft);color:var(--primary-ink)}
+.acl div.acl-selected:hover{background:color-mix(in srgb,var(--primary) 20%,var(--surface))}
+.acl-cb{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface-2);transition:all .1s}
+.acl div.acl-selected .acl-cb{background:var(--primary);border-color:var(--primary);color:#fff}
+.acl-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ─── map card ─── */
 .mapbox{background:var(--surface);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--shadow)}
@@ -318,24 +326,34 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .tbox-head .t{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.015em}
 .tmeta{font-size:12px;color:var(--mu);font-family:'JetBrains Mono';margin-left:auto}
 .tbox-export{display:flex;gap:6px}
-.tbox-export button{background:var(--surface-2);border:none;border-radius:9px;padding:7px 13px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;color:var(--ink-2);transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+.tbox-export button{background:var(--surface-2);border:none;border-radius:12px;padding:7px 13px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;color:var(--ink-2);transition:all .15s;display:inline-flex;align-items:center;gap:5px}
 .tbox-export button:hover{background:var(--line);color:var(--ink)}
 .tbox-export button svg{width:13px;height:13px}
-.twrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:960px}
+.twrap{overflow-x:auto;padding:8px 14px 14px}
+table{width:100%;border-collapse:separate;border-spacing:0 6px;min-width:960px}
 thead th{
-  padding:13px 18px;text-align:left;font-size:11px;font-weight:600;color:var(--mu);
-  letter-spacing:.02em;border-bottom:1px solid var(--line);white-space:nowrap;
-  cursor:pointer;user-select:none;transition:color .15s;background:var(--surface)
+  padding:6px 16px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--mu);
+  letter-spacing:.02em;white-space:nowrap;
+  cursor:pointer;user-select:none;transition:color .15s;background:transparent
 }
 thead th:hover{color:var(--ink)}
 thead th.sa::after{content:" ↑";color:var(--primary)}
 thead th.sd::after{content:" ↓";color:var(--primary)}
 thead th.num{text-align:right}
-tbody tr{border-bottom:1px solid var(--line);cursor:pointer;transition:background .1s}
-tbody tr:hover{background:var(--surface-2)}
-tbody tr:last-child{border-bottom:none}
-td{padding:14px 18px;font-size:13px;white-space:nowrap;vertical-align:middle;color:var(--ink-2)}
+tbody tr{cursor:pointer;transition:all .12s}
+tbody tr td{
+  background:var(--surface-2);
+  border-top:1.5px solid var(--line);
+  border-bottom:1.5px solid var(--line);
+  transition:all .12s
+}
+tbody tr td:first-child{border-left:1.5px solid var(--line);border-radius:14px 0 0 14px}
+tbody tr td:last-child{border-right:1.5px solid var(--line);border-radius:0 14px 14px 0}
+tbody tr:hover td{
+  background:color-mix(in srgb,var(--primary) 9%,var(--surface-2));
+  border-color:color-mix(in srgb,var(--primary) 30%,transparent)
+}
+td{padding:14px 16px;font-size:13px;white-space:nowrap;vertical-align:middle;color:var(--ink-2)}
 .td-main{color:var(--ink);font-weight:600}
 .td-num{font-family:'JetBrains Mono';font-variant-numeric:tabular-nums;color:var(--ink);text-align:right;font-weight:500;letter-spacing:-.01em}
 .td-num.muted{color:var(--mu);font-weight:400}
@@ -401,12 +419,42 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 .spin{display:inline-block;width:12px;height:12px;border:2px solid #ffffff60;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+@media(max-width:1300px){
+  .kgrid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:1100px){
-  .kgrid{grid-template-columns:repeat(2,1fr)}
+  .kgrid{grid-template-columns:repeat(3,1fr)}
   .charts-row{grid-template-columns:1fr}
   .fgrid{grid-template-columns:1fr}
   .mg{grid-template-columns:1fr 1fr}
 }
+/* ─── calculadora ─── */
+.calc-section{background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow);overflow:hidden}
+.calc-head{padding:22px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.calc-head-ico{width:40px;height:40px;border-radius:13px;background:var(--tint-amber-bg);color:var(--tint-amber-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.calc-head-ico svg{width:20px;height:20px;stroke-width:1.7}
+.calc-head-title{font-size:18px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.calc-head-sub{font-size:12px;color:var(--mu);margin-top:2px}
+.calc-body{padding:28px 24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;align-items:end}
+.calc-field{display:flex;flex-direction:column;gap:8px}
+.calc-label{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
+.calc-readonly{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:14px 16px;font-size:22px;font-weight:800;color:var(--ink);font-family:'JetBrains Mono';letter-spacing:-.02em;line-height:1}
+.calc-readonly .calc-unit{font-size:13px;font-weight:600;color:var(--mu);margin-left:4px}
+.calc-input-wrap{position:relative}
+.calc-input-wrap .calc-prefix{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--mu);pointer-events:none}
+.calc-input-wrap input{width:100%;background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--r-input);padding:14px 14px 14px 38px;font-size:18px;font-weight:700;color:var(--ink);font-family:'JetBrains Mono';outline:none;transition:all .15s}
+.calc-input-wrap input:focus{border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 4px var(--primary-soft)}
+.calc-input-wrap input::placeholder{color:var(--mu-2);font-weight:400}
+.calc-result-box{background:color-mix(in srgb,var(--primary) 10%,var(--surface-2));border:1.5px solid color-mix(in srgb,var(--primary) 25%,transparent);border-radius:var(--r-input);padding:14px 16px}
+.calc-result-val{font-size:26px;font-weight:800;color:var(--primary-ink);font-family:'JetBrains Mono';letter-spacing:-.02em;line-height:1}
+.calc-result-empty{font-size:13px;font-weight:500;color:var(--mu);font-style:italic;padding:4px 0}
+.calc-result-formula{font-size:11px;color:var(--mu);margin-top:5px}
+.calc-divider{display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:300;color:var(--mu);padding-bottom:14px}
+@media(max-width:900px){.calc-body{grid-template-columns:1fr;gap:16px}.calc-divider{display:none}}
+
+/* kcard calc highlight */
+.kcard-calc-result{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--primary-ink);font-family:'JetBrains Mono'}
+.kcard-calc-empty{font-size:12px;color:var(--mu);font-weight:500;font-style:italic}
+
 @media(max-width:760px){
   .shell{grid-template-columns:1fr;display:flex;flex-direction:column}
   .side{display:none}
@@ -467,6 +515,9 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
     </button>
     <button class="nav-btn" title="Filtros" onclick="openFilters()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 9v6l-4-2v-4z"/></svg>
+    </button>
+    <button class="nav-btn" title="Calculadora m²" onclick="scrollToSection('calc')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h0M8 14h2M12 14h2M16 14h0M8 18h2M12 18h2M16 18h0"/></svg>
     </button>
     <div class="side-spacer"></div>
     <div class="side-divider"></div>
@@ -607,13 +658,40 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="kcard">
           <div class="kcard-top">
             <div class="kico green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
             </div>
           </div>
           <div>
-            <div class="kval" id="ki">—</div>
-            <div class="klabel">Base ITBI</div>
-            <div class="kdelta up" id="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M7 17 17 7M7 7h10v10"/></svg><span>—</span><span class="vs">vs período anterior</span></div>
+            <div class="kval" id="km2t">—</div>
+            <div class="klabel">Preço médio m² (Terreno)</div>
+            <div class="kdelta" id="dm2t" style="color:var(--mu);font-size:11px;margin-top:6px">soma valor ÷ soma área</div>
+          </div>
+        </div>
+
+        <div class="kcard">
+          <div class="kcard-top">
+            <div class="kico pink">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+            </div>
+          </div>
+          <div>
+            <div class="kval" id="km2c">—</div>
+            <div class="klabel">Preço médio m² (Construída)</div>
+            <div class="kdelta" id="dm2c" style="color:var(--mu);font-size:11px;margin-top:6px">soma valor ÷ soma área</div>
+          </div>
+        </div>
+
+        <div class="kcard" style="cursor:pointer" onclick="scrollToSection('calc')" title="Abrir calculadora">
+          <div class="kcard-top">
+            <div class="kico amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h0M8 14h2M12 14h2M16 14h0M8 18h2M12 18h2M16 18h0"/></svg>
+            </div>
+            <span class="kdot" style="background:var(--warn);box-shadow:0 0 0 3px var(--tint-amber-bg)"></span>
+          </div>
+          <div>
+            <div id="kcalc-val"><span class="kcard-calc-empty">Defina o m²</span></div>
+            <div class="klabel">Calculadora m²</div>
+            <div class="kdelta" id="kcalc-sub" style="color:var(--mu);font-size:11px;margin-top:6px">ticket médio ÷ m² digitado</div>
           </div>
         </div>
       </div>
@@ -768,6 +846,46 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
             <button class="cbox-menu">⋯</button>
           </div>
           <canvas id="cbai" style="max-height:240px"></canvas>
+        </div>
+      </div>
+
+      <!-- ─── Calculadora m² ─── -->
+      <div class="calc-section" id="calc">
+        <div class="calc-head">
+          <div class="calc-head-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h0M8 14h2M12 14h2M16 14h0M8 18h2M12 18h2M16 18h0"/></svg>
+          </div>
+          <div>
+            <div class="calc-head-title">Calculadora de Ticket Médio por m²</div>
+            <div class="calc-head-sub">O ticket médio se atualiza automaticamente com os filtros globais. Digite a metragem real para calcular o valor estimado.</div>
+          </div>
+        </div>
+        <div class="calc-body">
+          <div class="calc-field">
+            <div class="calc-label">Ticket Médio (filtros ativos)</div>
+            <div class="calc-readonly" id="calc-ticket">
+              <span id="calc-ticket-val">—</span>
+            </div>
+            <div style="font-size:11px;color:var(--mu);margin-top:5px" id="calc-ticket-info">Aguardando dados…</div>
+          </div>
+          <div class="calc-divider">÷</div>
+          <div class="calc-field">
+            <div class="calc-label">Metragem real (m²)</div>
+            <div class="calc-input-wrap">
+              <span class="calc-prefix">m²</span>
+              <input type="number" id="calc-m2-input" min="1" max="99999" step="0.5" placeholder="Ex: 120">
+            </div>
+            <div style="font-size:11px;color:var(--mu);margin-top:5px">Digite a área construída real do imóvel</div>
+          </div>
+          <div class="calc-divider" style="font-size:22px">=</div>
+          <div class="calc-field">
+            <div class="calc-label">Valor do m²</div>
+            <div class="calc-result-box" id="calc-result-box">
+              <div id="calc-result-val" class="calc-result-empty">Defina o m² para calcular</div>
+              <div id="calc-result-formula" class="calc-result-formula" style="display:none"></div>
+            </div>
+            <div style="font-size:11px;color:var(--mu);margin-top:5px">Ticket médio ÷ metragem digitada</div>
+          </div>
         </div>
       </div>
 
@@ -1052,8 +1170,8 @@ async function loadStatus(){
 }
 function populateAnos(){
   const mn=document.getElementById('famin'),mx=document.getElementById('famax');
-  mn.innerHTML='<option value="">Todos</option>';
-  mx.innerHTML='<option value="">Todos</option>';
+  mn.innerHTML='';
+  mx.innerHTML='';
   allAnos.forEach(a=>{mn.innerHTML+=`<option value="${a}">${a}</option>`;mx.innerHTML+=`<option value="${a}">${a}</option>`});
 }
 
@@ -1175,7 +1293,7 @@ async function buscar(p=1){
       ]);
       lastResumo=r;
       renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[]);
-      renderTable(d);
+      renderTable(d);renderM2();
     }else{
       const d=await fetch(`${API}/api/transacoes?${params}`).then(x=>x.json());
       renderTable(d);
@@ -1188,7 +1306,7 @@ async function buscar(p=1){
     const demo=buildDemo();lastResumo=demo.resumo;
     renderKPI(demo.resumo.geral);
     renderCharts(demo.resumo.por_ano,demo.resumo.top_bairros);
-    renderTable(demo.tab);renderPills();updateOverSub(true);
+    renderTable(demo.tab);renderM2();renderPills();updateOverSub(true);
   }
 }
 
@@ -1206,12 +1324,13 @@ function renderKPI(g){
   const t=g.total_transacoes||0;
   const vol=bigK(g.volume_total);
   const tm=bigK(g.ticket_medio);
-  const ib=bigK(g.itbi_total);
 
   document.getElementById('kt').innerHTML=t.toLocaleString('pt-BR');
   document.getElementById('kv').innerHTML=`${vol.num}<span class="unit">${vol.unit}</span>`;
   document.getElementById('km').innerHTML=`R$ ${tm.num}<span class="unit">${tm.unit}</span>`;
-  document.getElementById('ki').innerHTML=`R$ ${ib.num}<span class="unit">${ib.unit}</span>`;
+  _calcTicketMedio=g.ticket_medio||0;
+  updateCalc();
+
 
   // tab counts (rough — we only have one number)
   document.getElementById('cnt-all').textContent=bigK(t).num+bigK(t).unit;
@@ -1220,12 +1339,12 @@ function renderKPI(g){
 
   // synthetic deltas: use first/last year deltas as a quick proxy
   const ano=lastResumo?.por_ano||[];
-  let deltaT=12.4,deltaV=18.2,deltaM=4.1,deltaI=15.6;
+  let deltaT=12.4,deltaV=18.2,deltaM=4.1;
   if(ano.length>=2){
     const last=ano[ano.length-1].transacoes,prev=ano[ano.length-2].transacoes;
     if(prev>0)deltaT=((last-prev)/prev)*100;
   }
-  setDelta('dt',deltaT);setDelta('dv',deltaV);setDelta('dm',deltaM);setDelta('di',deltaI);
+  setDelta('dt',deltaT);setDelta('dv',deltaV);setDelta('dm',deltaM);
 
   // gauge: percent of max year
   const years=(lastResumo?.por_ano||[]);
@@ -1356,6 +1475,7 @@ function renderCharts(ano,bai){
 
 /* ─── tabela ─── */
 function renderTable({dados,total,pagina,paginas,por_pagina}){
+  lastDados=dados||[];
   const tb=document.getElementById('tbody'),meta=document.getElementById('tmeta'),emp=document.getElementById('empty');
   tb.innerHTML='';
   if(!dados||dados.length===0){emp.style.display='block';meta.textContent='';renderPag(0,1,1);return}
@@ -1485,19 +1605,38 @@ function _initTagInput(wrapId,inputId,listId,ep){
       lst.innerHTML='';
       if(!it.length){lst.style.display='none';return}
       it.forEach(i=>{
-        const dv=document.createElement('div');dv.textContent=i;
-        dv.onclick=()=>{_addTag(inputId,i);inp.value='';lst.style.display='none'};
+        const already=(_tags[inputId]||[]).includes(i);
+        const dv=document.createElement('div');
+        if(already)dv.classList.add('acl-selected');
+        dv.innerHTML=`
+          <span class="acl-cb">${already?'<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>':''}</span>
+          <span class="acl-label">${i}</span>`;
+        dv.onclick=(e)=>{
+          e.stopPropagation();
+          if(already){
+            const idx=(_tags[inputId]||[]).indexOf(i);
+            if(idx>-1)_removeTag(inputId,idx);
+          }else{
+            _addTag(inputId,i);
+          }
+          // atualiza o item visualmente sem fechar o dropdown
+          const nowSelected=(_tags[inputId]||[]).includes(i);
+          dv.classList.toggle('acl-selected',nowSelected);
+          dv.querySelector('.acl-cb').innerHTML=nowSelected
+            ?'<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>'
+            :'';
+        };
         lst.appendChild(dv);
       });
       lst.style.display='block';
-    },220);
+    },120);
   });
 
   inp.addEventListener('keydown',e=>{
     if(e.key==='Backspace'&&!inp.value&&_tags[inputId].length){
       _removeTag(inputId,_tags[inputId].length-1);
     }
-    if(e.key==='Enter'){lst.style.display='none';}
+    if(e.key==='Enter'||e.key==='Escape'){lst.style.display='none';inp.value='';}
   });
 
   document.addEventListener('click',e=>{
@@ -1560,13 +1699,47 @@ function setupAC(iid,lid,ep){
       if(!it.length){lst.style.display='none';return}
       it.forEach(i=>{const dv=document.createElement('div');dv.textContent=i;dv.onclick=()=>{inp.value=i;lst.style.display='none'};lst.appendChild(dv)});
       lst.style.display='block';
-    },220);
+    },120);
   });
   document.addEventListener('click',e=>{if(!inp.contains(e.target)&&!lst.contains(e.target))lst.style.display='none'});
 }
 
 /* ─── seleção / export ─── */
 let selectedIds=new Set();
+let lastDados=[];
+
+function _hasPropertyFilter(){
+  return !!(
+    _getTagValue('fl') ||
+    _getTagValue('fb') ||
+    document.getElementById('fc')?.value?.trim() ||
+    document.getElementById('fsql')?.value?.trim() ||
+    document.getElementById('fn')?.value?.trim()
+  );
+}
+
+function renderM2(){
+  let m2t=null,m2c=null;
+
+  if(selectedIds.size>0){
+    const sel=lastDados.filter(d=>selectedIds.has(d.id));
+    const sumV =sel.reduce((s,d)=>s+(Number(d.valor_declarado)||0),0);
+    const sumAt=sel.reduce((s,d)=>s+(Number(d.area_terreno)||0),0);
+    const sumAc=sel.reduce((s,d)=>s+(Number(d.area_construida)||0),0);
+    if(sumAt>0)m2t=sumV/sumAt;
+    if(sumAc>0)m2c=sumV/sumAc;
+  } else if(_hasPropertyFilter()){
+    m2t=lastResumo?.geral?.preco_m2_terreno??null;
+    m2c=lastResumo?.geral?.preco_m2_construida??null;
+  }
+
+  const m2tK=bigK(m2t),m2cK=bigK(m2c);
+  document.getElementById('km2t').innerHTML=m2t?`R$ ${m2tK.num}<span class="unit">${m2tK.unit}</span>`:'—';
+  document.getElementById('km2c').innerHTML=m2c?`R$ ${m2cK.num}<span class="unit">${m2cK.unit}</span>`:'—';
+  const sub=(v,tipo)=>v?'R$ '+Math.round(v).toLocaleString('pt-BR')+'/m² · '+tipo:'selecione ou filtre imóveis';
+  document.getElementById('dm2t').textContent=sub(m2t,selectedIds.size>0?selectedIds.size+' selecionados':'filtro ativo');
+  document.getElementById('dm2c').textContent=sub(m2c,selectedIds.size>0?selectedIds.size+' selecionados':'filtro ativo');
+}
 function toggleAll(cb){
   if(cb.checked){
     document.querySelectorAll('.row-cb').forEach(c=>{c.checked=true;selectedIds.add(parseInt(c.dataset.id))});
@@ -1574,16 +1747,16 @@ function toggleAll(cb){
     selectedIds.clear();
     document.querySelectorAll('.row-cb').forEach(c=>{c.checked=false});
   }
-  updateExpBar();
+  updateExpBar();renderM2();
 }
 function toggleRow(cb){
   const id=parseInt(cb.dataset.id);
   cb.checked?selectedIds.add(id):selectedIds.delete(id);
   const allCbs=document.querySelectorAll('.row-cb');
   document.getElementById('cb-all').checked=[...allCbs].every(c=>c.checked);
-  updateExpBar();
+  updateExpBar();renderM2();
 }
-function deselecionarTudo(){selectedIds.clear();document.querySelectorAll('.row-cb').forEach(c=>c.checked=false);document.getElementById('cb-all').checked=false;updateExpBar()}
+function deselecionarTudo(){selectedIds.clear();document.querySelectorAll('.row-cb').forEach(c=>c.checked=false);document.getElementById('cb-all').checked=false;updateExpBar();renderM2();}
 function updateExpBar(){
   const bar=document.getElementById('expbar'),cnt=document.getElementById('exp-count');
   if(selectedIds.size>0){cnt.textContent=selectedIds.size.toLocaleString('pt-BR')+' selecionados';bar.style.display='flex'}
@@ -1690,6 +1863,58 @@ async function sync(){
   try{await fetch(`${API}/api/sincronizar`,{method:'POST'});alert('Sincronização iniciada em background!')}
   catch(e){alert('API offline em localhost:8000.')}
 }
+
+/* ─── calculadora m² ─── */
+let _calcTicketMedio=null;
+
+function updateCalc(){
+  const tm=_calcTicketMedio;
+  const m2=parseFloat(document.getElementById('calc-m2-input')?.value)||0;
+
+  // atualiza display do ticket médio
+  const tvEl=document.getElementById('calc-ticket-val');
+  const tiEl=document.getElementById('calc-ticket-info');
+  if(tm&&tm>0){
+    const tk=bigK(tm);
+    if(tvEl)tvEl.innerHTML=`R$ ${tk.num}<span style="font-size:14px;font-weight:600;color:var(--mu);margin-left:3px">${tk.unit}</span>`;
+    if(tiEl)tiEl.textContent=`R$ ${Math.round(tm).toLocaleString('pt-BR')} · média ponderada`;
+  }else{
+    if(tvEl)tvEl.textContent='—';
+    if(tiEl)tiEl.textContent='Sem dados para os filtros atuais';
+  }
+
+  // atualiza resultado
+  const resEl=document.getElementById('calc-result-val');
+  const fmlEl=document.getElementById('calc-result-formula');
+  const kcEl=document.getElementById('kcalc-val');
+  const ksEl=document.getElementById('kcalc-sub');
+
+  if(tm&&tm>0&&m2>0){
+    const resultado=tm/m2;
+    const rK=bigK(resultado);
+    const res=`R$ ${rK.num}${rK.unit?'<span style="font-size:16px;font-weight:600;color:var(--mu);margin-left:3px">'+rK.unit+'</span>':''}<span style="font-size:13px;font-weight:600;color:var(--mu);margin-left:4px">/m²</span>`;
+    if(resEl){resEl.className='calc-result-val';resEl.innerHTML=res}
+    if(fmlEl){fmlEl.style.display='';fmlEl.textContent=`R$ ${Math.round(tm).toLocaleString('pt-BR')} ÷ ${m2.toLocaleString('pt-BR')} m² = R$ ${Math.round(resultado).toLocaleString('pt-BR')}/m²`}
+    // card KPI
+    const cK=bigK(resultado);
+    if(kcEl)kcEl.innerHTML=`<span class="kcard-calc-result">R$ ${cK.num}<span style="font-size:16px;font-weight:600;color:var(--mu);margin-left:2px">${cK.unit}</span></span>`;
+    if(ksEl)ksEl.textContent=`${m2.toLocaleString('pt-BR')} m² · preço/m² estimado`;
+  }else if(m2>0&&(!tm||tm===0)){
+    if(resEl){resEl.className='calc-result-empty';resEl.textContent='Sem ticket médio para estes filtros'}
+    if(fmlEl)fmlEl.style.display='none';
+    if(kcEl)kcEl.innerHTML='<span class="kcard-calc-empty">Sem dados</span>';
+    if(ksEl)ksEl.textContent='ticket médio indisponível';
+  }else{
+    if(resEl){resEl.className='calc-result-empty';resEl.textContent='Defina o m² para calcular'}
+    if(fmlEl)fmlEl.style.display='none';
+    if(kcEl)kcEl.innerHTML='<span class="kcard-calc-empty">Defina o m²</span>';
+    if(ksEl)ksEl.textContent='ticket médio × m² digitado';
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('calc-m2-input')?.addEventListener('input',updateCalc);
+});
 
 /* ─── demo data ─── */
 function buildDemo(){
