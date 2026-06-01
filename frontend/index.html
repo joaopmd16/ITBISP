@@ -39,15 +39,15 @@
   --r-input:10px;
 }
 :root[data-theme="dark"]{
-  --bg:#1a1714;
-  --surface:#221e1a;
-  --surface-2:#2a2622;
-  --ink:#f0ebe1;
-  --ink-2:#c9c2b3;
-  --mu:#8a8275;
-  --mu-2:#5a5347;
-  --line:#332e28;
-  --line-2:#3f3a33;
+  --bg:#000000;
+  --surface:#0d0d0d;
+  --surface-2:#161616;
+  --ink:#f5f5f5;
+  --ink-2:#b8b8b8;
+  --mu:#808080;
+  --mu-2:#484848;
+  --line:#1e1e1e;
+  --line-2:#2a2a2a;
   --primary:#e08560;
   --primary-soft:#e0856022;
   --primary-ink:#f0a484;
@@ -725,8 +725,8 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
                     </linearGradient>
                   </defs>
                   <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="var(--surface-2)" stroke-width="16" stroke-linecap="round"/>
-                  <path id="gauge-arc" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#gg-arc)" stroke-width="16" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="180"/>
-                  <circle id="gauge-thumb" cx="100" cy="30" r="6" fill="var(--surface)" stroke="#e85959" stroke-width="3"/>
+                  <path id="gauge-arc" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#gg-arc)" stroke-width="16" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+                  <circle id="gauge-thumb" cx="20" cy="110" r="7" fill="var(--surface)" stroke="var(--primary)" stroke-width="2.5"/>
                 </svg>
                 <div class="gauge-overlay">
                   <div class="gauge-heart">
@@ -749,10 +749,6 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
               <button class="cbox-menu">⋯</button>
             </div>
             <div style="position:relative">
-              <div class="float-tip" id="bars-tip" style="top:8px;right:18px">
-                Crescimento de <u id="bars-tip-pct">—</u><br>
-                em relação ao período anterior.
-              </div>
               <canvas id="cano" style="max-height:240px"></canvas>
             </div>
           </div>
@@ -763,12 +759,50 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
           <div class="cbox-head">
             <div>
               <div class="cbox-title">Top bairros</div>
-              <div class="cbox-sub">clique para filtrar · ordenado por volume</div>
+              <div class="cbox-sub">clique para filtrar · ordenado por volume <span id="sd-badge" style="display:none;margin-left:8px;background:var(--surface-2);color:var(--mu);font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600"></span></div>
             </div>
             <button class="cbox-menu">⋯</button>
           </div>
           <canvas id="cbai" style="max-height:240px"></canvas>
         </div>
+      </div>
+
+      <!-- ─── Novos gráficos ─── -->
+      <div class="charts-row" style="margin-top:16px">
+        <!-- Sazonalidade mensal -->
+        <div class="cardbox" style="flex:2;min-width:0">
+          <div class="cbox-head">
+            <div>
+              <div class="cbox-title">Sazonalidade mensal</div>
+              <div class="cbox-sub">comparativo mês a mês por ano</div>
+            </div>
+            <button class="cbox-menu">⋯</button>
+          </div>
+          <canvas id="csaz" style="max-height:240px"></canvas>
+        </div>
+        <!-- Natureza da transação -->
+        <div class="cardbox" style="flex:1;min-width:0">
+          <div class="cbox-head">
+            <div>
+              <div class="cbox-title">Natureza da transação</div>
+              <div class="cbox-sub">distribuição por tipo</div>
+            </div>
+            <button class="cbox-menu">⋯</button>
+          </div>
+          <canvas id="cdnt" style="max-height:240px"></canvas>
+        </div>
+      </div>
+
+      <!-- Histograma faixas de valor -->
+      <div class="cardbox" style="margin-top:16px">
+        <div class="cbox-head">
+          <div>
+            <div class="cbox-title">Distribuição por faixa de valor</div>
+            <div class="cbox-sub">concentração do ticket médio por faixa de preço</div>
+          </div>
+          <button class="cbox-menu">⋯</button>
+        </div>
+        <canvas id="chist" style="max-height:200px"></canvas>
       </div>
 
       <!-- ─── Tabela ─── -->
@@ -885,7 +919,7 @@ function toggleTheme(){
   document.querySelectorAll('.icon-sun, .icon-sun-side').forEach(el=>el.style.display=newDark?'':'none');
   const btn=document.getElementById('btn-theme');
   if(btn)btn.title=newDark?'Modo claro':'Modo escuro · Claude';
-  if(lastResumo)renderCharts(lastResumo.por_ano||[],lastResumo.top_bairros||[]);
+  if(lastResumo)renderCharts(lastResumo.por_ano||[],lastResumo.top_bairros||[],lastResumo.por_mes||[],lastResumo.por_natureza||[],lastResumo.faixas_valor||[]);
 }
 
 /* ─── nav ─── */
@@ -1030,12 +1064,12 @@ async function loadStatus(){
     document.getElementById('yrs-y3').textContent=`${mx-2}–${mx}`;
     document.getElementById('yrs-y5').textContent=`${mx-4}–${mx}`;
     document.getElementById('yrs-all').textContent=`${allAnos[0]}–${mx}`;
-    const dMin=allAnos.includes(2020)?2020:(allAnos.find(a=>a>=mx-6)||allAnos[0]||2020);
+    const dMin=allAnos.find(a=>a>=mx-2)||allAnos[0]||mx-2;  // padrão: últimos 3 anos
     document.getElementById('famin').value=dMin;
     document.getElementById('famax').value=mx;
-    document.getElementById('pp-label').textContent='Últimos 7 anos  ('+dMin+'–'+mx+')';
+    document.getElementById('pp-label').textContent='Últimos 3 anos  ('+dMin+'–'+mx+')';
     document.querySelectorAll('.pp-item').forEach(i=>i.classList.remove('act'));
-    document.querySelector('.pp-item:nth-child(3)')?.classList.add('act');
+    document.querySelector('.pp-item:nth-child(2)')?.classList.add('act');
     if(dMin>allAnos[0])document.getElementById('bold').style.display='inline-flex';
   }catch(e){
     // demo years
@@ -1174,7 +1208,7 @@ async function buscar(p=1){
         fetch(`${API}/api/resumo?${getP()}`).then(x=>x.json()),
       ]);
       lastResumo=r;
-      renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[]);
+      renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[],r.por_mes||[],r.por_natureza||[],r.faixas_valor||[]);
       renderTable(d);
     }else{
       const d=await fetch(`${API}/api/transacoes?${params}`).then(x=>x.json());
@@ -1187,7 +1221,7 @@ async function buscar(p=1){
     hideLoading();
     const demo=buildDemo();lastResumo=demo.resumo;
     renderKPI(demo.resumo.geral);
-    renderCharts(demo.resumo.por_ano,demo.resumo.top_bairros);
+    renderCharts(demo.resumo.por_ano,demo.resumo.top_bairros,[],demo.resumo.por_natureza||[],[]);
     renderTable(demo.tab);renderPills();updateOverSub(true);
   }
 }
@@ -1237,8 +1271,6 @@ function renderKPI(g){
   }else{
     setGauge(64,bigK(t).num+bigK(t).unit);
   }
-  // bars tooltip
-  document.getElementById('bars-tip-pct').textContent=(deltaT>=0?'+':'')+deltaT.toFixed(1).replace('.',',')+'%';
   const peak=ano.reduce((a,b)=>b.transacoes>(a?.transacoes||0)?b:a,null);
   if(peak)document.getElementById('bars-headline').textContent=peak.ano_referencia;
 }
@@ -1252,106 +1284,210 @@ function setDelta(id,pct){
 }
 
 function setGauge(pct,centerLabel){
-  const total=Math.PI*80; // half-circumference
-  // path length = 251 (matches d, 80 radius half-circle)
-  const len=251;
-  const off=len-(len*pct/100);
-  document.getElementById('gauge-arc').setAttribute('stroke-dashoffset',off);
-  // thumb position along the arc
-  const ang=Math.PI*(1-pct/100); // from 180deg → 0deg
-  const cx=100+80*Math.cos(ang);
-  const cy=110-80*Math.sin(ang);
-  const th=document.getElementById('gauge-thumb');
-  th.setAttribute('cx',cx);th.setAttribute('cy',cy);
-  document.getElementById('gauge-val').innerHTML=centerLabel;
-  document.getElementById('gauge-cap').innerHTML=`Você está em <b style="color:var(--ink)">${pct}%</b> do maior ano da série.`;
-  document.getElementById('gauge-sub').textContent=`Atividade · ${pct}% do pico`;
+  // pathLength="100" → dashoffset é diretamente o percentual (sem getTotalLength)
+  // off = 100 - pct  →  pct=0 → off=100 (vazio); pct=100 → off=0 (cheio)
+  document.getElementById('gauge-arc').setAttribute('stroke-dashoffset', 100 - pct);
+
+  // Thumb: arco vai de esquerda (ângulo π) até direita (ângulo 0) no sentido horário
+  // pct=0 → thumb na esquerda (20,110); pct=100 → thumb na direita (180,110)
+  const ang = Math.PI * (1 - pct / 100);
+  const th  = document.getElementById('gauge-thumb');
+  th.setAttribute('cx', (100 + 80 * Math.cos(ang)).toFixed(2));
+  th.setAttribute('cy', (110 - 80 * Math.sin(ang)).toFixed(2));
+
+  document.getElementById('gauge-val').innerHTML = centerLabel;
+  document.getElementById('gauge-cap').innerHTML =
+    `Você está em <b style="color:var(--primary)">${pct}%</b> do maior ano da série.`;
+  document.getElementById('gauge-sub').textContent = `Atividade · ${pct}% do pico`;
 }
 
 /* ─── charts ─── */
-function renderCharts(ano,bai){
+function renderCharts(ano,bai,porMes,porNat,faixas){
   Object.values(CH).forEach(c=>c.destroy());CH={};
   const cs=getComputedStyle(document.documentElement);
   const ink=cs.getPropertyValue('--ink').trim();
   const mu=cs.getPropertyValue('--mu').trim();
   const line=cs.getPropertyValue('--line').trim();
   const primary=cs.getPropertyValue('--primary').trim();
-  const surface=cs.getPropertyValue('--surface').trim();
   const surface2=cs.getPropertyValue('--surface-2').trim();
-  Chart.defaults.font.family="Plus Jakarta Sans, -apple-system, system-ui, sans-serif";
+  const TT={backgroundColor:'#111',titleColor:'#fff',bodyColor:'#ccc',padding:12,cornerRadius:10,displayColors:false,
+    titleFont:{family:'JetBrains Mono',size:10,weight:'500'},
+    bodyFont:{family:'Plus Jakarta Sans',size:12,weight:'600'}};
+  Chart.defaults.font.family="Plus Jakarta Sans,-apple-system,system-ui,sans-serif";
 
-  // peak gets primary color
-  const peakVal=Math.max(...ano.map(r=>r.transacoes));
-  CH.ano=new Chart(document.getElementById('cano').getContext('2d'),{
-    type:'bar',
-    data:{
-      labels:ano.map(r=>r.ano_referencia),
-      datasets:[{
-        data:ano.map(r=>r.transacoes),
-        backgroundColor:ctx=>{
-          const v=ctx.parsed?.y??ctx.raw;
-          return v===peakVal?primary:surface2;
+  /* ── 1. Transações por ano (barras) ───────────────────────────── */
+  if(ano.length){
+    const peakVal=Math.max(...ano.map(r=>r.transacoes));
+    CH.ano=new Chart(document.getElementById('cano').getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:ano.map(r=>r.ano_referencia),
+        datasets:[{
+          data:ano.map(r=>r.transacoes),
+          backgroundColor:ctx=>(ctx.parsed?.y??ctx.raw)===peakVal?primary:surface2,
+          hoverBackgroundColor:primary,
+          borderRadius:8,borderSkipped:false,barPercentage:.6,categoryPercentage:.85
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...TT,
+          callbacks:{
+            title:ctx=>`${ctx[0].label}`,
+            label:ctx=>{
+              const v=ctx.parsed.y;
+              const pct=peakVal>0?((v/peakVal)*100).toFixed(1):'0';
+              return `${v.toLocaleString('pt-BR')} transações  (${pct}% do pico)`;
+            }
+          }
+        }},
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{color:mu,font:{size:11,weight:'500'}}},
+          y:{grid:{color:line,drawTicks:false},border:{display:false},
+            ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:10,maxTicksLimit:5,
+              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+        }
+      }
+    });
+  }
+
+  /* ── 2. Top bairros (barras horizontais) — sem S/D ────────────── */
+  const sdEntry=bai.find(r=>!r.bairro||r.bairro.trim()==='');
+  const sdBadge=document.getElementById('sd-badge');
+  if(sdEntry){
+    sdBadge.style.display='inline';
+    sdBadge.textContent=`${sdEntry.transacoes.toLocaleString('pt-BR')} sem bairro`;
+  }else{sdBadge.style.display='none';}
+  const bb=bai.filter(r=>r.bairro&&r.bairro.trim()!=='').slice(0,10);
+  if(bb.length){
+    CH.bai=new Chart(document.getElementById('cbai').getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:bb.map(r=>r.bairro),
+        datasets:[{
+          data:bb.map(r=>r.transacoes),
+          backgroundColor:ctx=>ctx.dataIndex===0?primary:surface2,
+          hoverBackgroundColor:primary,borderRadius:8,barPercentage:.7
+        }]
+      },
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...TT,
+          callbacks:{label:ctx=>ctx.parsed.x.toLocaleString('pt-BR')+' transações'}}},
+        onClick:(e,els)=>{
+          if(!els.length)return;
+          const b=bb[els[0].index]?.bairro;
+          if(b){document.getElementById('fb').value=b;buscar(1);}
         },
-        borderRadius:8,borderSkipped:false,
-        barPercentage:.6,categoryPercentage:.85,
-        hoverBackgroundColor:primary
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#16182a',titleColor:'#fff',bodyColor:'#fff',
-          padding:12,cornerRadius:10,displayColors:false,
-          titleFont:{family:'JetBrains Mono',size:10,weight:'500'},
-          bodyFont:{family:'Plus Jakarta Sans',size:12,weight:'600'},
-          callbacks:{label:ctx=>ctx.parsed.y.toLocaleString('pt-BR')+' transações'}
+        scales:{
+          x:{grid:{color:line,drawTicks:false},border:{display:false},
+            ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:10,maxTicksLimit:5,
+              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}},
+          y:{grid:{display:false},border:{display:false},
+            ticks:{color:ink,font:{size:12,weight:'600'},padding:10}}
         }
-      },
-      scales:{
-        x:{grid:{display:false},border:{display:false},ticks:{color:mu,font:{size:11,family:'Plus Jakarta Sans',weight:'500'}}},
-        y:{grid:{color:line,drawTicks:false},border:{display:false},ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:10,maxTicksLimit:5,callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
       }
-    }
-  });
+    });
+  }
 
-  const bb=bai.slice(0,10);
-  CH.bai=new Chart(document.getElementById('cbai').getContext('2d'),{
-    type:'bar',
-    data:{
-      labels:bb.map(r=>r.bairro||'S/D'),
-      datasets:[{
-        data:bb.map(r=>r.transacoes),
-        backgroundColor:ctx=>ctx.dataIndex===0?primary:surface2,
-        hoverBackgroundColor:primary,
-        borderRadius:8,
-        barPercentage:.7
-      }]
-    },
-    options:{
-      indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#16182a',titleColor:'#fff',bodyColor:'#fff',
-          padding:12,cornerRadius:10,displayColors:false,
-          titleFont:{family:'Plus Jakarta Sans',size:12,weight:'700'},
-          bodyFont:{family:'Plus Jakarta Sans',size:12,weight:'500'},
-          callbacks:{label:ctx=>ctx.parsed.x.toLocaleString('pt-BR')+' transações'}
+  /* ── 3. Sazonalidade mensal (linha) ───────────────────────────── */
+  if(porMes&&porMes.length){
+    const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const anos=[...new Set(porMes.map(r=>r.ano_referencia))].sort().slice(-3);
+    const CORES=['#e08560','#5b8fff','#5dd29c'];
+    const datasets=anos.map((a,i)=>{
+      const byMes=Array(12).fill(null);
+      porMes.filter(r=>r.ano_referencia===a).forEach(r=>{if(r.mes_referencia>=1&&r.mes_referencia<=12)byMes[r.mes_referencia-1]=r.transacoes;});
+      return{label:String(a),data:byMes,borderColor:CORES[i],backgroundColor:CORES[i]+'22',
+        pointBackgroundColor:CORES[i],pointRadius:4,pointHoverRadius:6,
+        tension:.35,fill:false,spanGaps:true};
+    });
+    CH.saz=new Chart(document.getElementById('csaz').getContext('2d'),{
+      type:'line',
+      data:{labels:MESES,datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:true,position:'top',align:'end',labels:{color:mu,usePointStyle:true,pointStyleWidth:8,boxHeight:6,font:{size:11}}},
+          tooltip:{...TT,mode:'index',intersect:false,
+            callbacks:{label:ctx=>`${ctx.dataset.label}: ${(ctx.parsed.y||0).toLocaleString('pt-BR')}`}}
+        },
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{color:mu,font:{size:11}}},
+          y:{grid:{color:line,drawTicks:false},border:{display:false},
+            ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:8,maxTicksLimit:5,
+              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
         }
-      },
-      onClick:(e,els)=>{
-        if(!els.length)return;
-        const bairro=bb[els[0].index]?.bairro;
-        if(bairro&&bairro!=='S/D'){document.getElementById('fb').value=bairro;buscar(1)}
-      },
-      scales:{
-        x:{grid:{color:line,drawTicks:false},border:{display:false},ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:10,maxTicksLimit:5,callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}},
-        y:{grid:{display:false},border:{display:false},ticks:{color:ink,font:{size:12,family:'Plus Jakarta Sans',weight:'600'},padding:10}}
       }
-    }
-  });
+    });
+  }
+
+  /* ── 4. Donut — natureza da transação ────────────────────────── */
+  if(porNat&&porNat.length){
+    const DORES=['#e08560','#5b8fff','#5dd29c','#e8b955','#e95e8a','#a87bff','#0891b2'];
+    const labels=porNat.map(r=>{
+      const n=String(r.natureza_transacao||'Outros');
+      return n.replace(/^\d+\.\s*/,'').slice(0,28);
+    });
+    CH.dnt=new Chart(document.getElementById('cdnt').getContext('2d'),{
+      type:'doughnut',
+      data:{labels,datasets:[{data:porNat.map(r=>r.total),
+        backgroundColor:DORES.slice(0,porNat.length),
+        borderColor:'#000',borderWidth:2,hoverOffset:6}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,cutout:'68%',
+        plugins:{
+          legend:{display:true,position:'right',labels:{color:mu,usePointStyle:true,pointStyleWidth:8,boxHeight:8,font:{size:11},
+            generateLabels:chart=>{
+              const ds=chart.data.datasets[0];
+              const total=ds.data.reduce((a,b)=>a+b,0);
+              return chart.data.labels.map((l,i)=>({
+                text:`${l}  ${total>0?((ds.data[i]/total)*100).toFixed(1)+'%':''}`,
+                fillStyle:ds.backgroundColor[i],strokeStyle:'transparent',index:i
+              }));
+            }
+          }},
+          tooltip:{...TT,callbacks:{label:ctx=>`${ctx.parsed.toLocaleString('pt-BR')} transações`}}
+        }
+      }
+    });
+  }
+
+  /* ── 5. Histograma — faixas de valor ─────────────────────────── */
+  if(faixas&&faixas.length){
+    const FORDER=['Ate 300k','300k-600k','600k-1M','1M-2M','Acima 2M'];
+    const fOrdenado=FORDER.map(f=>faixas.find(r=>r.faixa===f)||{faixa:f,transacoes:0});
+    const totFx=fOrdenado.reduce((a,r)=>a+r.transacoes,0);
+    CH.hist=new Chart(document.getElementById('chist').getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:['Até R$300k','R$300k–600k','R$600k–1M','R$1M–2M','Acima R$2M'],
+        datasets:[{
+          data:fOrdenado.map(r=>r.transacoes),
+          backgroundColor:[surface2,surface2,primary,surface2,surface2],
+          hoverBackgroundColor:primary,borderRadius:8,barPercentage:.65
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...TT,
+          callbacks:{
+            label:ctx=>{
+              const v=ctx.parsed.y;
+              const pct=totFx>0?((v/totFx)*100).toFixed(1):'0';
+              return `${v.toLocaleString('pt-BR')} transações  ·  ${pct}% do total`;
+            }
+          }
+        }},
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{color:mu,font:{size:11,weight:'500'}}},
+          y:{grid:{color:line,drawTicks:false},border:{display:false},
+            ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:8,maxTicksLimit:5,
+              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+        }
+      }
+    });
+  }
 }
 
 /* ─── tabela ─── */

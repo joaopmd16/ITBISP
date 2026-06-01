@@ -35,10 +35,23 @@ app.add_middleware(
 # UTILITÁRIOS
 # ──────────────────────────────────────────────
 
+import unicodedata
+
+def _unaccent(s: str | None) -> str | None:
+    """Remove acentos e normaliza para uppercase — usado como função SQLite UNACCENT()."""
+    if s is None:
+        return None
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', str(s))
+        if unicodedata.category(c) != 'Mn'
+    ).upper()
+
+
 @contextmanager
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.create_function("UNACCENT", 1, _unaccent)   # disponível em todas as queries
     try:
         yield conn
     finally:
@@ -51,14 +64,14 @@ def rows_to_list(rows) -> list[dict]:
 
 def _multi_like(col: str, value: str, nocase: bool = True) -> tuple[str, list]:
     """Suporte a múltiplos valores separados por vírgula → OR no SQL.
-    Ex: 'brasilandia, freguesia' → (col LIKE '%brasilandia%' OR col LIKE '%freguesia%')
+    Normaliza o INPUT (remove acentos) e compara com UPPER(col) —
+    mantém uso dos índices sem chamar UDF por linha.
     """
     vals = [v.strip() for v in value.split(",") if v.strip()]
     if not vals:
         return "", []
-    collate = " COLLATE NOCASE" if nocase else ""
-    clauses = [f"{col} LIKE ?{collate}" for _ in vals]
-    return f"({' OR '.join(clauses)})", [f"%{v}%" for v in vals]
+    clauses = [f"UPPER({col}) LIKE ?" for _ in vals]
+    return f"({' OR '.join(clauses)})", [f"%{_unaccent(v)}%" for v in vals]
 
 
 @app.on_event("startup")
@@ -97,47 +110,49 @@ def startup():
         """)
         conn.commit()
 
-    # 2. Pré-aquece APENAS o range padrão (2020–atual) — evita OOM em VMs com pouca RAM
+    # 2. Pré-aquece o cache do resumo para o range padrão do frontend (últimos 3 anos)
     import threading
     def _prewarm():
         try:
             import time
-            time.sleep(5)  # deixa o servidor subir antes de fazer queries
+            time.sleep(3)
             ano_max = datetime.now().year
-            ano_min = ano_max - 6  # 2020
-            where = "WHERE ano_referencia >= ? AND ano_referencia <= ?"
-            params_q = [ano_min, ano_max]
-            with get_db() as conn:
-                geral = conn.execute(f"""
-                    SELECT COUNT(*) AS total_transacoes,
-                           SUM(valor_declarado) AS volume_total,
-                           AVG(valor_declarado) AS ticket_medio,
-                           MIN(valor_declarado) AS valor_minimo,
-                           MAX(valor_declarado) AS valor_maximo,
-                           SUM(valor_itbi)      AS itbi_total
-                    FROM transacoes {where}""", params_q).fetchone()
-                por_ano = conn.execute(f"""
-                    SELECT ano_referencia, COUNT(*) as transacoes,
-                           AVG(valor_declarado) as ticket_medio,
-                           SUM(valor_declarado) as volume
-                    FROM transacoes {where}
-                    GROUP BY ano_referencia ORDER BY ano_referencia""", params_q).fetchall()
-                por_natureza = conn.execute(f"""
-                    SELECT natureza_transacao, COUNT(*) as total
-                    FROM transacoes {where}
-                    GROUP BY natureza_transacao ORDER BY total DESC LIMIT 10""", params_q).fetchall()
-                top_bairros = conn.execute(f"""
-                    SELECT bairro, COUNT(*) as transacoes,
-                           AVG(valor_declarado) as ticket_medio
-                    FROM transacoes {where}
-                    GROUP BY bairro ORDER BY transacoes DESC LIMIT 15""", params_q).fetchall()
-            resultado = {
-                "geral": dict(geral),
-                "por_ano": rows_to_list(por_ano),
-                "por_natureza": rows_to_list(por_natureza),
-                "top_bairros": rows_to_list(top_bairros),
-            }
-            _resumo_cache_set(where + str(params_q), resultado)
+            # Aquece os dois ranges mais usados: últimos 3 anos e último ano
+            for ano_min in [ano_max - 2, ano_max]:
+                where = "WHERE ano_referencia >= ? AND ano_referencia <= ?"
+                params_q = [ano_min, ano_max]
+                with get_db() as conn:
+                    conn.execute("PRAGMA cache_size = -32768")
+                    geral = conn.execute(f"""
+                        SELECT COUNT(*) AS total_transacoes,
+                               SUM(valor_declarado) AS volume_total,
+                               AVG(valor_declarado) AS ticket_medio,
+                               MIN(valor_declarado) AS valor_minimo,
+                               MAX(valor_declarado) AS valor_maximo,
+                               SUM(valor_itbi)      AS itbi_total
+                        FROM transacoes {where}""", params_q).fetchone()
+                    por_ano = conn.execute(f"""
+                        SELECT ano_referencia, COUNT(*) as transacoes,
+                               AVG(valor_declarado) as ticket_medio,
+                               SUM(valor_declarado) as volume
+                        FROM transacoes {where}
+                        GROUP BY ano_referencia ORDER BY ano_referencia""", params_q).fetchall()
+                    por_natureza = conn.execute(f"""
+                        SELECT natureza_transacao, COUNT(*) as total
+                        FROM transacoes {where}
+                        GROUP BY natureza_transacao ORDER BY total DESC LIMIT 10""", params_q).fetchall()
+                    top_bairros = conn.execute(f"""
+                        SELECT bairro, COUNT(*) as transacoes,
+                               AVG(valor_declarado) as ticket_medio
+                        FROM transacoes {where}
+                        GROUP BY bairro ORDER BY transacoes DESC LIMIT 15""", params_q).fetchall()
+                resultado = {
+                    "geral": dict(geral),
+                    "por_ano": rows_to_list(por_ano),
+                    "por_natureza": rows_to_list(por_natureza),
+                    "top_bairros": rows_to_list(top_bairros),
+                }
+                _resumo_cache_set(where + str(params_q), resultado)
         except Exception:
             pass
     threading.Thread(target=_prewarm, daemon=True).start()
@@ -393,11 +408,38 @@ def resumo(
             LIMIT 15
         """, params).fetchall()
 
+        por_mes = conn.execute(f"""
+            SELECT ano_referencia, mes_referencia, COUNT(*) as transacoes
+            FROM transacoes {where}
+            WHERE mes_referencia IS NOT NULL
+            GROUP BY ano_referencia, mes_referencia
+            ORDER BY ano_referencia, mes_referencia
+        """, params).fetchall()
+
+        faixas_valor = conn.execute(f"""
+            SELECT
+              CASE
+                WHEN valor_declarado <  300000  THEN 'Ate 300k'
+                WHEN valor_declarado <  600000  THEN '300k-600k'
+                WHEN valor_declarado < 1000000  THEN '600k-1M'
+                WHEN valor_declarado < 2000000  THEN '1M-2M'
+                ELSE 'Acima 2M'
+              END AS faixa,
+              COUNT(*) AS transacoes,
+              MIN(valor_declarado) AS _ord
+            FROM transacoes {where}
+            WHERE valor_declarado IS NOT NULL AND valor_declarado > 0
+            GROUP BY faixa
+            ORDER BY _ord
+        """, params).fetchall()
+
     resultado = {
         "geral": dict(geral),
         "por_ano": rows_to_list(por_ano),
         "por_natureza": rows_to_list(por_natureza),
         "top_bairros": rows_to_list(top_bairros),
+        "por_mes": rows_to_list(por_mes),
+        "faixas_valor": [{"faixa": r["faixa"], "transacoes": r["transacoes"]} for r in faixas_valor],
     }
     _resumo_cache_set(cache_key, resultado)
     return resultado
@@ -410,9 +452,9 @@ def autocomplete_logradouro(q: str = Query(..., min_length=3)):
     with get_db() as conn:
         rows = conn.execute("""
             SELECT DISTINCT logradouro FROM transacoes
-            WHERE UPPER(logradouro) LIKE UPPER(?)
+            WHERE UPPER(logradouro) LIKE ?
             ORDER BY logradouro LIMIT 15
-        """, (f"%{q}%",)).fetchall()
+        """, (f"%{_unaccent(q)}%",)).fetchall()
     return [r["logradouro"] for r in rows if r["logradouro"]]
 
 
@@ -421,9 +463,9 @@ def autocomplete_bairro(q: str = Query(..., min_length=2)):
     with get_db() as conn:
         rows = conn.execute("""
             SELECT DISTINCT bairro FROM transacoes
-            WHERE UPPER(bairro) LIKE UPPER(?)
+            WHERE UPPER(bairro) LIKE ?
             ORDER BY bairro LIMIT 15
-        """, (f"%{q}%",)).fetchall()
+        """, (f"%{_unaccent(q)}%",)).fetchall()
     return [r["bairro"] for r in rows if r["bairro"]]
 
 

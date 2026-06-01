@@ -445,10 +445,33 @@ def _df_raw_from_rows(rows: list, sheet_name: str) -> pd.DataFrame | None:
 def processar_ano_csv(xlsx_path: Path, ano: int, forcar_csv: bool = False) -> pd.DataFrame:
     """
     Processa um arquivo XLSX ano a ano:
-    1. Lê lista de abas (leve, só metadados)
-    2. Para cada aba de mês: usa CSV em cache se disponível, senão converte do XLSX
+    1. Se XLSX não existir mas CSVs existirem → lê direto dos CSVs (sem abrir XLSX)
+    2. Se XLSX existir → lê abas uma a uma, cacheia cada uma como CSV
     3. Normaliza e retorna DataFrame consolidado
     """
+    # ── Modo CSV-only: sem XLSX na VM ─────────────────────────────────────
+    if not xlsx_path.exists():
+        csv_files = sorted(CSV_DIR.glob(f"itbi_{ano}_*.csv"))
+        if not csv_files:
+            print(f"   [ERRO] Nem XLSX nem CSVs para {ano}")
+            return pd.DataFrame()
+        frames_csv = []
+        for csv_path in csv_files:
+            sheet_name = csv_path.stem[len(f"itbi_{ano}_"):]
+            mes = mes_da_aba(sheet_name)
+            try:
+                df_raw = pd.read_csv(csv_path, dtype=str, keep_default_na=False)
+                df_raw = df_raw.replace({'': None, 'nan': None, 'None': None})
+                df = normalizar_df(df_raw, ano, mes)
+                if not df.empty:
+                    frames_csv.append(df)
+                    print(f"      [CSV] {sheet_name:<14} > {len(df):>7,} registros")
+                del df_raw; gc.collect()
+            except Exception as e:
+                print(f"      [ERRO] {csv_path.name}: {e}")
+        return pd.concat(frames_csv, ignore_index=True) if frames_csv else pd.DataFrame()
+
+    # ── Modo normal: XLSX presente ────────────────────────────────────────
     from openpyxl import load_workbook
 
     # Lê só os nomes das abas — muito mais leve que carregar tudo
@@ -576,27 +599,34 @@ def sincronizar(anos: list[int] = None, forcar: bool = False, limpar_csv: bool =
 
         xlsx_path = CACHE_DIR / f"itbi_{ano}.xlsx"
 
-        # Re-usa XLSX já baixado se existir e hash não mudou
+        # ── Prioridade 1: CSVs já existem → usa sem precisar do XLSX ─────
+        csvs_existentes = list(CSV_DIR.glob(f"itbi_{ano}_*.csv"))
+        if csvs_existentes and not forcar:
+            print(f"   [CSV] [{ano}] {len(csvs_existentes)} CSVs em cache — processando direto...")
+            df = processar_ano_csv(xlsx_path, ano, forcar_csv=False)
+            if not df.empty:
+                hash_ref = hash_em_banco(ano) or f"csv_{ano}"
+                salvar_no_banco(df, ano, hash_ref)
+                total_geral += len(df)
+                print(f"   [OK] [{ano}] {len(df):,} registros salvos (do CSV).\n")
+                del df; gc.collect()
+            continue
+
+        # ── Prioridade 2: XLSX local com hash igual → pula ───────────────
         if xlsx_path.exists() and not forcar:
             hash_salvo = hash_em_banco(ano)
             novo_hash  = file_hash(xlsx_path)
             if hash_salvo and novo_hash == hash_salvo:
-                # Verifica se CSVs existem
-                csvs_existentes = list(CSV_DIR.glob(f"itbi_{ano}_*.csv"))
-                if csvs_existentes:
-                    print(f"   ↩️  [{ano}] XLSX e CSVs em cache — relendo CSVs...")
-                    df = processar_ano_csv(xlsx_path, ano, forcar_csv=False)
-                    if not df.empty:
-                        salvar_no_banco(df, ano, novo_hash)
-                        total_geral += len(df)
-                        print(f"   ✅ [{ano}] {len(df):,} registros salvos (do CSV).\n")
-                        del df; gc.collect()
-                    continue
-                # Sem CSVs → converte do XLSX
-        else:
-            xlsx_path = download(ano, url)
-            if xlsx_path is None:
+                print(f"   [=] [{ano}] Arquivo nao mudou, pulando.\n")
                 continue
+
+        # ── Prioridade 3: Baixa do site ───────────────────────────────────
+        if not xlsx_path.exists() or forcar:
+            xlsx_baixado = download(ano, url)
+            if xlsx_baixado is None:
+                print(f"   [ERRO] [{ano}] Download falhou e sem CSVs em cache. Pulando.\n")
+                continue
+            xlsx_path = xlsx_baixado
 
         novo_hash = file_hash(xlsx_path)
         hash_salvo = hash_em_banco(ano)
