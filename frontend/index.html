@@ -155,7 +155,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .pp-divider{height:1px;background:var(--line);margin:6px 0}
 
 /* ─── KPI cards ─── */
-.kgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
 .kcard{background:var(--surface);border-radius:var(--r-card);padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s}
 .kcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .kcard-top{display:flex;align-items:flex-start;justify-content:space-between}
@@ -166,6 +166,34 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .kico.amber{background:var(--tint-amber-bg);color:var(--tint-amber-fg)}
 .kico.green{background:var(--tint-green-bg);color:var(--tint-green-fg)}
 .kico.pink{background:var(--tint-pink-bg);color:var(--tint-pink-fg)}
+.kico.orange{background:#ff8c4222;color:#ff8c42}
+/* ── Calculadora ── */
+/* ── Calculadora ── */
+.calc-section{background:var(--surface);border-radius:var(--r-card);padding:0;box-shadow:var(--shadow);margin-bottom:0;overflow:hidden}
+.calc-header{display:flex;align-items:center;gap:10px;padding:18px 24px 16px;border-bottom:1px solid var(--line)}
+.calc-header-ico{width:32px;height:32px;border-radius:10px;background:#ff8c4222;color:#ff8c42;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.calc-header-ico svg{width:16px;height:16px}
+.calc-header-text{flex:1}
+.calc-header-text h3{margin:0;font-size:13px;font-weight:700;color:var(--fg);line-height:1}
+.calc-header-text p{margin:0;font-size:11px;color:var(--muted);margin-top:2px}
+.calc-body{display:flex;align-items:stretch;gap:0;padding:0}
+.calc-slot{flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:6px;position:relative}
+.calc-slot+.calc-slot{border-left:1px solid var(--line)}
+.calc-slot label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.calc-slot-val{font-size:24px;font-weight:800;color:var(--fg);letter-spacing:-.02em;line-height:1.1}
+.calc-slot-val.accent{color:#ff8c42}
+.calc-slot-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.calc-slot input{width:100%;padding:10px 14px;border-radius:var(--r-input);border:1.5px solid var(--line);background:var(--surface-2);color:var(--fg);font-size:20px;font-weight:700;outline:none;transition:border-color .15s,box-shadow .15s;-moz-appearance:textfield}
+.calc-slot input::-webkit-outer-spin-button,.calc-slot input::-webkit-inner-spin-button{-webkit-appearance:none}
+.calc-slot input:focus{border-color:#ff8c42;box-shadow:0 0 0 3px #ff8c4218}
+.calc-slot input.modified{border-color:#ff8c42;background:#ff8c420d}
+.calc-op{display:flex;align-items:center;justify-content:center;padding:0 4px;font-size:26px;font-weight:200;color:var(--muted);align-self:center;user-select:none;flex-shrink:0}
+.calc-result-slot{flex:1.3;padding:20px 24px;display:flex;flex-direction:column;gap:6px;background:linear-gradient(135deg,#ff8c4210 0%,transparent 60%);border-left:1px solid var(--line)}
+.calc-result-slot label{font-size:10.5px;font-weight:700;color:#ff8c42;text-transform:uppercase;letter-spacing:.06em}
+.calc-result-big{font-size:28px;font-weight:900;color:#ff8c42;letter-spacing:-.03em;line-height:1}
+.calc-result-empty{font-size:15px;font-weight:600;color:var(--muted)}
+.calc-result-sub{font-size:11px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:5px}
+.calc-result-sub svg{opacity:.5}
 .kdot{width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);margin:6px}
 .kval{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--ink);font-feature-settings:"tnum","ss01"}
 .kval .unit{font-size:18px;font-weight:600;color:var(--mu);margin-left:2px;letter-spacing:-.01em}
@@ -195,7 +223,11 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .charts-row{display:grid;grid-template-columns:5fr 7fr;gap:16px}
 .cardbox{background:var(--surface);border-radius:var(--r-card);padding:22px 24px;box-shadow:var(--shadow);position:relative}
 .cbox-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:10px}
-.cbox-title{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.015em}
+.cbox-title{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.015em;display:inline-flex;align-items:center;gap:6px}
+.cbox-tip{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--surface-2);color:var(--mu);font-size:10px;font-weight:700;cursor:default;position:relative;flex-shrink:0;transition:background .15s,color .15s}
+.cbox-tip:hover{background:var(--primary);color:#fff}
+.cbox-tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);background:#1a1a2e;color:#e8e8e8;font-size:11.5px;font-weight:400;line-height:1.5;padding:10px 14px;border-radius:10px;white-space:pre-wrap;width:240px;pointer-events:none;opacity:0;transition:opacity .18s;z-index:999;box-shadow:0 6px 24px #0004;border:1px solid #ffffff12}
+.cbox-tip:hover::after{opacity:1}
 .cbox-sub{font-size:12px;color:var(--mu);margin-top:2px}
 .cbox-menu{background:var(--surface-2);border:none;width:28px;height:28px;border-radius:8px;cursor:pointer;color:var(--mu);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cbox-menu:hover{color:var(--ink)}
@@ -215,6 +247,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .gauge-num{position:absolute;left:50%;top:68%;transform:translate(-50%,-50%);font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--ink);line-height:1;white-space:nowrap}
 .gauge-num .un{font-size:15px;color:var(--mu);font-weight:600;margin-left:2px}
 .gauge-cap{font-size:12px;color:var(--mu);margin-top:10px;max-width:240px;line-height:1.4;text-align:center;padding:0 8px}
+.chart-empty{display:flex;align-items:center;justify-content:center;min-height:140px;font-size:12px;color:var(--mu);font-style:italic;opacity:.6}
 
 /* inline filters */
 .filt-inline{background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow);overflow:hidden}
@@ -402,7 +435,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 @keyframes spin{to{transform:rotate(360deg)}}
 
 @media(max-width:1100px){
-  .kgrid{grid-template-columns:repeat(2,1fr)}
+  .kgrid{grid-template-columns:repeat(2,1fr);}.kcard-calc .calc-field input{font-size:12px}
   .charts-row{grid-template-columns:1fr}
   .fgrid{grid-template-columns:1fr}
   .mg{grid-template-columns:1fr 1fr}
@@ -616,6 +649,25 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
             <div class="kdelta up" id="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M7 17 17 7M7 7h10v10"/></svg><span>—</span><span class="vs">vs período anterior</span></div>
           </div>
         </div>
+
+        <!-- KPI Calculadora m² -->
+        <div class="kcard kcard-calc">
+          <div class="kcard-top">
+            <div class="kico orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h4"/></svg>
+            </div>
+          </div>
+          <div>
+            <div class="kval" id="k-calc-result" style="font-size:16px">Defina o m²</div>
+            <div class="klabel">Valor do m² (ticket ÷ m²)</div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+              <input id="calc-m2" type="number" min="1" placeholder="m²" title="Área em m²"
+                style="width:80px;padding:6px 10px;border-radius:var(--r-input);border:1.5px solid var(--line);background:var(--surface-2);color:var(--fg);font-size:13px;font-weight:600;outline:none"
+                oninput="updateCalc()" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--line)'">
+              <span style="font-size:11px;color:var(--muted)">m²</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- filtros inline -->
@@ -709,7 +761,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
           <div class="cardbox">
             <div class="cbox-head">
               <div>
-                <div class="cbox-title">Movimento do mercado</div>
+                <div class="cbox-title">Movimento do mercado<span class="cbox-tip" data-tip="Indica o volume de transações do ano mais recente em relação ao pico histórico da série. 100% = ano recorde.">ⓘ</span></div>
                 <div class="cbox-sub" id="gauge-sub">Atividade vs. capacidade</div>
               </div>
               <button class="cbox-menu">⋯</button>
@@ -743,7 +795,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
           <div class="cardbox">
             <div class="cbox-head">
               <div>
-                <div class="cbox-title">Transações por ano</div>
+                <div class="cbox-title">Transações por ano<span class="cbox-tip" data-tip="Volume total de transações imobiliárias registradas a cada ano. A barra em destaque (coral) indica o ano de maior volume histórico.">ⓘ</span></div>
                 <div class="cbox-sub"><span id="bars-headline" class="mono" style="color:var(--primary);font-weight:600">—</span> · pico de movimento</div>
               </div>
               <button class="cbox-menu">⋯</button>
@@ -758,7 +810,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="cardbox" style="margin-top:16px">
           <div class="cbox-head">
             <div>
-              <div class="cbox-title">Top bairros</div>
+              <div class="cbox-title">Top bairros<span class="cbox-tip" data-tip="Os 10 bairros com maior número de transações no período filtrado. Clique em uma barra para filtrar pelo bairro.">ⓘ</span></div>
               <div class="cbox-sub">clique para filtrar · ordenado por volume <span id="sd-badge" style="display:none;margin-left:8px;background:var(--surface-2);color:var(--mu);font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600"></span></div>
             </div>
             <button class="cbox-menu">⋯</button>
@@ -773,18 +825,19 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="cardbox" style="flex:2;min-width:0">
           <div class="cbox-head">
             <div>
-              <div class="cbox-title">Sazonalidade mensal</div>
+              <div class="cbox-title">Sazonalidade mensal<span class="cbox-tip" data-tip="Compara o volume de transações mês a mês nos últimos 3 anos. Permite identificar padrões sazonais — meses de alta e baixa no mercado imobiliário.">ⓘ</span></div>
               <div class="cbox-sub">comparativo mês a mês por ano</div>
             </div>
             <button class="cbox-menu">⋯</button>
           </div>
           <canvas id="csaz" style="max-height:240px"></canvas>
+          <div id="csaz-empty" class="chart-empty" style="display:none">Dados mensais não disponíveis para o filtro selecionado</div>
         </div>
         <!-- Natureza da transação -->
         <div class="cardbox" style="flex:1;min-width:0">
           <div class="cbox-head">
             <div>
-              <div class="cbox-title">Natureza da transação</div>
+              <div class="cbox-title">Natureza da transação<span class="cbox-tip" data-tip="Distribuição proporcional dos tipos de transferência: compra e venda, arrematação, doação, permuta, entre outros. Mostra qual modalidade domina no filtro ativo.">ⓘ</span></div>
               <div class="cbox-sub">distribuição por tipo</div>
             </div>
             <button class="cbox-menu">⋯</button>
@@ -797,12 +850,56 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
       <div class="cardbox" style="margin-top:16px">
         <div class="cbox-head">
           <div>
-            <div class="cbox-title">Distribuição por faixa de valor</div>
+            <div class="cbox-title">Distribuição por faixa de valor<span class="cbox-tip" data-tip="Concentração de transações por faixa de preço declarado: até R$300k, R$300k–600k, R$600k–1M, R$1M–2M e acima de R$2M. A barra em destaque é a faixa com maior volume.">ⓘ</span></div>
             <div class="cbox-sub">concentração do ticket médio por faixa de preço</div>
           </div>
           <button class="cbox-menu">⋯</button>
         </div>
         <canvas id="chist" style="max-height:200px"></canvas>
+        <div id="chist-empty" class="chart-empty" style="display:none">Dados de faixa de valor não disponíveis para o filtro selecionado</div>
+      </div>
+
+      <!-- ─── Calculadora ─── -->
+      <div class="calc-section" id="calc">
+        <div class="calc-header">
+          <div class="calc-header-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h4"/></svg>
+          </div>
+          <div class="calc-header-text">
+            <h3>Calculadora de Ticket Médio por m²</h3>
+            <p>Digite a área para calcular o valor estimado por metro quadrado com base no ticket médio do filtro atual</p>
+          </div>
+        </div>
+        <div class="calc-body">
+          <div class="calc-slot">
+            <label style="display:flex;align-items:center;justify-content:space-between">
+              <span>Ticket médio</span>
+              <button id="calc-tm-reset" onclick="resetCalcTm()" title="Restaurar valor original"
+                style="display:none;background:none;border:none;cursor:pointer;color:#ff8c42;font-size:10px;font-weight:700;padding:0;text-transform:uppercase;letter-spacing:.04em;gap:3px;align-items:center">
+                ↺ restaurar
+              </button>
+            </label>
+            <input id="calc-tm-input" type="text" inputmode="numeric" placeholder="—"
+              oninput="onCalcTmChange()" onblur="fmtCalcTmBlur()" onfocus="fmtCalcTmFocus()">
+            <div class="calc-slot-sub" id="calc-tm-sub">padrão: baseado no filtro</div>
+          </div>
+          <div class="calc-op">÷</div>
+          <div class="calc-slot">
+            <label>Área do imóvel (m²)</label>
+            <input id="calc-m2-main" type="number" min="1" placeholder="65" oninput="updateCalc()">
+            <div class="calc-slot-sub">informe a área construída</div>
+          </div>
+          <div class="calc-op">=</div>
+          <div class="calc-result-slot">
+            <label>Valor estimado do m²</label>
+            <div id="calc-output-big" class="calc-result-big" style="display:none"></div>
+            <div id="calc-output-empty" class="calc-result-empty">Digite a área →</div>
+            <div class="calc-result-sub">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              ticket médio ÷ área informada
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ─── Tabela ─── -->
@@ -1125,6 +1222,23 @@ function getP(extra={}){
   return p;
 }
 
+// Params sem filtros de endereço específico (logradouro/numero/cep/sql)
+// Usado para sazonalidade e histograma mostrarem o panorama geral do bairro/ano
+function getContextP(){
+  const v=id=>document.getElementById(id)?.value?.trim()||'';
+  const p=new URLSearchParams();
+  const fb=_getTagValue('fb');if(fb)p.append('bairro',fb);
+  if(v('famin'))p.append('ano_min',v('famin'));
+  if(v('famax'))p.append('ano_max',v('famax'));
+  if(v('fvmin'))p.append('valor_min',v('fvmin'));
+  if(v('fvmax'))p.append('valor_max',v('fvmax'));
+  let nat=v('fnat');
+  if(natFilter==='cp'&&!nat)nat='compra';
+  if(natFilter==='ar'&&!nat)nat='arremata';
+  if(nat)p.append('natureza',nat);
+  return p;
+}
+
 function limpar(){
   _clearTags('fl');_clearTags('fb');
   ['fc','fn','fvmin','fvmax','fnat','fsql'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
@@ -1203,12 +1317,17 @@ async function buscar(p=1){
       selectedIds.clear();
       document.getElementById('cb-all').checked=false;
       updateExpBar();
-      const[d,r]=await Promise.all([
+      const contextP=getContextP();
+      const sameContext=contextP.toString()===getP().toString();
+      const[d,r,ctx]=await Promise.all([
         fetch(`${API}/api/transacoes?${params}`).then(x=>x.json()),
         fetch(`${API}/api/resumo?${getP()}`).then(x=>x.json()),
+        sameContext?Promise.resolve(null):fetch(`${API}/api/resumo?${contextP}`).then(x=>x.json()),
       ]);
       lastResumo=r;
-      renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[],r.por_mes||[],r.por_natureza||[],r.faixas_valor||[]);
+      const porMes=(ctx||r).por_mes||[];
+      const faixas=(ctx||r).faixas_valor||[];
+      renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[],porMes,r.por_natureza||[],faixas);
       renderTable(d);
     }else{
       const d=await fetch(`${API}/api/transacoes?${params}`).then(x=>x.json());
@@ -1236,11 +1355,139 @@ function updateOverSub(demo){
 }
 
 /* ─── KPIs ─── */
+let _calcTicketMedio = 0;
+let _calcTmDefault   = 0;   // guarda o valor original da API
+
+function _brlFmt(v){
+  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+}
+function _brlShort(v){
+  if(v>=1e9) return `R$ ${(v/1e9).toFixed(2).replace('.',',')} B`;
+  if(v>=1e6) return `R$ ${(v/1e6).toFixed(2).replace('.',',')} M`;
+  if(v>=1e3) return `R$ ${(v/1e3).toFixed(1).replace('.',',')} K`;
+  return `R$ ${Math.round(v).toLocaleString('pt-BR')}`;
+}
+function _parseCalcTm(str){
+  // aceita "635.533", "R$ 635.533", "635533"
+  return parseFloat(str.replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+}
+
+function _setCalcTm(val, isDefault){
+  const inp = document.getElementById('calc-tm-input');
+  const sub = document.getElementById('calc-tm-sub');
+  const rst = document.getElementById('calc-tm-reset');
+  if(!inp) return;
+  // se o campo está em foco, mostra só número puro; senão formata
+  if(document.activeElement === inp){
+    inp.value = Math.round(val);
+  } else {
+    inp.value = _brlFmt(val);
+  }
+  if(isDefault){
+    inp.classList.remove('modified');
+    if(rst) rst.style.display = 'none';
+    if(sub) sub.textContent = 'padrão: baseado no filtro';
+  } else {
+    inp.classList.add('modified');
+    if(rst) rst.style.display = 'inline-flex';
+    if(sub) sub.textContent = `padrão: ${_brlShort(_calcTmDefault)}`;
+  }
+}
+
+function fmtCalcTmFocus(){
+  // ao focar: remove "R$ " mas mantém pontos — já formatado para edição ao vivo
+  const inp = document.getElementById('calc-tm-input');
+  if(!inp) return;
+  const raw = _parseCalcTm(inp.value);
+  if(raw > 0) inp.value = Math.round(raw).toLocaleString('pt-BR');
+  inp.select();
+}
+
+function fmtCalcTmBlur(){
+  // ao sair: formata com R$ e pontos
+  const inp = document.getElementById('calc-tm-input');
+  if(!inp) return;
+  const raw = _parseCalcTm(inp.value);
+  if(raw > 0) inp.value = _brlFmt(raw);
+}
+
+function onCalcTmChange(){
+  const inp = document.getElementById('calc-tm-input');
+  // extrai só dígitos
+  const digits = (inp?.value || '').replace(/\D/g,'');
+  const val = parseFloat(digits) || 0;
+
+  // reformata com pontos mantendo cursor no fim
+  if(digits.length > 0){
+    const formatted = parseInt(digits).toLocaleString('pt-BR');
+    inp.value = formatted;
+  }
+
+  _calcTicketMedio = val > 0 ? val : 0;
+  const isDefault = Math.round(val) === Math.round(_calcTmDefault);
+  const sub = document.getElementById('calc-tm-sub');
+  const rst = document.getElementById('calc-tm-reset');
+  if(isDefault){
+    inp.classList.remove('modified');
+    if(rst) rst.style.display='none';
+    if(sub) sub.textContent='padrão: baseado no filtro';
+  } else {
+    inp.classList.add('modified');
+    if(rst) rst.style.display='inline-flex';
+    if(sub) sub.textContent=`padrão: ${_brlShort(_calcTmDefault)}`;
+  }
+  updateCalc();
+}
+
+function resetCalcTm(){
+  _calcTicketMedio = _calcTmDefault;
+  _setCalcTm(_calcTmDefault, true);
+  updateCalc();
+}
+
+function updateCalc(){
+  const m2El   = document.getElementById('calc-m2-main');
+  const kEl    = document.getElementById('calc-m2');       // mini input no KPI card
+  const bigEl  = document.getElementById('calc-output-big');
+  const emptyEl= document.getElementById('calc-output-empty');
+  const outKpi = document.getElementById('k-calc-result');
+
+  // sincroniza os dois inputs de m²
+  if(document.activeElement === m2El && kEl) kEl.value = m2El.value;
+  if(document.activeElement === kEl && m2El) m2El.value = kEl.value;
+
+  const m2 = parseFloat((m2El||kEl)?.value);
+  const tm = _calcTicketMedio;
+
+  if(!m2 || m2 <= 0 || !tm){
+    if(bigEl)  { bigEl.style.display='none'; bigEl.textContent=''; }
+    if(emptyEl){ emptyEl.style.display=''; emptyEl.textContent='Digite a área →'; }
+    if(outKpi) outKpi.textContent = 'Defina o m²';
+    return;
+  }
+  const resultado = tm / m2;
+  const fmt = resultado >= 1e6
+    ? `R$ ${(resultado/1e6).toFixed(2).replace('.',',')} M`
+    : resultado >= 1e3
+    ? `R$ ${(resultado/1e3).toFixed(1).replace('.',',')} K`
+    : `R$ ${resultado.toLocaleString('pt-BR',{maximumFractionDigits:0})}`;
+  const fmtFull = fmt + '/m²';
+  if(bigEl)  { bigEl.style.display=''; bigEl.textContent=fmtFull; }
+  if(emptyEl){ emptyEl.style.display='none'; }
+  if(outKpi) outKpi.textContent = fmtFull;
+}
+
 function renderKPI(g){
   const t=g.total_transacoes||0;
   const vol=bigK(g.volume_total);
   const tm=bigK(g.ticket_medio);
   const ib=bigK(g.itbi_total);
+
+  // atualiza calculadora com novo ticket médio (sempre restaura o padrão)
+  _calcTmDefault   = g.ticket_medio || 0;
+  _calcTicketMedio = _calcTmDefault;
+  _setCalcTm(_calcTmDefault, true);
+  updateCalc();
 
   document.getElementById('kt').innerHTML=t.toLocaleString('pt-BR');
   document.getElementById('kv').innerHTML=`${vol.num}<span class="unit">${vol.unit}</span>`;
@@ -1264,12 +1511,12 @@ function renderKPI(g){
   // gauge: percent of max year
   const years=(lastResumo?.por_ano||[]);
   if(years.length){
-    const last=years[years.length-1].transacoes;
-    const max=Math.max(...years.map(y=>y.transacoes));
-    const pct=Math.max(0,Math.min(100,Math.round(last/max*100)));
-    setGauge(pct,bigK(last).num+bigK(last).unit);
+    const lastYr=years[years.length-1];
+    const peakYr=years.reduce((a,b)=>b.transacoes>a.transacoes?b:a);
+    const pct=Math.max(0,Math.min(100,Math.round(lastYr.transacoes/peakYr.transacoes*100)));
+    setGauge(pct,bigK(lastYr.transacoes).num+bigK(lastYr.transacoes).unit,lastYr.ano_referencia,peakYr);
   }else{
-    setGauge(64,bigK(t).num+bigK(t).unit);
+    setGauge(64,bigK(t).num+bigK(t).unit,null,null);
   }
   const peak=ano.reduce((a,b)=>b.transacoes>(a?.transacoes||0)?b:a,null);
   if(peak)document.getElementById('bars-headline').textContent=peak.ano_referencia;
@@ -1283,7 +1530,7 @@ function setDelta(id,pct){
   el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="${arrow}"/></svg><span>${(up?'+':'')+pct.toFixed(2).replace('.',',')}%</span><span class="vs">vs período anterior</span>`;
 }
 
-function setGauge(pct,centerLabel){
+function setGauge(pct,centerLabel,anoAtual,peakYr){
   // pathLength="100" → dashoffset é diretamente o percentual (sem getTotalLength)
   // off = 100 - pct  →  pct=0 → off=100 (vazio); pct=100 → off=0 (cheio)
   document.getElementById('gauge-arc').setAttribute('stroke-dashoffset', 100 - pct);
@@ -1296,9 +1543,20 @@ function setGauge(pct,centerLabel){
   th.setAttribute('cy', (110 - 80 * Math.sin(ang)).toFixed(2));
 
   document.getElementById('gauge-val').innerHTML = centerLabel;
-  document.getElementById('gauge-cap').innerHTML =
-    `Você está em <b style="color:var(--primary)">${pct}%</b> do maior ano da série.`;
-  document.getElementById('gauge-sub').textContent = `Atividade · ${pct}% do pico`;
+
+  let capText;
+  if(anoAtual && peakYr){
+    const peakLabel = bigK(peakYr.transacoes).num + bigK(peakYr.transacoes).unit;
+    if(anoAtual === peakYr.ano_referencia){
+      capText = `<b style="color:var(--primary)">${anoAtual}</b> é o <b style="color:var(--primary)">ano recorde</b> da série histórica.`;
+    } else {
+      capText = `<b style="color:var(--primary)">${anoAtual}</b> representa <b style="color:var(--primary)">${pct}%</b> do recorde histórico <span style="color:var(--mu)">(${peakYr.ano_referencia} · ${peakLabel})</span>`;
+    }
+  } else {
+    capText = `Volume equivale a <b style="color:var(--primary)">${pct}%</b> do ano recorde da série.`;
+  }
+  document.getElementById('gauge-cap').innerHTML = capText;
+  document.getElementById('gauge-sub').textContent = `Atividade · ${pct}% do recorde`;
 }
 
 /* ─── charts ─── */
@@ -1391,10 +1649,14 @@ function renderCharts(ano,bai,porMes,porNat,faixas){
   }
 
   /* ── 3. Sazonalidade mensal (linha) ───────────────────────────── */
+  const sazCanvas=document.getElementById('csaz');
+  const sazEmpty=document.getElementById('csaz-empty');
   if(porMes&&porMes.length){
+    if(sazEmpty)sazEmpty.style.display='none';
+    sazCanvas.style.display='block';
     const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     const anos=[...new Set(porMes.map(r=>r.ano_referencia))].sort().slice(-3);
-    const CORES=['#e08560','#5b8fff','#5dd29c'];
+    const CORES=['#e08560','#c4a080','#808080'];
     const datasets=anos.map((a,i)=>{
       const byMes=Array(12).fill(null);
       porMes.filter(r=>r.ano_referencia===a).forEach(r=>{if(r.mes_referencia>=1&&r.mes_referencia<=12)byMes[r.mes_referencia-1]=r.transacoes;});
@@ -1402,13 +1664,13 @@ function renderCharts(ano,bai,porMes,porNat,faixas){
         pointBackgroundColor:CORES[i],pointRadius:4,pointHoverRadius:6,
         tension:.35,fill:false,spanGaps:true};
     });
-    CH.saz=new Chart(document.getElementById('csaz').getContext('2d'),{
+    CH.saz=new Chart(sazCanvas.getContext('2d'),{
       type:'line',
       data:{labels:MESES,datasets},
       options:{
         responsive:true,maintainAspectRatio:false,
         plugins:{
-          legend:{display:true,position:'top',align:'end',labels:{color:mu,usePointStyle:true,pointStyleWidth:8,boxHeight:6,font:{size:11}}},
+          legend:{display:true,position:'top',align:'end',labels:{color:ink,usePointStyle:true,pointStyleWidth:8,boxHeight:6,font:{size:11}}},
           tooltip:{...TT,mode:'index',intersect:false,
             callbacks:{label:ctx=>`${ctx.dataset.label}: ${(ctx.parsed.y||0).toLocaleString('pt-BR')}`}}
         },
@@ -1420,33 +1682,44 @@ function renderCharts(ano,bai,porMes,porNat,faixas){
         }
       }
     });
+  }else{
+    sazCanvas.style.display='none';
+    if(sazEmpty)sazEmpty.style.display='flex';
   }
 
   /* ── 4. Donut — natureza da transação ────────────────────────── */
   if(porNat&&porNat.length){
-    const DORES=['#e08560','#5b8fff','#5dd29c','#e8b955','#e95e8a','#a87bff','#0891b2'];
+    // coral dominante + cores distinguíveis para fatias menores
+    const DORES=['#e08560','#5b9bd5','#6ec47e','#e8c44a','#c45b8a','#8b7fe8','#4ec9c9','#e87a5b','#a0c45b','#b07040'];
     const labels=porNat.map(r=>{
       const n=String(r.natureza_transacao||'Outros');
-      return n.replace(/^\d+\.\s*/,'').slice(0,28);
+      return n.replace(/^\d+\.\s*/,'').slice(0,36);
     });
     CH.dnt=new Chart(document.getElementById('cdnt').getContext('2d'),{
       type:'doughnut',
       data:{labels,datasets:[{data:porNat.map(r=>r.total),
         backgroundColor:DORES.slice(0,porNat.length),
-        borderColor:'#000',borderWidth:2,hoverOffset:6}]},
+        borderColor:'#111',borderWidth:2,hoverOffset:6}]},
       options:{
         responsive:true,maintainAspectRatio:false,cutout:'68%',
         plugins:{
-          legend:{display:true,position:'right',labels:{color:mu,usePointStyle:true,pointStyleWidth:8,boxHeight:8,font:{size:11},
-            generateLabels:chart=>{
-              const ds=chart.data.datasets[0];
-              const total=ds.data.reduce((a,b)=>a+b,0);
-              return chart.data.labels.map((l,i)=>({
-                text:`${l}  ${total>0?((ds.data[i]/total)*100).toFixed(1)+'%':''}`,
-                fillStyle:ds.backgroundColor[i],strokeStyle:'transparent',index:i
-              }));
-            }
-          }},
+          legend:{display:true,position:'right',maxWidth:260,
+            labels:{color:ink,usePointStyle:true,pointStyleWidth:9,boxHeight:9,
+              font:{size:11,weight:'600'},padding:9,maxWidth:240,
+              generateLabels:chart=>{
+                const ds=chart.data.datasets[0];
+                const total=ds.data.reduce((a,b)=>a+b,0);
+                return chart.data.labels.map((l,i)=>{
+                  const pct=total>0?((ds.data[i]/total)*100).toFixed(1)+'%':'';
+                  const label=l.length>26?l.slice(0,24)+'…':l;
+                  return{
+                    text:`${label}  ${pct}`,
+                    fillStyle:ds.backgroundColor[i],strokeStyle:'transparent',
+                    fontColor:ink,index:i
+                  };
+                });
+              }
+            }},
           tooltip:{...TT,callbacks:{label:ctx=>`${ctx.parsed.toLocaleString('pt-BR')} transações`}}
         }
       }
@@ -1454,17 +1727,23 @@ function renderCharts(ano,bai,porMes,porNat,faixas){
   }
 
   /* ── 5. Histograma — faixas de valor ─────────────────────────── */
+  const histCanvas=document.getElementById('chist');
+  const histEmpty=document.getElementById('chist-empty');
   if(faixas&&faixas.length){
+    if(histEmpty)histEmpty.style.display='none';
+    histCanvas.style.display='block';
     const FORDER=['Ate 300k','300k-600k','600k-1M','1M-2M','Acima 2M'];
     const fOrdenado=FORDER.map(f=>faixas.find(r=>r.faixa===f)||{faixa:f,transacoes:0});
     const totFx=fOrdenado.reduce((a,r)=>a+r.transacoes,0);
-    CH.hist=new Chart(document.getElementById('chist').getContext('2d'),{
+    // bucket com maior volume em destaque (coral); demais em surface-2
+    const maxFx=Math.max(...fOrdenado.map(r=>r.transacoes));
+    CH.hist=new Chart(histCanvas.getContext('2d'),{
       type:'bar',
       data:{
         labels:['Até R$300k','R$300k–600k','R$600k–1M','R$1M–2M','Acima R$2M'],
         datasets:[{
           data:fOrdenado.map(r=>r.transacoes),
-          backgroundColor:[surface2,surface2,primary,surface2,surface2],
+          backgroundColor:fOrdenado.map(r=>r.transacoes===maxFx?primary:surface2),
           hoverBackgroundColor:primary,borderRadius:8,barPercentage:.65
         }]
       },
@@ -1487,6 +1766,9 @@ function renderCharts(ano,bai,porMes,porNat,faixas){
         }
       }
     });
+  }else{
+    histCanvas.style.display='none';
+    if(histEmpty)histEmpty.style.display='flex';
   }
 }
 
@@ -1703,6 +1985,8 @@ function setupAC(iid,lid,ep){
 
 /* ─── seleção / export ─── */
 let selectedIds=new Set();
+let _autoXlsTimer=null;
+
 function toggleAll(cb){
   if(cb.checked){
     document.querySelectorAll('.row-cb').forEach(c=>{c.checked=true;selectedIds.add(parseInt(c.dataset.id))});
@@ -1711,6 +1995,7 @@ function toggleAll(cb){
     document.querySelectorAll('.row-cb').forEach(c=>{c.checked=false});
   }
   updateExpBar();
+  _scheduleAutoXls();
 }
 function toggleRow(cb){
   const id=parseInt(cb.dataset.id);
@@ -1718,12 +2003,29 @@ function toggleRow(cb){
   const allCbs=document.querySelectorAll('.row-cb');
   document.getElementById('cb-all').checked=[...allCbs].every(c=>c.checked);
   updateExpBar();
+  _scheduleAutoXls();
 }
-function deselecionarTudo(){selectedIds.clear();document.querySelectorAll('.row-cb').forEach(c=>c.checked=false);document.getElementById('cb-all').checked=false;updateExpBar()}
+function deselecionarTudo(){
+  clearTimeout(_autoXlsTimer);
+  selectedIds.clear();
+  document.querySelectorAll('.row-cb').forEach(c=>c.checked=false);
+  document.getElementById('cb-all').checked=false;
+  updateExpBar();
+}
 function updateExpBar(){
   const bar=document.getElementById('expbar'),cnt=document.getElementById('exp-count');
   if(selectedIds.size>0){cnt.textContent=selectedIds.size.toLocaleString('pt-BR')+' selecionados';bar.style.display='flex'}
   else{bar.style.display='none'}
+}
+function _scheduleAutoXls(){
+  clearTimeout(_autoXlsTimer);
+  if(selectedIds.size===0)return;
+  // mostra indicador "preparando..."
+  const cnt=document.getElementById('exp-count');
+  if(cnt)cnt.textContent=selectedIds.size.toLocaleString('pt-BR')+' selecionados  ·  preparando Excel…';
+  _autoXlsTimer=setTimeout(()=>{
+    if(selectedIds.size>0) exportar('excel');
+  }, 1500);
 }
 function _showPdfToast(){
   const t=document.getElementById('pdf-toast');
@@ -1822,9 +2124,63 @@ async function carregarPontos(){
 }
 function filtrarPorCEP(cep){document.getElementById('fc').value=cep.replace(/^(\d{5})(\d{3})$/,'$1-$2');mapaInst?.closePopup();buscar(1);if(mapaVisivel)setTimeout(carregarPontos,800)}
 
-async function sync(){
-  try{await fetch(`${API}/api/sincronizar`,{method:'POST'});alert('Sincronização iniciada em background!')}
-  catch(e){alert('API offline em localhost:8000.')}
+/* ─── modal de sincronização ─── */
+let _syncPollTimer=null;
+
+function sync(){
+  document.getElementById('sync-modal').style.display='flex';
+  document.getElementById('sync-log').textContent='';
+  document.getElementById('sync-status').textContent='Aguardando...';
+  document.getElementById('sync-btn-start').disabled=false;
+  document.getElementById('sync-btn-start').textContent='▶  Sincronizar agora';
+  // pré-preenche ano atual
+  const anoAtual=new Date().getFullYear();
+  document.getElementById('sync-anos').value=anoAtual;
+}
+function closeSyncModal(){
+  clearInterval(_syncPollTimer);
+  document.getElementById('sync-modal').style.display='none';
+}
+async function iniciarSync(){
+  const anos=document.getElementById('sync-anos').value.trim();
+  const btn=document.getElementById('sync-btn-start');
+  btn.disabled=true;
+  btn.textContent='⏳  Sincronizando...';
+  document.getElementById('sync-log').textContent='Iniciando...\n';
+  document.getElementById('sync-status').textContent='🔄 Rodando';
+  try{
+    const url=anos?`${API}/api/sincronizar?anos=${encodeURIComponent(anos)}`:`${API}/api/sincronizar`;
+    const r=await fetch(url,{method:'POST'});
+    if(r.status===409){
+      document.getElementById('sync-log').textContent='⚠️ Sincronização já está rodando em background.';
+      document.getElementById('sync-status').textContent='⚠️ Já rodando';
+      btn.disabled=false; btn.textContent='▶  Sincronizar agora';
+      return;
+    }
+  }catch(e){
+    document.getElementById('sync-log').textContent='❌ Falha ao conectar na API.';
+    document.getElementById('sync-status').textContent='❌ Erro';
+    btn.disabled=false; btn.textContent='▶  Sincronizar agora';
+    return;
+  }
+  // poll de status a cada 2s
+  clearInterval(_syncPollTimer);
+  _syncPollTimer=setInterval(async()=>{
+    try{
+      const s=await fetch(`${API}/api/sincronizar/status`).then(x=>x.json());
+      const logEl=document.getElementById('sync-log');
+      logEl.textContent=s.log.join('\n');
+      logEl.scrollTop=logEl.scrollHeight;
+      if(!s.rodando){
+        clearInterval(_syncPollTimer);
+        const ok=s.log.some(l=>l.includes('✅'));
+        document.getElementById('sync-status').textContent=ok?'✅ Concluído':'❌ Erro';
+        btn.disabled=false;
+        btn.textContent='▶  Sincronizar novamente';
+        if(ok){ setTimeout(()=>buscar(1),1500); }
+      }
+    }catch{}
+  },2000);
 }
 
 /* ─── demo data ─── */
@@ -1869,6 +2225,41 @@ function buildDemo(){
 <div id="pdf-toast">
   <div class="pdf-spinner"></div>
   <div><div class="pdf-txt">Gerando PDF...</div><div class="pdf-sub">Isso pode levar alguns segundos</div></div>
+</div>
+
+<!-- ── Modal Sincronização ── -->
+<div id="sync-modal" style="display:none;position:fixed;inset:0;background:#0009;z-index:10000;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:18px;padding:28px 28px 22px;width:520px;max-width:95vw;box-shadow:0 24px 64px #0008;border:1px solid var(--line)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div>
+        <div style="font-size:17px;font-weight:800;color:var(--ink);letter-spacing:-.02em">🔄 Sincronizar dados</div>
+        <div style="font-size:12px;color:var(--mu);margin-top:3px">Baixa as planilhas mais recentes da Prefeitura SP</div>
+      </div>
+      <button onclick="closeSyncModal()" style="background:var(--surface-2);border:none;border-radius:9px;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--mu)">✕</button>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:var(--mu);display:block;margin-bottom:6px">Anos a sincronizar (separados por vírgula — deixe em branco para todos)</label>
+      <input id="sync-anos" type="text" placeholder="ex: 2025, 2026"
+        style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--ink);font-family:inherit;outline:none">
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <button id="sync-btn-start" onclick="iniciarSync()"
+        style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s">
+        ▶  Sincronizar agora
+      </button>
+      <span id="sync-status" style="font-size:12px;color:var(--mu)">Aguardando...</span>
+    </div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--mu);margin-bottom:5px;letter-spacing:.04em">LOG</div>
+    <pre id="sync-log"
+      style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:11px;color:var(--ink-2);font-family:'JetBrains Mono',monospace;height:200px;overflow-y:auto;margin:0;white-space:pre-wrap;word-break:break-all"></pre>
+
+    <div style="margin-top:14px;font-size:11px;color:var(--mu);line-height:1.5">
+      ⚠️ A sincronização pode levar vários minutos dependendo dos anos selecionados. Não feche o servidor durante o processo.
+    </div>
+  </div>
 </div>
 </body>
 </html>

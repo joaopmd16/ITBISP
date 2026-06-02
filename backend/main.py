@@ -408,10 +408,11 @@ def resumo(
             LIMIT 15
         """, params).fetchall()
 
+        where_and = ("WHERE" if not filters else "AND")
         por_mes = conn.execute(f"""
             SELECT ano_referencia, mes_referencia, COUNT(*) as transacoes
             FROM transacoes {where}
-            WHERE mes_referencia IS NOT NULL
+            {where_and} mes_referencia IS NOT NULL
             GROUP BY ano_referencia, mes_referencia
             ORDER BY ano_referencia, mes_referencia
         """, params).fetchall()
@@ -428,7 +429,7 @@ def resumo(
               COUNT(*) AS transacoes,
               MIN(valor_declarado) AS _ord
             FROM transacoes {where}
-            WHERE valor_declarado IS NOT NULL AND valor_declarado > 0
+            {where_and} valor_declarado IS NOT NULL AND valor_declarado > 0
             GROUP BY faixa
             ORDER BY _ord
         """, params).fetchall()
@@ -603,26 +604,56 @@ def status():
 # ── Sincronização (trigger manual/cron) ──────
 
 sincronizando = False
+_sync_log: list[str] = []
+_sync_inicio: Optional[float] = None
+
+@app.get("/api/sincronizar/status")
+def sincronizar_status():
+    return {
+        "rodando": sincronizando,
+        "log": _sync_log[-30:],   # últimas 30 linhas
+        "inicio": _sync_inicio,
+    }
 
 @app.post("/api/sincronizar")
-def sincronizar(anos: Optional[list[int]] = None, background_tasks: BackgroundTasks = None):
+def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None)):
     """Dispara a sincronização em background. Use com cron ou botão no dashboard."""
-    global sincronizando
+    global sincronizando, _sync_log, _sync_inicio
     if sincronizando:
         return JSONResponse({"status": "já rodando"}, status_code=409)
 
+    anos_list = [int(a) for a in anos.split(",") if a.strip().isdigit()] if anos else None
+
     def _run():
-        global sincronizando
+        global sincronizando, _sync_log, _sync_inicio
+        import time, sys, io, contextlib
         sincronizando = True
+        _sync_inicio = time.time()
+        _sync_log.clear()
+
+        class _Tee:
+            def write(self, s):
+                if s.strip():
+                    _sync_log.append(s.rstrip())
+            def flush(self): pass
+
+        tee = _Tee()
         try:
-            from scraper import sincronizar as _sync
-            _sync(anos=anos)
-            popular_iptu()   # atualiza tabela IPTU após sync
+            with contextlib.redirect_stdout(tee), contextlib.redirect_stderr(tee):
+                from scraper_csv import sincronizar as _sync
+                # forcar=True → re-baixa o XLSX mesmo que já exista em cache
+                _sync(anos=anos_list, forcar=True)
+                _sync_log.append("✅ Scraper concluído. Atualizando tabela IPTU…")
+                popular_iptu()
+                _sync_log.append("✅ Sincronização completa!")
+                _resumo_cache.clear()
+        except Exception as e:
+            _sync_log.append(f"❌ Erro: {e}")
         finally:
             sincronizando = False
 
     background_tasks.add_task(_run)
-    return {"status": "iniciado", "anos": anos or "todos"}
+    return {"status": "iniciado", "anos": anos_list or "todos"}
 
 
 # Serve o frontend estático (deve ficar no final para não sobrescrever as rotas da API)
