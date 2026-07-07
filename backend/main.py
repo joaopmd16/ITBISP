@@ -45,6 +45,16 @@ ROTAS_PUBLICAS = {
 
 
 @app.middleware("http")
+async def no_cache_html(request: Request, call_next):
+    response = await call_next(request)
+    if response.headers.get("content-type", "").startswith("text/html"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
+@app.middleware("http")
 async def exigir_assinatura(request: Request, call_next):
     path = request.url.path
     # bypass auth em localhost (desenvolvimento local)
