@@ -12,10 +12,17 @@ from typing import Optional
 from contextlib import contextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, Query, BackgroundTasks
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
+
+from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+import auth
+import billing
 
 DB_PATH = Path(__file__).parent / "itbi.db"
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -29,16 +36,65 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rotas que NÃO exigem login + assinatura ativa
+ROTAS_PUBLICAS = {
+    "/api", "/api/status",
+    "/api/auth/registrar", "/api/auth/login",
+    "/api/webhook/stripe",
+}
+
+
+@app.middleware("http")
+async def exigir_assinatura(request: Request, call_next):
+    path = request.url.path
+    # bypass auth em localhost (desenvolvimento local)
+    client_host = request.client.host if request.client else ""
+    if client_host in ("127.0.0.1", "::1"):
+        return await call_next(request)
+    if not path.startswith("/api") or path in ROTAS_PUBLICAS or path.startswith("/api/auth/me") \
+            or path.startswith("/api/billing"):
+        return await call_next(request)
+
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return JSONResponse({"detail": "Não autenticado"}, status_code=401)
+    try:
+        payload = auth.decodificar_token(auth_header.removeprefix("Bearer ").strip())
+    except HTTPException as e:
+        return JSONResponse({"detail": e.detail}, status_code=e.status_code)
+
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT status FROM assinaturas WHERE usuario_id = ?", (int(payload["sub"]),)
+        ).fetchone()
+    if not row or row["status"] not in ("active", "trialing", "dev"):
+        return JSONResponse({"detail": "Assinatura inativa"}, status_code=402)
+
+    return await call_next(request)
+
 
 
 # ──────────────────────────────────────────────
 # UTILITÁRIOS
 # ──────────────────────────────────────────────
 
+import unicodedata
+
+def _unaccent(s: str | None) -> str | None:
+    """Remove acentos e normaliza para uppercase — usado como função SQLite UNACCENT()."""
+    if s is None:
+        return None
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', str(s))
+        if unicodedata.category(c) != 'Mn'
+    ).upper()
+
+
 @contextmanager
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.create_function("UNACCENT", 1, _unaccent)   # disponível em todas as queries
     try:
         yield conn
     finally:
@@ -51,14 +107,14 @@ def rows_to_list(rows) -> list[dict]:
 
 def _multi_like(col: str, value: str, nocase: bool = True) -> tuple[str, list]:
     """Suporte a múltiplos valores separados por vírgula → OR no SQL.
-    Ex: 'brasilandia, freguesia' → (col LIKE '%brasilandia%' OR col LIKE '%freguesia%')
+    Normaliza o INPUT (remove acentos) e compara com UPPER(col) —
+    mantém uso dos índices sem chamar UDF por linha.
     """
     vals = [v.strip() for v in value.split(",") if v.strip()]
     if not vals:
         return "", []
-    collate = " COLLATE NOCASE" if nocase else ""
-    clauses = [f"{col} LIKE ?{collate}" for _ in vals]
-    return f"({' OR '.join(clauses)})", [f"%{v}%" for v in vals]
+    clauses = [f"UPPER({col}) LIKE ?" for _ in vals]
+    return f"({' OR '.join(clauses)})", [f"%{_unaccent(v)}%" for v in vals]
 
 
 @app.on_event("startup")
@@ -72,7 +128,6 @@ def startup():
             PRAGMA temp_store   = MEMORY;
             PRAGMA mmap_size    = 67108864;
             CREATE INDEX IF NOT EXISTS idx_logradouro  ON transacoes(logradouro);
-            CREATE INDEX IF NOT EXISTS idx_logradouro_upper ON transacoes(UPPER(logradouro));
             CREATE INDEX IF NOT EXISTS idx_bairro      ON transacoes(bairro);
             CREATE INDEX IF NOT EXISTS idx_cep         ON transacoes(cep);
             CREATE INDEX IF NOT EXISTS idx_ano         ON transacoes(ano_referencia);
@@ -95,70 +150,62 @@ def startup():
                 updated_at      TEXT DEFAULT (datetime('now'))
             );
             CREATE INDEX IF NOT EXISTS idx_iptu_sql ON iptu(sql_terreno);
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                email       TEXT UNIQUE NOT NULL,
+                senha_hash  TEXT NOT NULL,
+                criado_em   TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS assinaturas (
+                usuario_id          INTEGER PRIMARY KEY REFERENCES usuarios(id),
+                stripe_customer_id  TEXT,
+                stripe_subscription_id TEXT,
+                status              TEXT DEFAULT 'inativa',
+                atualizado_em       TEXT DEFAULT (datetime('now'))
+            );
         """)
         conn.commit()
 
-    # 2. Pré-aquece APENAS o range padrão (2020–atual) — evita OOM em VMs com pouca RAM
+    # 2. Pré-aquece o cache do resumo para o range padrão do frontend (últimos 3 anos)
     import threading
     def _prewarm():
-        try:
-            import time
-            time.sleep(5)  # deixa o servidor subir antes de fazer queries
-            ano_max = datetime.now().year
-            ano_min = ano_max - 6  # 2020
-            where = "WHERE ano_referencia >= ? AND ano_referencia <= ?"
-            params_q = [ano_min, ano_max]
-            with get_db() as conn:
-                geral = conn.execute(f"""
-                    SELECT COUNT(*) AS total_transacoes,
-                           SUM(valor_declarado) AS volume_total,
-                           AVG(valor_declarado) AS ticket_medio,
-                           MIN(valor_declarado) AS valor_minimo,
-                           MAX(valor_declarado) AS valor_maximo,
-                           SUM(valor_itbi)      AS itbi_total,
-                           CASE WHEN SUM(area_terreno)   > 0
-                                THEN SUM(valor_declarado) / SUM(area_terreno)   ELSE NULL END AS preco_m2_terreno,
-                           CASE WHEN SUM(area_construida) > 0
-                                THEN SUM(valor_declarado) / SUM(area_construida) ELSE NULL END AS preco_m2_construida
-                    FROM transacoes {where}""", params_q).fetchone()
-                por_ano = conn.execute(f"""
-                    SELECT ano_referencia, COUNT(*) as transacoes,
-                           AVG(valor_declarado) as ticket_medio,
-                           SUM(valor_declarado) as volume
-                    FROM transacoes {where}
-                    GROUP BY ano_referencia ORDER BY ano_referencia""", params_q).fetchall()
-                por_natureza = conn.execute(f"""
-                    SELECT natureza_transacao, COUNT(*) as total
-                    FROM transacoes {where}
-                    GROUP BY natureza_transacao ORDER BY total DESC LIMIT 10""", params_q).fetchall()
-                top_bairros = conn.execute(f"""
-                    SELECT bairro, COUNT(*) as transacoes,
-                           AVG(valor_declarado) as ticket_medio
-                    FROM transacoes {where}
-                    GROUP BY bairro ORDER BY transacoes DESC LIMIT 15""", params_q).fetchall()
-            resultado = {
-                "geral": dict(geral),
-                "por_ano": rows_to_list(por_ano),
-                "por_natureza": rows_to_list(por_natureza),
-                "top_bairros": rows_to_list(top_bairros),
-            }
-            _resumo_cache_set(where + str(params_q), resultado)
-        except Exception:
-            pass
+        import time
+        time.sleep(4)  # aguarda servidor estabilizar
+        ano_atual = datetime.now().year
+        # Ranges a pré-aquecer em ordem de prioridade:
+        # (ano_min, ano_max, descrição)
+        ranges = [
+            (ano_atual - 2, ano_atual,  "padrão 3 anos"),   # 2024-2026
+            (2006,          ano_atual,  "todos os anos"),    # 2006-2026
+            (2006,          2023,       "anos antigos"),     # 2006-2023
+        ]
+        for ano_min, ano_max, label in ranges:
+            try:
+                resumo(
+                    logradouro=None, numero=None, bairro=None, cep=None, sql=None,
+                    ano_min=ano_min, ano_max=ano_max,
+                    mes_min=None, mes_max=None,
+                    valor_min=None, valor_max=None, natureza=None,
+                )
+                time.sleep(2)  # respira entre queries pesadas
+            except Exception:
+                pass
     threading.Thread(target=_prewarm, daemon=True).start()
+    threading.Thread(target=_carregar_ac, daemon=True).start()
 
-    # 3. Popula tabela iptu em background somente se estiver vazia
-    def _popular_iptu_lazy():
-        try:
-            import time
-            time.sleep(15)  # espera o servidor estabilizar
-            with get_db() as conn:
-                count = conn.execute("SELECT COUNT(*) FROM iptu").fetchone()[0]
-            if count == 0:
-                popular_iptu()
-        except Exception:
-            pass
-    threading.Thread(target=_popular_iptu_lazy, daemon=True).start()
+    # 3. Popula tabela iptu em background somente se estiver vazia (desabilitado localmente)
+    if not (Path(__file__).parent / ".dev_local").exists():
+        def _popular_iptu_lazy():
+            try:
+                import time
+                time.sleep(15)
+                with get_db() as conn:
+                    count = conn.execute("SELECT COUNT(*) FROM iptu").fetchone()[0]
+                if count == 0:
+                    popular_iptu()
+            except Exception:
+                pass
+        threading.Thread(target=_popular_iptu_lazy, daemon=True).start()
 
 
 # ──────────────────────────────────────────────
@@ -194,6 +241,49 @@ def popular_iptu():
 # Cache simples em memória para /api/resumo
 _resumo_cache: dict = {}
 
+# Cache de autocomplete (carregado no startup em background)
+_ac_logradouros: list = []
+_ac_bairros: list = []
+_ac_ceps: list = []
+_ac_numeros: list = []
+_ac_sqls: list = []
+
+def _carregar_ac():
+    """Carrega valores únicos na memória para autocomplete instantâneo."""
+    global _ac_logradouros, _ac_bairros, _ac_ceps, _ac_numeros, _ac_sqls
+    try:
+        import time; time.sleep(5)
+        with get_db() as conn:
+            def _load(col, table="transacoes"):
+                return [r[col] for r in conn.execute(
+                    f"SELECT DISTINCT {col} FROM {table} WHERE {col} IS NOT NULL ORDER BY {col}"
+                ).fetchall()]
+            _ac_logradouros = [r["logradouro"] for r in conn.execute(
+                "SELECT DISTINCT logradouro FROM transacoes "
+                "WHERE logradouro IS NOT NULL AND logradouro != '' "
+                "AND LENGTH(logradouro) <= 60 "
+                "AND logradouro NOT LIKE '%Calculado%' "
+                "AND logradouro NOT LIKE '%automaticamente%' "
+                "AND logradouro NOT LIKE '%campo%' "
+                "AND logradouro NOT LIKE '%Proporção%' "
+                "AND logradouro NOT LIKE '%integrante%' "
+                "AND logradouro NOT LIKE '%#%' "
+                "ORDER BY logradouro"
+            ).fetchall()]
+            _ac_bairros     = _load("bairro")
+            _ac_ceps        = _load("cep")
+            _ac_numeros     = _load("numero")
+            _ac_sqls        = [r["sql_terreno"] for r in conn.execute(
+                "SELECT DISTINCT sql_terreno FROM transacoes "
+                "WHERE sql_terreno IS NOT NULL AND sql_terreno != '' "
+                "AND sql_terreno NOT LIKE '%#%' AND sql_terreno NOT LIKE '%ERROR%' "
+                "AND sql_terreno NOT LIKE '%NAME%' AND sql_terreno NOT LIKE '%REF%' "
+                "AND LENGTH(sql_terreno) >= 6 "
+                "ORDER BY sql_terreno"
+            ).fetchall()]
+    except Exception:
+        pass
+
 def _resumo_cache_get(key: str):
     entry = _resumo_cache.get(key)
     if entry and (time.time() - entry["ts"]) < 300:  # 5 min TTL
@@ -224,6 +314,8 @@ def buscar_transacoes(
     sql:         Optional[str]  = Query(None),
     ano_min:     Optional[int]  = Query(None),
     ano_max:     Optional[int]  = Query(None),
+    mes_min:     Optional[int]  = Query(None),
+    mes_max:     Optional[int]  = Query(None),
     valor_min:   Optional[float]= Query(None),
     valor_max:   Optional[float]= Query(None),
     natureza:    Optional[str]  = Query(None),
@@ -266,6 +358,12 @@ def buscar_transacoes(
     if ano_max:
         filters.append("ano_referencia <= ?")
         params.append(ano_max)
+    if mes_min:
+        filters.append("mes_referencia >= ?")
+        params.append(mes_min)
+    if mes_max:
+        filters.append("mes_referencia <= ?")
+        params.append(mes_max)
     if valor_min is not None:
         filters.append("valor_declarado >= ?")
         params.append(valor_min)
@@ -306,6 +404,8 @@ def resumo(
     sql:        Optional[str]   = Query(None),
     ano_min:    Optional[int]   = Query(None),
     ano_max:    Optional[int]   = Query(None),
+    mes_min:    Optional[int]   = Query(None),
+    mes_max:    Optional[int]   = Query(None),
     valor_min:  Optional[float] = Query(None),
     valor_max:  Optional[float] = Query(None),
     natureza:   Optional[str]   = Query(None),
@@ -337,6 +437,12 @@ def resumo(
     if ano_max:
         filters.append("ano_referencia <= ?")
         params.append(ano_max)
+    if mes_min:
+        filters.append("mes_referencia >= ?")
+        params.append(mes_min)
+    if mes_max:
+        filters.append("mes_referencia <= ?")
+        params.append(mes_max)
     if valor_min is not None:
         filters.append("valor_declarado >= ?")
         params.append(valor_min)
@@ -359,30 +465,30 @@ def resumo(
         conn.execute("PRAGMA cache_size = -64000")   # 64 MB page cache
         conn.execute("PRAGMA temp_store = MEMORY")
 
-        geral = conn.execute(f"""
-            SELECT
-                COUNT(*)           AS total_transacoes,
-                SUM(valor_declarado) AS volume_total,
-                AVG(valor_declarado) AS ticket_medio,
-                MIN(valor_declarado) AS valor_minimo,
-                MAX(valor_declarado) AS valor_maximo,
-                SUM(valor_itbi)      AS itbi_total,
-                CASE WHEN SUM(area_terreno)   > 0
-                     THEN SUM(valor_declarado) / SUM(area_terreno)   ELSE NULL END AS preco_m2_terreno,
-                CASE WHEN SUM(area_construida) > 0
-                     THEN SUM(valor_declarado) / SUM(area_construida) ELSE NULL END AS preco_m2_construida
-            FROM transacoes {where}
-        """, params).fetchone()
-
         por_ano = conn.execute(f"""
             SELECT ano_referencia,
                    COUNT(*) as transacoes,
                    AVG(valor_declarado) as ticket_medio,
-                   SUM(valor_declarado) as volume
+                   SUM(valor_declarado) as volume,
+                   MIN(valor_declarado) as valor_minimo,
+                   MAX(valor_declarado) as valor_maximo,
+                   SUM(valor_itbi) as itbi_total
             FROM transacoes {where}
             GROUP BY ano_referencia
             ORDER BY ano_referencia
         """, params).fetchall()
+
+        # "geral" é derivado de por_ano (evita um 2º full scan da tabela)
+        total_transacoes = sum(r["transacoes"] for r in por_ano)
+        volume_total = sum(r["volume"] or 0 for r in por_ano)
+        geral = {
+            "total_transacoes": total_transacoes,
+            "volume_total": volume_total or None,
+            "ticket_medio": (volume_total / total_transacoes) if total_transacoes else None,
+            "valor_minimo": min((r["valor_minimo"] for r in por_ano if r["valor_minimo"] is not None), default=None),
+            "valor_maximo": max((r["valor_maximo"] for r in por_ano if r["valor_maximo"] is not None), default=None),
+            "itbi_total": sum(r["itbi_total"] or 0 for r in por_ano) or None,
+        }
 
         por_natureza = conn.execute(f"""
             SELECT natureza_transacao, COUNT(*) as total
@@ -402,11 +508,39 @@ def resumo(
             LIMIT 15
         """, params).fetchall()
 
+        where_and = ("WHERE" if not filters else "AND")
+        por_mes = conn.execute(f"""
+            SELECT ano_referencia, mes_referencia, COUNT(*) as transacoes
+            FROM transacoes {where}
+            {where_and} mes_referencia IS NOT NULL
+            GROUP BY ano_referencia, mes_referencia
+            ORDER BY ano_referencia, mes_referencia
+        """, params).fetchall()
+
+        faixas_valor = conn.execute(f"""
+            SELECT
+              CASE
+                WHEN valor_declarado <  300000  THEN 'Ate 300k'
+                WHEN valor_declarado <  600000  THEN '300k-600k'
+                WHEN valor_declarado < 1000000  THEN '600k-1M'
+                WHEN valor_declarado < 2000000  THEN '1M-2M'
+                ELSE 'Acima 2M'
+              END AS faixa,
+              COUNT(*) AS transacoes,
+              MIN(valor_declarado) AS _ord
+            FROM transacoes {where}
+            {where_and} valor_declarado IS NOT NULL AND valor_declarado > 0
+            GROUP BY faixa
+            ORDER BY _ord
+        """, params).fetchall()
+
     resultado = {
-        "geral": dict(geral),
+        "geral": geral,
         "por_ano": rows_to_list(por_ano),
         "por_natureza": rows_to_list(por_natureza),
         "top_bairros": rows_to_list(top_bairros),
+        "por_mes": rows_to_list(por_mes),
+        "faixas_valor": [{"faixa": r["faixa"], "transacoes": r["transacoes"]} for r in faixas_valor],
     }
     _resumo_cache_set(cache_key, resultado)
     return resultado
@@ -414,44 +548,73 @@ def resumo(
 
 # ── Autocomplete ─────────────────────────────
 
-@app.get("/api/autocomplete/logradouro")
-def autocomplete_logradouro(q: str = Query(..., min_length=3)):
-    uq = q.upper()
-    with get_db() as conn:
-        # busca por prefixo — usa idx_logradouro_upper, muito rápido
-        rows = conn.execute("""
-            SELECT DISTINCT logradouro FROM transacoes
-            WHERE UPPER(logradouro) LIKE ? || '%'
-            ORDER BY logradouro LIMIT 15
-        """, (uq,)).fetchall()
-        results = [r["logradouro"] for r in rows if r["logradouro"]]
+def _ac_page(cache: list, q: str, offset: int, size: int = 8, transform=None):
+    """Filtra cache em memória e retorna uma página."""
+    if q:
+        needle = _unaccent(q).upper()
+        filtered = [v for v in cache if needle in _unaccent(transform(v) if transform else v).upper()]
+    else:
+        filtered = cache
+    page = filtered[offset:offset + size]
+    return {"items": page, "has_more": (offset + size) < len(filtered), "total": len(filtered)}
 
-        # se poucos resultados, complementa com busca "contains" (sem índice, mas limitada)
-        if len(results) < 8:
-            seen = set(results)
-            extra = conn.execute("""
-                SELECT DISTINCT logradouro FROM transacoes
-                WHERE UPPER(logradouro) LIKE '%' || ? || '%'
-                  AND UPPER(logradouro) NOT LIKE ? || '%'
-                ORDER BY logradouro LIMIT 10
-            """, (uq, uq)).fetchall()
-            for r in extra:
-                if r["logradouro"] and r["logradouro"] not in seen:
-                    results.append(r["logradouro"])
-                    if len(results) >= 15:
-                        break
-    return results
+
+@app.get("/api/autocomplete/logradouro")
+def autocomplete_logradouro(q: str = Query(default=""), offset: int = 0):
+    if _ac_logradouros:
+        return _ac_page(_ac_logradouros, q, offset)
+    if not q: return {"items": [], "has_more": False, "total": 0}
+    with get_db() as conn:
+        rows = conn.execute("SELECT DISTINCT logradouro FROM transacoes WHERE UPPER(logradouro) LIKE ? ORDER BY logradouro LIMIT 8 OFFSET ?", (f"%{_unaccent(q).upper()}%", offset)).fetchall()
+    items = [r["logradouro"] for r in rows if r["logradouro"]]
+    return {"items": items, "has_more": len(items) == 8, "total": -1}
 
 
 @app.get("/api/autocomplete/bairro")
-def autocomplete_bairro(q: str = Query(..., min_length=2)):
+def autocomplete_bairro(q: str = Query(default=""), offset: int = 0):
+    if _ac_bairros:
+        return _ac_page(_ac_bairros, q, offset)
+    if not q: return {"items": [], "has_more": False, "total": 0}
     with get_db() as conn:
-        rows = conn.execute("""
-            SELECT DISTINCT bairro FROM transacoes
-            WHERE UPPER(bairro) LIKE UPPER(?)
-            ORDER BY bairro LIMIT 15
-        """, (f"%{q}%",)).fetchall()
-    return [r["bairro"] for r in rows if r["bairro"]]
+        rows = conn.execute("SELECT DISTINCT bairro FROM transacoes WHERE UPPER(bairro) LIKE ? ORDER BY bairro LIMIT 8 OFFSET ?", (f"%{_unaccent(q).upper()}%", offset)).fetchall()
+    items = [r["bairro"] for r in rows if r["bairro"]]
+    return {"items": items, "has_more": len(items) == 8, "total": -1}
+
+
+@app.get("/api/autocomplete/cep")
+def autocomplete_cep(q: str = Query(default=""), offset: int = 0):
+    if _ac_ceps:
+        needle_fn = lambda v: (v or "").replace("-", "")
+        q_clean = q.replace("-", "").replace(" ", "")
+        return _ac_page(_ac_ceps, q_clean, offset, transform=needle_fn)
+    if not q: return {"items": [], "has_more": False, "total": 0}
+    with get_db() as conn:
+        rows = conn.execute("SELECT DISTINCT cep FROM transacoes WHERE cep LIKE ? ORDER BY cep LIMIT 8 OFFSET ?", (f"%{q}%", offset)).fetchall()
+    items = [r["cep"] for r in rows if r["cep"]]
+    return {"items": items, "has_more": len(items) == 8, "total": -1}
+
+
+@app.get("/api/autocomplete/numero")
+def autocomplete_numero(q: str = Query(..., min_length=1), offset: int = 0):
+    if _ac_numeros:
+        return _ac_page(_ac_numeros, q, offset)
+    with get_db() as conn:
+        rows = conn.execute("SELECT DISTINCT numero FROM transacoes WHERE UPPER(numero) LIKE ? ORDER BY numero LIMIT 8 OFFSET ?", (f"%{q.upper()}%", offset)).fetchall()
+    items = [r["numero"] for r in rows if r["numero"]]
+    return {"items": items, "has_more": len(items) == 8, "total": -1}
+
+
+@app.get("/api/autocomplete/sql")
+def autocomplete_sql(q: str = Query(default=""), offset: int = 0):
+    if _ac_sqls:
+        needle_fn = lambda v: (v or "").replace(".", "").replace("-", "")
+        q_clean = q.replace(".", "").replace("-", "").strip()
+        return _ac_page(_ac_sqls, q_clean, offset, transform=needle_fn)
+    if not q: return {"items": [], "has_more": False, "total": 0}
+    with get_db() as conn:
+        rows = conn.execute("SELECT DISTINCT sql_terreno FROM transacoes WHERE sql_terreno LIKE ? ORDER BY sql_terreno LIMIT 8 OFFSET ?", (f"%{q}%", offset)).fetchall()
+    items = [r["sql_terreno"] for r in rows if r["sql_terreno"]]
+    return {"items": items, "has_more": len(items) == 8, "total": -1}
 
 
 # ── Exportação ───────────────────────────────
@@ -588,26 +751,185 @@ def status():
 # ── Sincronização (trigger manual/cron) ──────
 
 sincronizando = False
+_sync_log: list[str] = []
+_sync_inicio: Optional[float] = None
+
+@app.get("/api/sincronizar/status")
+def sincronizar_status():
+    return {
+        "rodando": sincronizando,
+        "log": _sync_log[-30:],   # últimas 30 linhas
+        "inicio": _sync_inicio,
+    }
 
 @app.post("/api/sincronizar")
-def sincronizar(anos: Optional[list[int]] = None, background_tasks: BackgroundTasks = None):
+def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None)):
     """Dispara a sincronização em background. Use com cron ou botão no dashboard."""
-    global sincronizando
+    global sincronizando, _sync_log, _sync_inicio
     if sincronizando:
         return JSONResponse({"status": "já rodando"}, status_code=409)
 
+    anos_list = [int(a) for a in anos.split(",") if a.strip().isdigit()] if anos else None
+
     def _run():
-        global sincronizando
+        global sincronizando, _sync_log, _sync_inicio
+        import time, sys, io, contextlib
         sincronizando = True
+        _sync_inicio = time.time()
+        _sync_log.clear()
+
+        class _Tee:
+            def write(self, s):
+                if s.strip():
+                    _sync_log.append(s.rstrip())
+            def flush(self): pass
+
+        tee = _Tee()
         try:
-            from scraper import sincronizar as _sync
-            _sync(anos=anos)
-            popular_iptu()   # atualiza tabela IPTU após sync
+            with contextlib.redirect_stdout(tee), contextlib.redirect_stderr(tee):
+                from scraper_csv import sincronizar as _sync
+                # forcar=True → re-baixa o XLSX mesmo que já exista em cache
+                _sync(anos=anos_list, forcar=True)
+                _sync_log.append("✅ Scraper concluído. Atualizando tabela IPTU…")
+                popular_iptu()
+                _sync_log.append("✅ Sincronização completa!")
+                _resumo_cache.clear()
+        except Exception as e:
+            _sync_log.append(f"❌ Erro: {e}")
         finally:
             sincronizando = False
 
     background_tasks.add_task(_run)
-    return {"status": "iniciado", "anos": anos or "todos"}
+    return {"status": "iniciado", "anos": anos_list or "todos"}
+
+
+# ──────────────────────────────────────────────
+# AUTENTICAÇÃO
+# ──────────────────────────────────────────────
+
+class CredenciaisIn(BaseModel):
+    email: str
+    senha: str
+
+
+@app.post("/api/auth/registrar")
+def registrar(dados: CredenciaisIn):
+    email = dados.email.strip().lower()
+    if not email or "@" not in email or len(dados.senha) < 6:
+        raise HTTPException(400, "E-mail inválido ou senha muito curta (mín. 6 caracteres)")
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE email = ?", (email,)).fetchone()
+        if existe:
+            raise HTTPException(409, "E-mail já cadastrado")
+        cur = conn.execute(
+            "INSERT INTO usuarios (email, senha_hash) VALUES (?, ?)",
+            (email, auth.hash_senha(dados.senha)),
+        )
+        usuario_id = cur.lastrowid
+        conn.execute(
+            "INSERT INTO assinaturas (usuario_id, status) VALUES (?, 'inativa')", (usuario_id,)
+        )
+        conn.commit()
+    token = auth.criar_token(usuario_id, email)
+    return {"token": token, "email": email}
+
+
+@app.post("/api/auth/login")
+def login(dados: CredenciaisIn):
+    email = dados.email.strip().lower()
+    with get_db() as conn:
+        row = conn.execute("SELECT id, senha_hash FROM usuarios WHERE email = ?", (email,)).fetchone()
+    if not row or not auth.verificar_senha(dados.senha, row["senha_hash"]):
+        raise HTTPException(401, "E-mail ou senha incorretos")
+    token = auth.criar_token(row["id"], email)
+    return {"token": token, "email": email}
+
+
+@app.get("/api/auth/me")
+def me(usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT status FROM assinaturas WHERE usuario_id = ?", (usuario["id"],)
+        ).fetchone()
+    return {"email": usuario["email"], "assinatura_status": row["status"] if row else "inativa"}
+
+
+# ──────────────────────────────────────────────
+# COBRANÇA — STRIPE
+# ──────────────────────────────────────────────
+
+@app.post("/api/billing/liberar-beta")
+def liberar_beta(usuario: dict = Depends(auth.get_usuario_atual)):
+    """Libera acesso gratuito temporário (fase beta, sem cobrança)."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE assinaturas SET status = 'trialing', atualizado_em = datetime('now') WHERE usuario_id = ?",
+            (usuario["id"],),
+        )
+        conn.commit()
+    return {"status": "trialing"}
+
+
+@app.post("/api/billing/checkout")
+def criar_checkout(usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT stripe_customer_id FROM assinaturas WHERE usuario_id = ?", (usuario["id"],)
+        ).fetchone()
+    customer_id = row["stripe_customer_id"] if row else None
+    url = billing.criar_checkout_session(usuario["email"], usuario["id"], customer_id)
+    return {"url": url}
+
+
+@app.post("/api/billing/portal")
+def abrir_portal(usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT stripe_customer_id FROM assinaturas WHERE usuario_id = ?", (usuario["id"],)
+        ).fetchone()
+    if not row or not row["stripe_customer_id"]:
+        raise HTTPException(400, "Nenhuma assinatura encontrada")
+    url = billing.criar_portal_session(row["stripe_customer_id"])
+    return {"url": url}
+
+
+@app.post("/api/webhook/stripe")
+async def webhook_stripe(request: Request):
+    payload = await request.body()
+    assinatura_header = request.headers.get("stripe-signature", "")
+    try:
+        evento = billing.construir_evento(payload, assinatura_header)
+    except Exception as e:
+        raise HTTPException(400, f"Webhook inválido: {e}")
+
+    tipo = evento["type"]
+    obj = evento["data"]["object"]
+
+    with get_db() as conn:
+        if tipo == "checkout.session.completed":
+            usuario_id = int(obj.get("client_reference_id") or obj.get("metadata", {}).get("usuario_id", 0))
+            if usuario_id:
+                conn.execute(
+                    """UPDATE assinaturas SET stripe_customer_id = ?, stripe_subscription_id = ?,
+                       status = 'active', atualizado_em = datetime('now') WHERE usuario_id = ?""",
+                    (obj.get("customer"), obj.get("subscription"), usuario_id),
+                )
+        elif tipo in ("customer.subscription.updated", "customer.subscription.deleted"):
+            status = obj.get("status", "inativa")
+            conn.execute(
+                """UPDATE assinaturas SET status = ?, atualizado_em = datetime('now')
+                   WHERE stripe_subscription_id = ?""",
+                (status, obj.get("id")),
+            )
+        elif tipo == "invoice.payment_failed":
+            conn.execute(
+                """UPDATE assinaturas SET status = 'past_due', atualizado_em = datetime('now')
+                   WHERE stripe_subscription_id = ?""",
+                (obj.get("subscription"),),
+            )
+        conn.commit()
+
+    return {"status": "ok"}
 
 
 # Serve o frontend estático (deve ficar no final para não sobrescrever as rotas da API)

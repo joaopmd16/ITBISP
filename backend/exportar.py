@@ -241,25 +241,25 @@ def gerar_excel(df: pd.DataFrame, filtros: dict = None) -> bytes:
 # PDF — estilo relatório profissional (light)
 # ──────────────────────────────────────────────
 
-# Paleta clara e profissional
-_BG       = '#FFFFFF'
-_SURFACE  = '#F4F6FA'
-_SURFACE2 = '#EAF0FB'
-_NAVY     = '#1B2A4A'
-_INK      = '#1F2937'
-_INK2     = '#374151'
-_MU       = '#6B7280'
-_LINE     = '#E5E7EB'
-_BLUE     = '#2563EB'
-_GREEN    = '#10B981'
-_PURPLE   = '#7C3AED'
-_AMBER    = '#F59E0B'
-_RED      = '#EF4444'
-_TEAL     = '#0891B2'
+# Paleta dark — preto e laranja/coral (igual ao dashboard)
+_BG       = '#0d0d0d'
+_SURFACE  = '#161616'
+_SURFACE2 = '#1e1e1e'
+_NAVY     = '#e08560'   # coral como "destaque principal"
+_INK      = '#f0f0f0'
+_INK2     = '#c8c8c8'
+_MU       = '#808080'
+_LINE     = '#2a2a2a'
+_BLUE     = '#e08560'   # coral
+_GREEN    = '#f0a484'   # coral claro
+_PURPLE   = '#c46e4a'   # coral escuro
+_AMBER    = '#e8c44a'   # amarelo quente
+_RED      = '#e08560'
+_TEAL     = '#d4956a'
 
-# Paleta de cores para gráficos
-_CHART_COLORS = ['#2563EB','#10B981','#7C3AED','#F59E0B','#EF4444',
-                 '#0891B2','#EC4899','#84CC16','#F97316','#6366F1']
+# Paleta de cores para gráficos (dark)
+_CHART_COLORS = ['#e08560','#c46e4a','#f0a484','#e8c44a','#d4956a',
+                 '#a85c38','#f5c5a3','#c8a878','#8c4a28','#e0b090']
 
 
 def _fmt(v, mode='brl'):
@@ -285,12 +285,15 @@ def _draw_page(canvas, doc):
     from reportlab.lib import colors
     W_PAGE, H_PAGE = doc.pagesize
     canvas.saveState()
-    # Barra de topo navy
-    canvas.setFillColor(colors.HexColor(_NAVY))
+    # Fundo total da página preto
+    canvas.setFillColor(colors.HexColor(_BG))
+    canvas.rect(0, 0, W_PAGE, H_PAGE, fill=1, stroke=0)
+    # Barra de topo coral/laranja
+    canvas.setFillColor(colors.HexColor('#e08560'))
     canvas.rect(0, H_PAGE - 28, W_PAGE, 28, fill=1, stroke=0)
     # Título no topo
     canvas.setFont('Helvetica-Bold', 9)
-    canvas.setFillColor(colors.white)
+    canvas.setFillColor(colors.HexColor('#0d0d0d'))
     canvas.drawString(18, H_PAGE - 18, 'ITBI · São Paulo  —  Relatório de Transações Imobiliárias')
     canvas.setFont('Helvetica', 8)
     canvas.drawRightString(W_PAGE - 18, H_PAGE - 18,
@@ -520,11 +523,11 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
 
     # ── KPI cards (5 indicadores em linha) ────────────────────────────────
     kpi_data = [
-        ('Transacoes',      _fmt(total, 'num'), _BLUE,   '#EFF6FF'),
-        ('Volume Total',    _fmt(vol),          _GREEN,  '#ECFDF5'),
-        ('Ticket Medio',    _fmt(med),          _PURPLE, '#F5F3FF'),
-        ('Maior Transacao', _fmt(maxi),         _AMBER,  '#FFFBEB'),
-        ('Base ITBI Total', _fmt(itbi),         _TEAL,   '#ECFEFF'),
+        ('Transacoes',      _fmt(total, 'num'), '#e08560', '#1e1e1e'),
+        ('Volume Total',    _fmt(vol),          '#f0a484', '#1e1e1e'),
+        ('Ticket Medio',    _fmt(med),          '#e8c44a', '#1e1e1e'),
+        ('Maior Transacao', _fmt(maxi),         '#c46e4a', '#1e1e1e'),
+        ('Base ITBI Total', _fmt(itbi),         '#d4956a', '#1e1e1e'),
     ]
     cw_kpi = W / len(kpi_data)
 
@@ -584,18 +587,18 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
         elems.append(Paragraph('Graficos e Indicadores', s_section))
         elems.append(Spacer(1, 6))
 
-        plt.style.use('default')
+        plt.style.use('dark_background')
 
         def _ax_style(ax, title=''):
-            ax.set_facecolor('white')
+            ax.set_facecolor('#161616')
             for sp in ax.spines.values():
-                sp.set_color(_LINE); sp.set_linewidth(0.6)
-            ax.tick_params(colors=_MU, labelsize=8, length=0)
-            ax.grid(color=_LINE, linewidth=0.5, axis='y', zorder=0)
+                sp.set_color('#2a2a2a'); sp.set_linewidth(0.6)
+            ax.tick_params(colors='#808080', labelsize=8, length=0)
+            ax.grid(color='#2a2a2a', linewidth=0.5, axis='y', zorder=0)
             ax.set_axisbelow(True)
             if title:
                 ax.set_title(title, fontsize=10, fontweight='bold',
-                             color=_NAVY, pad=10, loc='left')
+                             color='#e08560', pad=10, loc='left')
 
         fmtK = mticker.FuncFormatter(lambda x, _: f'{int(x/1000)}k' if x>=1000 else str(int(x)))
         fmtM = mticker.FuncFormatter(lambda x, _:
@@ -610,7 +613,7 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
         anos_str = por_ano['ano_referencia'].astype(str).tolist()
         peak_t = por_ano['transacoes'].max()
 
-        FIG_BG = '#FAFBFC'
+        FIG_BG = '#0d0d0d'
 
         # ── Linha 1: Barras transações + Pizza natureza ──────────────────
         fig1, (axA, axB) = plt.subplots(1, 2, figsize=(16, 4.2),
@@ -728,6 +731,64 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
         fig3.savefig(ib3, format='png', dpi=150, bbox_inches='tight', facecolor=FIG_BG)
         plt.close(fig3); ib3.seek(0)
         elems.append(RLImage(ib3, width=W, height=6.8*cm))
+        elems.append(Spacer(1, 10))
+
+        # ── Linha 4: Sazonalidade mensal + Distribuição por faixa ───────
+        fig4, (axG, axH) = plt.subplots(1, 2, figsize=(16, 4.0))
+        fig4.patch.set_facecolor(FIG_BG)
+
+        _ax_style(axG, 'Sazonalidade Mensal (ultimos 3 anos)')
+        MESES_STR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+        if 'mes_referencia' in df.columns and 'ano_referencia' in df.columns:
+            df_mes = df.dropna(subset=['mes_referencia', 'ano_referencia'])
+            df_mes = df_mes[df_mes['mes_referencia'].between(1, 12)]
+            ultimos_anos = sorted(df_mes['ano_referencia'].unique())[-3:]
+            SAZ_CORES = [_BLUE, _GREEN, _AMBER]
+            for i, ano in enumerate(ultimos_anos):
+                sub = df_mes[df_mes['ano_referencia'] == ano]
+                contagem = sub.groupby('mes_referencia').size()
+                vals_mes = [contagem.get(m, np.nan) for m in range(1, 13)]
+                xs = [j for j, v in enumerate(vals_mes) if not np.isnan(v)]
+                ys = [v for v in vals_mes if not np.isnan(v)]
+                if xs:
+                    axG.plot(xs, ys, color=SAZ_CORES[i % 3], linewidth=2,
+                             marker='o', markersize=4, markerfacecolor='white',
+                             markeredgecolor=SAZ_CORES[i % 3], markeredgewidth=1.5,
+                             label=str(int(ano)), zorder=4)
+                    axG.fill_between(xs, ys, alpha=0.08, color=SAZ_CORES[i % 3], zorder=2)
+            axG.set_xticks(range(12))
+            axG.set_xticklabels(MESES_STR, fontsize=8)
+            axG.yaxis.set_major_formatter(fmtK)
+            axG.legend(fontsize=8, framealpha=0, loc='upper right')
+        axG.set_facecolor(FIG_BG)
+
+        _ax_style(axH, 'Distribuicao por Faixa de Valor')
+        if 'valor_declarado' in df.columns:
+            faixas_labels = ['Ate\nR$300k', 'R$300k\n600k', 'R$600k\n1M', 'R$1M\n2M', 'Acima\nR$2M']
+            faixas_bins = [0, 300_000, 600_000, 1_000_000, 2_000_000, float('inf')]
+            vd = df['valor_declarado'].dropna()
+            vd = vd[vd > 0]
+            contagens_fx = [((vd >= faixas_bins[j]) & (vd < faixas_bins[j+1])).sum()
+                             for j in range(5)]
+            max_fx = max(contagens_fx) if contagens_fx else 1
+            bar_cols_fx = [_BLUE if c == max_fx else _SURFACE2 for c in contagens_fx]
+            brs = axH.bar(range(5), contagens_fx, color=bar_cols_fx,
+                          edgecolor='white', linewidth=0.5, width=0.6, zorder=3)
+            for bar, val in zip(brs, contagens_fx):
+                if val > 0:
+                    axH.text(bar.get_x()+bar.get_width()/2, val + max_fx*0.01,
+                             fmtK(val, None), ha='center', va='bottom',
+                             fontsize=7.5, color=_MU)
+            axH.set_xticks(range(5))
+            axH.set_xticklabels(faixas_labels, fontsize=8)
+            axH.yaxis.set_major_formatter(fmtK)
+        axH.set_facecolor(FIG_BG)
+
+        plt.tight_layout(pad=1.5)
+        ib4 = io.BytesIO()
+        fig4.savefig(ib4, format='png', dpi=150, bbox_inches='tight', facecolor=FIG_BG)
+        plt.close(fig4); ib4.seek(0)
+        elems.append(RLImage(ib4, width=W, height=7.2*cm))
         elems.append(Spacer(1, 6))
 
     # ── Tabela de registros ───────────────────────────────────────────────
@@ -772,7 +833,7 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
     t.setStyle(TableStyle([
         ('BACKGROUND',    (0,0), (-1,0),  C_NAVY),
         ('LINEBELOW',     (0,0), (-1,0),  2,    C_BLUE),
-        ('ROWBACKGROUNDS',(0,1), (-1,-1), [colors.white, C_SURF]),
+        ('ROWBACKGROUNDS',(0,1), (-1,-1), [C_SURF, C_SURF2]),
         ('GRID',          (0,0), (-1,-1), 0.3,  C_LINE),
         ('TOPPADDING',    (0,0), (-1,-1), 4),
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
@@ -843,27 +904,27 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
                 i = len(rows_f)
                 rows_f.append([Paragraph(txt, s_gh), ''])
                 is_data.append(False)
-                stls_f += [
+                stls_f.extend([
                     ('SPAN',          (0, i), (1, i)),
                     ('BACKGROUND',    (0, i), (1, i), colors.HexColor(c_hex)),
                     ('TOPPADDING',    (0, i), (1, i), 3),
                     ('BOTTOMPADDING', (0, i), (1, i), 3),
                     ('LEFTPADDING',   (0, i), (1, i), 6),
                     ('RIGHTPADDING',  (0, i), (1, i), 4),
-                ]
+                ])
 
             def add_row(lbl, val):
                 i = len(rows_f)
                 rows_f.append([Paragraph(lbl, s_lbl), Paragraph(val, s_val)])
                 is_data.append(True)
-                stls_f += [
+                stls_f.extend([
                     ('TOPPADDING',    (0, i), (1, i), 2),
                     ('BOTTOMPADDING', (0, i), (1, i), 2),
                     ('LEFTPADDING',   (0, i), (0, i), 6),
                     ('RIGHTPADDING',  (0, i), (0, i), 3),
                     ('LEFTPADDING',   (1, i), (1, i), 4),
                     ('RIGHTPADDING',  (1, i), (1, i), 4),
-                ]
+                ])
 
             # ── Cabeçalho do imóvel ───────────────────────
             addr = _v('logradouro')

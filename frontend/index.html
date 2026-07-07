@@ -34,19 +34,19 @@
   --warn:#c98a16;
   --shadow:0 1px 2px #1a23410a, 0 4px 14px #1a23410a;
   --shadow-lg:0 14px 40px #1a234118;
-  --r-card:20px;
+  --r-card:16px;
   --r-pill:999px;
-  --r-input:14px;
+  --r-input:10px;
 }
 :root[data-theme="dark"]{
   --bg:#000000;
   --surface:#0d0d0d;
-  --surface-2:#171717;
-  --ink:#f0f0f0;
-  --ink-2:#b0b0b0;
-  --mu:#666666;
-  --mu-2:#333333;
-  --line:#1f1f1f;
+  --surface-2:#161616;
+  --ink:#f5f5f5;
+  --ink-2:#b8b8b8;
+  --mu:#808080;
+  --mu-2:#484848;
+  --line:#1e1e1e;
   --line-2:#2a2a2a;
   --primary:#e08560;
   --primary-soft:#e0856022;
@@ -61,9 +61,6 @@
   --warn:#e8b955;
   --shadow:0 1px 2px #0006, 0 6px 20px #0008;
   --shadow-lg:0 18px 50px #000a;
-  --r-card:20px;
-  --r-pill:999px;
-  --r-input:14px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -77,7 +74,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',
 .side{position:sticky;top:0;height:100vh;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px;z-index:50}
 .side-logo{width:38px;height:38px;border-radius:11px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 6px 18px color-mix(in srgb,var(--primary) 35%,transparent)}
 .side-logo svg{width:18px;height:18px}
-.nav-btn{width:40px;height:40px;border-radius:14px;background:none;border:none;color:var(--mu);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:all .15s}
+.nav-btn{width:40px;height:40px;border-radius:11px;background:none;border:none;color:var(--mu);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:all .15s}
 .nav-btn svg{width:18px;height:18px;stroke-width:1.6}
 .nav-btn:hover{color:var(--ink);background:var(--surface-2)}
 .nav-btn.active{color:var(--primary);background:var(--primary-soft)}
@@ -103,7 +100,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',
 .av.b2{background:#7c4dff}
 .av.b3{background:#e23f7e}
 .av.plus{background:var(--surface);color:var(--ink-2);border:1px dashed var(--line-2);font-size:11px;font-weight:500}
-.top-btn{background:var(--surface);border:1px solid var(--line);width:38px;height:38px;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .15s;position:relative}
+.top-btn{background:var(--surface);border:1px solid var(--line);width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .15s;position:relative}
 .top-btn:hover{border-color:var(--line-2);color:var(--ink)}
 .top-btn svg{width:16px;height:16px;stroke-width:1.7}
 .top-btn .badge-dot{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--surface)}
@@ -132,7 +129,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',
 .settings-shortcuts{display:flex;flex-direction:column;gap:8px}
 .shortcut-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)}
 kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-size:11px;font-family:'JetBrains Mono';color:var(--ink)}
-.btn-primary{background:var(--primary);color:#fff;border:none;border-radius:14px;padding:0 18px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:all .15s;box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 25%,transparent)}
+.btn-primary{background:var(--primary);color:#fff;border:none;border-radius:11px;padding:0 18px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:all .15s;box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 25%,transparent)}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px color-mix(in srgb,var(--primary) 32%,transparent)}
 .btn-primary:disabled{opacity:.7;cursor:wait;transform:none}
 
@@ -144,7 +141,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .over-title{font-size:24px;font-weight:700;letter-spacing:-.025em;color:var(--ink)}
 .over-sub{font-size:13px;color:var(--mu);margin-left:4px}
 .over-spacer{flex:1}
-.period-picker{background:var(--surface);border:1px solid var(--line);border-radius:14px;height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--ink);font-size:13px;font-weight:500;position:relative;transition:all .15s}
+.period-picker{background:var(--surface);border:1px solid var(--line);border-radius:11px;height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--ink);font-size:13px;font-weight:500;position:relative;transition:all .15s}
 .period-picker:hover{border-color:var(--line-2)}
 .period-picker svg{width:14px;height:14px;color:var(--mu)}
 .period-picker .chev{margin-left:4px;color:var(--mu);font-size:10px}
@@ -158,7 +155,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .pp-divider{height:1px;background:var(--line);margin:6px 0}
 
 /* ─── KPI cards ─── */
-.kgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.kgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
 .kcard{background:var(--surface);border-radius:var(--r-card);padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s}
 .kcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .kcard-top{display:flex;align-items:flex-start;justify-content:space-between}
@@ -169,6 +166,34 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .kico.amber{background:var(--tint-amber-bg);color:var(--tint-amber-fg)}
 .kico.green{background:var(--tint-green-bg);color:var(--tint-green-fg)}
 .kico.pink{background:var(--tint-pink-bg);color:var(--tint-pink-fg)}
+.kico.orange{background:#ff8c4222;color:#ff8c42}
+/* ── Calculadora ── */
+/* ── Calculadora ── */
+.calc-section{background:var(--surface);border-radius:var(--r-card);padding:0;box-shadow:var(--shadow);margin-bottom:0;overflow:hidden}
+.calc-header{display:flex;align-items:center;gap:10px;padding:18px 24px 16px;border-bottom:1px solid var(--line)}
+.calc-header-ico{width:32px;height:32px;border-radius:10px;background:#ff8c4222;color:#ff8c42;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.calc-header-ico svg{width:16px;height:16px}
+.calc-header-text{flex:1}
+.calc-header-text h3{margin:0;font-size:13px;font-weight:700;color:var(--fg);line-height:1}
+.calc-header-text p{margin:0;font-size:11px;color:var(--muted);margin-top:2px}
+.calc-body{display:flex;align-items:stretch;gap:0;padding:0}
+.calc-slot{flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:6px;position:relative}
+.calc-slot+.calc-slot{border-left:1px solid var(--line)}
+.calc-slot label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.calc-slot-val{font-size:24px;font-weight:800;color:var(--fg);letter-spacing:-.02em;line-height:1.1}
+.calc-slot-val.accent{color:#ff8c42}
+.calc-slot-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.calc-slot input{width:100%;padding:10px 14px;border-radius:var(--r-input);border:1.5px solid var(--line);background:var(--surface-2);color:var(--fg);font-size:20px;font-weight:700;outline:none;transition:border-color .15s,box-shadow .15s;-moz-appearance:textfield}
+.calc-slot input::-webkit-outer-spin-button,.calc-slot input::-webkit-inner-spin-button{-webkit-appearance:none}
+.calc-slot input:focus{border-color:#ff8c42;box-shadow:0 0 0 3px #ff8c4218}
+.calc-slot input.modified{border-color:#ff8c42;background:#ff8c420d}
+.calc-op{display:flex;align-items:center;justify-content:center;padding:0 4px;font-size:26px;font-weight:200;color:var(--muted);align-self:center;user-select:none;flex-shrink:0}
+.calc-result-slot{flex:1.3;padding:20px 24px;display:flex;flex-direction:column;gap:6px;background:linear-gradient(135deg,#ff8c4210 0%,transparent 60%);border-left:1px solid var(--line)}
+.calc-result-slot label{font-size:10.5px;font-weight:700;color:#ff8c42;text-transform:uppercase;letter-spacing:.06em}
+.calc-result-big{font-size:28px;font-weight:900;color:#ff8c42;letter-spacing:-.03em;line-height:1}
+.calc-result-empty{font-size:15px;font-weight:600;color:var(--muted)}
+.calc-result-sub{font-size:11px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:5px}
+.calc-result-sub svg{opacity:.5}
 .kdot{width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);margin:6px}
 .kval{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--ink);font-feature-settings:"tnum","ss01"}
 .kval .unit{font-size:18px;font-weight:600;color:var(--mu);margin-left:2px;letter-spacing:-.01em}
@@ -198,7 +223,11 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .charts-row{display:grid;grid-template-columns:5fr 7fr;gap:16px}
 .cardbox{background:var(--surface);border-radius:var(--r-card);padding:22px 24px;box-shadow:var(--shadow);position:relative}
 .cbox-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:10px}
-.cbox-title{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.015em}
+.cbox-title{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.015em;display:inline-flex;align-items:center;gap:6px}
+.cbox-tip{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--surface-2);color:var(--mu);font-size:10px;font-weight:700;cursor:default;position:relative;flex-shrink:0;transition:background .15s,color .15s}
+.cbox-tip:hover{background:var(--primary);color:#fff}
+.cbox-tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);background:#1a1a2e;color:#e8e8e8;font-size:11.5px;font-weight:400;line-height:1.5;padding:10px 14px;border-radius:10px;white-space:pre-wrap;width:240px;pointer-events:none;opacity:0;transition:opacity .18s;z-index:999;box-shadow:0 6px 24px #0004;border:1px solid #ffffff12}
+.cbox-tip:hover::after{opacity:1}
 .cbox-sub{font-size:12px;color:var(--mu);margin-top:2px}
 .cbox-menu{background:var(--surface-2);border:none;width:28px;height:28px;border-radius:8px;cursor:pointer;color:var(--mu);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cbox-menu:hover{color:var(--ink)}
@@ -218,6 +247,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .gauge-num{position:absolute;left:50%;top:68%;transform:translate(-50%,-50%);font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--ink);line-height:1;white-space:nowrap}
 .gauge-num .un{font-size:15px;color:var(--mu);font-weight:600;margin-left:2px}
 .gauge-cap{font-size:12px;color:var(--mu);margin-top:10px;max-width:240px;line-height:1.4;text-align:center;padding:0 8px}
+.chart-empty{display:flex;align-items:center;justify-content:center;min-height:140px;font-size:12px;color:var(--mu);font-style:italic;opacity:.6}
 
 /* inline filters */
 .filt-inline{background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow);overflow:hidden}
@@ -276,7 +306,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 #pdf-toast .pdf-sub{font-size:11px;color:var(--mu);margin-top:1px}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* ─── tag input ─── */
-.tag-input-inner{display:flex;flex-wrap:wrap;gap:5px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:5px 10px;min-height:44px;padding:5px 10px;min-height:42px;cursor:text;transition:all .15s}
+.tag-input-inner{display:flex;flex-wrap:wrap;gap:5px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:5px 10px;min-height:42px;cursor:text;transition:all .15s}
 .tag-input-inner:focus-within{border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 4px var(--primary-soft)}
 .tag-input-inner input{border:none;background:none;outline:none;color:var(--ink);font-size:13px;font-family:inherit;flex:1;min-width:100px;padding:3px 2px}
 .tag-input-inner input::placeholder{color:var(--mu)}
@@ -287,16 +317,11 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .ffield input::placeholder{color:var(--mu)}
 .filt-body-foot{padding:18px 24px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}
 .filt-body-foot .hint{margin-left:auto;font-size:11px;color:var(--mu)}
-.btn-ghost-2{background:var(--surface-2);color:var(--ink-2);border:none;border-radius:14px;padding:0 16px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:background .15s}
+.btn-ghost-2{background:var(--surface-2);color:var(--ink-2);border:none;border-radius:10px;padding:0 16px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:background .15s}
 .btn-ghost-2:hover{background:var(--line)}
-.acl{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:99;background:var(--surface);border:1px solid var(--line);border-radius:14px;max-height:260px;overflow-y:auto;box-shadow:var(--shadow-lg);padding:6px}
-.acl div{padding:9px 12px;font-size:13px;cursor:pointer;color:var(--ink-2);border-radius:9px;display:flex;align-items:center;gap:10px;transition:background .1s}
-.acl div:hover{background:var(--surface-2);color:var(--ink)}
-.acl div.acl-selected{background:var(--primary-soft);color:var(--primary-ink)}
-.acl div.acl-selected:hover{background:color-mix(in srgb,var(--primary) 20%,var(--surface))}
-.acl-cb{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface-2);transition:all .1s}
-.acl div.acl-selected .acl-cb{background:var(--primary);border-color:var(--primary);color:#fff}
-.acl-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acl{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:99;background:var(--surface);border:1px solid var(--line);border-radius:10px;max-height:220px;overflow-y:auto;box-shadow:var(--shadow-lg);padding:6px}
+.acl div{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--ink-2);border-radius:7px}
+.acl div:hover{background:var(--primary-soft);color:var(--primary-ink)}
 
 /* ─── map card ─── */
 .mapbox{background:var(--surface);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--shadow)}
@@ -326,34 +351,24 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .tbox-head .t{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.015em}
 .tmeta{font-size:12px;color:var(--mu);font-family:'JetBrains Mono';margin-left:auto}
 .tbox-export{display:flex;gap:6px}
-.tbox-export button{background:var(--surface-2);border:none;border-radius:12px;padding:7px 13px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;color:var(--ink-2);transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+.tbox-export button{background:var(--surface-2);border:none;border-radius:9px;padding:7px 13px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;color:var(--ink-2);transition:all .15s;display:inline-flex;align-items:center;gap:5px}
 .tbox-export button:hover{background:var(--line);color:var(--ink)}
 .tbox-export button svg{width:13px;height:13px}
-.twrap{overflow-x:auto;padding:8px 14px 14px}
-table{width:100%;border-collapse:separate;border-spacing:0 6px;min-width:960px}
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:960px}
 thead th{
-  padding:6px 16px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--mu);
-  letter-spacing:.02em;white-space:nowrap;
-  cursor:pointer;user-select:none;transition:color .15s;background:transparent
+  padding:13px 18px;text-align:left;font-size:11px;font-weight:600;color:var(--mu);
+  letter-spacing:.02em;border-bottom:1px solid var(--line);white-space:nowrap;
+  cursor:pointer;user-select:none;transition:color .15s;background:var(--surface)
 }
 thead th:hover{color:var(--ink)}
 thead th.sa::after{content:" ↑";color:var(--primary)}
 thead th.sd::after{content:" ↓";color:var(--primary)}
 thead th.num{text-align:right}
-tbody tr{cursor:pointer;transition:all .12s}
-tbody tr td{
-  background:var(--surface-2);
-  border-top:1.5px solid var(--line);
-  border-bottom:1.5px solid var(--line);
-  transition:all .12s
-}
-tbody tr td:first-child{border-left:1.5px solid var(--line);border-radius:14px 0 0 14px}
-tbody tr td:last-child{border-right:1.5px solid var(--line);border-radius:0 14px 14px 0}
-tbody tr:hover td{
-  background:color-mix(in srgb,var(--primary) 9%,var(--surface-2));
-  border-color:color-mix(in srgb,var(--primary) 30%,transparent)
-}
-td{padding:14px 16px;font-size:13px;white-space:nowrap;vertical-align:middle;color:var(--ink-2)}
+tbody tr{border-bottom:1px solid var(--line);cursor:pointer;transition:background .1s}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr:last-child{border-bottom:none}
+td{padding:14px 18px;font-size:13px;white-space:nowrap;vertical-align:middle;color:var(--ink-2)}
 .td-main{color:var(--ink);font-weight:600}
 .td-num{font-family:'JetBrains Mono';font-variant-numeric:tabular-nums;color:var(--ink);text-align:right;font-weight:500;letter-spacing:-.01em}
 .td-num.muted{color:var(--mu);font-weight:400}
@@ -402,59 +417,53 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 .mfv.hero{font-size:26px;font-weight:800;letter-spacing:-.025em;color:var(--primary);font-family:inherit}
 .mfv.mu{color:var(--mu)}
 
-/* ─── export bar ─── */
-.expbar{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(0);background:var(--surface);border:1px solid var(--line);color:var(--ink);border-radius:16px;padding:10px 10px 10px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 50px #0008;z-index:300;white-space:nowrap;animation:expbar-in .25s cubic-bezier(.2,.8,.2,1)}
-@keyframes expbar-in{from{transform:translateX(-50%) translateY(16px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
-.expbar-count{font-size:13px;font-weight:700;color:var(--ink)}
-.expbar-sub{font-size:11px;color:var(--mu)}
-.exp-divider{width:1px;height:18px;background:var(--line)}
-.exp-btn{border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);border-radius:10px;padding:7px 16px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .15s}
-.exp-btn:hover{border-color:var(--primary);color:var(--primary)}
+/* ─── export bar (liquid glass) ─── */
+.expbar{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(0);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 55%,transparent),color-mix(in srgb,var(--surface) 75%,transparent));
+  -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid color-mix(in srgb,#fff 18%,transparent);
+  color:var(--ink);border-radius:22px;padding:10px 10px 10px 20px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 24px 60px #0009,inset 0 1px 0 color-mix(in srgb,#fff 14%,transparent),inset 0 0 0 1px color-mix(in srgb,#fff 4%,transparent);
+  z-index:300;white-space:nowrap;animation:expbar-in .3s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+.expbar::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(120deg,color-mix(in srgb,#fff 10%,transparent) 0%,transparent 35%);mix-blend-mode:overlay}
+@keyframes expbar-in{from{transform:translateX(-50%) translateY(16px) scale(.96);opacity:0}to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
+.expbar-count{font-size:13px;font-weight:700;color:var(--ink);position:relative;z-index:1}
+.expbar-sub{font-size:11px;color:var(--mu);position:relative;z-index:1}
+
+.selpop{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(8px) scale(.96);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 55%,transparent),color-mix(in srgb,var(--surface) 75%,transparent));
+  -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid color-mix(in srgb,#fff 18%,transparent);border-radius:18px;padding:14px 18px;
+  box-shadow:0 24px 60px #0009,inset 0 1px 0 color-mix(in srgb,#fff 14%,transparent);
+  z-index:301;min-width:220px;display:flex;flex-direction:column;gap:8px;
+  opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}
+.selpop.open{opacity:1;transform:translateX(-50%) translateY(0) scale(1);pointer-events:auto}
+.selpop-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.selpop-head{margin-bottom:2px;padding-bottom:8px;border-bottom:1px solid color-mix(in srgb,#fff 10%,transparent)}
+.selpop-title{font-size:12px;font-weight:700;color:var(--ink)}
+.selpop-x{background:none;border:none;color:var(--mu);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;transition:color .15s}
+.selpop-x:hover{color:var(--ink)}
+.selpop-lbl{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em}
+.selpop-val{font-size:14px;color:var(--ink)}
+.exp-divider{width:1px;height:18px;background:color-mix(in srgb,#fff 14%,transparent);position:relative;z-index:1}
+.exp-btn{border:1px solid color-mix(in srgb,#fff 14%,transparent);background:color-mix(in srgb,#fff 6%,transparent);color:var(--ink-2);border-radius:12px;padding:7px 16px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .15s;position:relative;z-index:1}
+.exp-btn:hover{border-color:var(--primary);color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,transparent)}
 .exp-btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
 .exp-btn.primary:hover{opacity:.88}
-.exp-clear{background:none;color:var(--mu);border:none;cursor:pointer;font-size:12px;font-family:inherit;padding:7px 10px;border-radius:10px;transition:color .15s}
+.exp-clear{background:none;color:var(--mu);border:none;cursor:pointer;font-size:12px;font-family:inherit;padding:7px 10px;border-radius:10px;transition:color .15s;position:relative;z-index:1}
 .exp-clear:hover{color:var(--ink)}
 
 /* spinner */
 .spin{display:inline-block;width:12px;height:12px;border:2px solid #ffffff60;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-@media(max-width:1300px){
-  .kgrid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:1100px){
-  .kgrid{grid-template-columns:repeat(3,1fr)}
+  .kgrid{grid-template-columns:repeat(2,1fr);}.kcard-calc .calc-field input{font-size:12px}
   .charts-row{grid-template-columns:1fr}
   .fgrid{grid-template-columns:1fr}
   .mg{grid-template-columns:1fr 1fr}
 }
-/* ─── calculadora ─── */
-.calc-section{background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow);overflow:hidden}
-.calc-head{padding:22px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
-.calc-head-ico{width:40px;height:40px;border-radius:13px;background:var(--tint-amber-bg);color:var(--tint-amber-fg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.calc-head-ico svg{width:20px;height:20px;stroke-width:1.7}
-.calc-head-title{font-size:18px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
-.calc-head-sub{font-size:12px;color:var(--mu);margin-top:2px}
-.calc-body{padding:28px 24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;align-items:end}
-.calc-field{display:flex;flex-direction:column;gap:8px}
-.calc-label{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
-.calc-readonly{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:14px 16px;font-size:22px;font-weight:800;color:var(--ink);font-family:'JetBrains Mono';letter-spacing:-.02em;line-height:1}
-.calc-readonly .calc-unit{font-size:13px;font-weight:600;color:var(--mu);margin-left:4px}
-.calc-input-wrap{position:relative}
-.calc-input-wrap .calc-prefix{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--mu);pointer-events:none}
-.calc-input-wrap input{width:100%;background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--r-input);padding:14px 14px 14px 38px;font-size:18px;font-weight:700;color:var(--ink);font-family:'JetBrains Mono';outline:none;transition:all .15s}
-.calc-input-wrap input:focus{border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 4px var(--primary-soft)}
-.calc-input-wrap input::placeholder{color:var(--mu-2);font-weight:400}
-.calc-result-box{background:color-mix(in srgb,var(--primary) 10%,var(--surface-2));border:1.5px solid color-mix(in srgb,var(--primary) 25%,transparent);border-radius:var(--r-input);padding:14px 16px}
-.calc-result-val{font-size:26px;font-weight:800;color:var(--primary-ink);font-family:'JetBrains Mono';letter-spacing:-.02em;line-height:1}
-.calc-result-empty{font-size:13px;font-weight:500;color:var(--mu);font-style:italic;padding:4px 0}
-.calc-result-formula{font-size:11px;color:var(--mu);margin-top:5px}
-.calc-divider{display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:300;color:var(--mu);padding-bottom:14px}
-@media(max-width:900px){.calc-body{grid-template-columns:1fr;gap:16px}.calc-divider{display:none}}
-
-/* kcard calc highlight */
-.kcard-calc-result{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--primary-ink);font-family:'JetBrains Mono'}
-.kcard-calc-empty{font-size:12px;color:var(--mu);font-weight:500;font-style:italic}
-
 @media(max-width:760px){
   .shell{grid-template-columns:1fr;display:flex;flex-direction:column}
   .side{display:none}
@@ -515,9 +524,6 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
     </button>
     <button class="nav-btn" title="Filtros" onclick="openFilters()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 9v6l-4-2v-4z"/></svg>
-    </button>
-    <button class="nav-btn" title="Calculadora m²" onclick="scrollToSection('calc')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h0M8 14h2M12 14h2M16 14h0M8 18h2M12 18h2M16 18h0"/></svg>
     </button>
     <div class="side-spacer"></div>
     <div class="side-divider"></div>
@@ -580,6 +586,14 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
             <div class="shortcut-row"><kbd>Enter</kbd><span>Buscar</span></div>
             <div class="shortcut-row"><kbd>Esc</kbd><span>Fechar painel</span></div>
             <div class="shortcut-row"><kbd>←</kbd><kbd>→</kbd><span>Navegar páginas</span></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Conta</div>
+          <div class="settings-options" style="flex-direction:column;gap:8px">
+            <button class="sopt" style="width:100%" onclick="abrirPortalAssinatura()">Gerenciar assinatura</button>
+            <button class="sopt" style="width:100%" onclick="logout()">Sair</button>
           </div>
         </div>
       </div>
@@ -658,40 +672,32 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="kcard">
           <div class="kcard-top">
             <div class="kico green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
             </div>
           </div>
           <div>
-            <div class="kval" id="km2t">—</div>
-            <div class="klabel">Preço médio m² (Terreno)</div>
-            <div class="kdelta" id="dm2t" style="color:var(--mu);font-size:11px;margin-top:6px">soma valor ÷ soma área</div>
+            <div class="kval" id="ki">—</div>
+            <div class="klabel">Base ITBI</div>
+            <div class="kdelta up" id="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M7 17 17 7M7 7h10v10"/></svg><span>—</span><span class="vs">vs período anterior</span></div>
           </div>
         </div>
 
-        <div class="kcard">
+        <!-- KPI Calculadora m² -->
+        <div class="kcard kcard-calc">
           <div class="kcard-top">
-            <div class="kico pink">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+            <div class="kico orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h4"/></svg>
             </div>
           </div>
           <div>
-            <div class="kval" id="km2c">—</div>
-            <div class="klabel">Preço médio m² (Construída)</div>
-            <div class="kdelta" id="dm2c" style="color:var(--mu);font-size:11px;margin-top:6px">soma valor ÷ soma área</div>
-          </div>
-        </div>
-
-        <div class="kcard" style="cursor:pointer" onclick="scrollToSection('calc')" title="Abrir calculadora">
-          <div class="kcard-top">
-            <div class="kico amber">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h0M8 14h2M12 14h2M16 14h0M8 18h2M12 18h2M16 18h0"/></svg>
+            <div class="kval" id="k-calc-result" style="font-size:16px">Defina o m²</div>
+            <div class="klabel">Valor do m² (ticket ÷ m²)</div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+              <input id="calc-m2" type="number" min="1" placeholder="m²" title="Área em m²"
+                style="width:80px;padding:6px 10px;border-radius:var(--r-input);border:1.5px solid var(--line);background:var(--surface-2);color:var(--fg);font-size:13px;font-weight:600;outline:none"
+                oninput="updateCalc()" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--line)'">
+              <span style="font-size:11px;color:var(--muted)">m²</span>
             </div>
-            <span class="kdot" style="background:var(--warn);box-shadow:0 0 0 3px var(--tint-amber-bg)"></span>
-          </div>
-          <div>
-            <div id="kcalc-val"><span class="kcard-calc-empty">Defina o m²</span></div>
-            <div class="klabel">Calculadora m²</div>
-            <div class="kdelta" id="kcalc-sub" style="color:var(--mu);font-size:11px;margin-top:6px">ticket médio ÷ m² digitado</div>
           </div>
         </div>
       </div>
@@ -720,15 +726,18 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
             </div>
             <div class="ffield">
               <label>CEP</label>
-              <input id="fc" type="text" class="mono" placeholder="01310-100">
+              <div class="tag-input-inner" id="fc-wrap" onclick="document.getElementById('fc').focus()"></div>
+              <div class="acl" id="acc" style="display:none"></div>
             </div>
             <div class="ffield">
               <label>N° IPTU (SQL)</label>
-              <input id="fsql" type="text" class="mono" placeholder="098034 ou 098.034.0016-9">
+              <div class="tag-input-inner" id="fsql-wrap" onclick="document.getElementById('fsql').focus()"></div>
+              <div class="acl" id="acsql" style="display:none"></div>
             </div>
             <div class="ffield">
               <label>Número</label>
-              <input id="fn" type="text" class="mono" placeholder="100">
+              <div class="tag-input-inner" id="fn-wrap" onclick="document.getElementById('fn').focus()"></div>
+              <div class="acl" id="acn" style="display:none"></div>
             </div>
             <div class="ffield">
               <label>Natureza</label>
@@ -741,6 +750,14 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
             <div class="ffield">
               <label>Ano até</label>
               <select id="famax"><option value="">Todos</option></select>
+            </div>
+            <div class="ffield">
+              <label>Mês de</label>
+              <select id="fmesmin"><option value="">Todos</option></select>
+            </div>
+            <div class="ffield">
+              <label>Mês até</label>
+              <select id="fmesmax"><option value="">Todos</option></select>
             </div>
             <div class="ffield">
               <label>Valor mínimo</label>
@@ -787,7 +804,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
           <div class="cardbox">
             <div class="cbox-head">
               <div>
-                <div class="cbox-title">Movimento do mercado</div>
+                <div class="cbox-title">Movimento do mercado<span class="cbox-tip" data-tip="Indica o volume de transações do ano mais recente em relação ao pico histórico da série. 100% = ano recorde.">ⓘ</span></div>
                 <div class="cbox-sub" id="gauge-sub">Atividade vs. capacidade</div>
               </div>
               <button class="cbox-menu">⋯</button>
@@ -803,8 +820,8 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
                     </linearGradient>
                   </defs>
                   <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="var(--surface-2)" stroke-width="16" stroke-linecap="round"/>
-                  <path id="gauge-arc" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#gg-arc)" stroke-width="16" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="180"/>
-                  <circle id="gauge-thumb" cx="100" cy="30" r="6" fill="var(--surface)" stroke="#e85959" stroke-width="3"/>
+                  <path id="gauge-arc" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#gg-arc)" stroke-width="16" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+                  <circle id="gauge-thumb" cx="20" cy="110" r="7" fill="var(--surface)" stroke="var(--primary)" stroke-width="2.5"/>
                 </svg>
                 <div class="gauge-overlay">
                   <div class="gauge-heart">
@@ -821,16 +838,12 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
           <div class="cardbox">
             <div class="cbox-head">
               <div>
-                <div class="cbox-title">Transações por ano</div>
+                <div class="cbox-title">Transações por ano<span class="cbox-tip" data-tip="Volume total de transações imobiliárias registradas a cada ano. A barra em destaque (coral) indica o ano de maior volume histórico.">ⓘ</span></div>
                 <div class="cbox-sub"><span id="bars-headline" class="mono" style="color:var(--primary);font-weight:600">—</span> · pico de movimento</div>
               </div>
               <button class="cbox-menu">⋯</button>
             </div>
             <div style="position:relative">
-              <div class="float-tip" id="bars-tip" style="top:8px;right:18px">
-                Crescimento de <u id="bars-tip-pct">—</u><br>
-                em relação ao período anterior.
-              </div>
               <canvas id="cano" style="max-height:240px"></canvas>
             </div>
           </div>
@@ -840,8 +853,8 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="cardbox" style="margin-top:16px">
           <div class="cbox-head">
             <div>
-              <div class="cbox-title">Top bairros</div>
-              <div class="cbox-sub">clique para filtrar · ordenado por volume</div>
+              <div class="cbox-title">Top bairros<span class="cbox-tip" data-tip="Os 10 bairros com maior número de transações no período filtrado. Clique em uma barra para filtrar pelo bairro.">ⓘ</span></div>
+              <div class="cbox-sub">clique para filtrar · ordenado por volume <span id="sd-badge" style="display:none;margin-left:8px;background:var(--surface-2);color:var(--mu);font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600"></span></div>
             </div>
             <button class="cbox-menu">⋯</button>
           </div>
@@ -849,42 +862,85 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         </div>
       </div>
 
-      <!-- ─── Calculadora m² ─── -->
-      <div class="calc-section" id="calc">
-        <div class="calc-head">
-          <div class="calc-head-ico">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h0M8 14h2M12 14h2M16 14h0M8 18h2M12 18h2M16 18h0"/></svg>
+      <!-- ─── Novos gráficos ─── -->
+      <div class="charts-row" style="margin-top:16px">
+        <!-- Sazonalidade mensal -->
+        <div class="cardbox" style="flex:2;min-width:0">
+          <div class="cbox-head">
+            <div>
+              <div class="cbox-title">Sazonalidade mensal<span class="cbox-tip" data-tip="Compara o volume de transações mês a mês nos últimos 3 anos. Permite identificar padrões sazonais — meses de alta e baixa no mercado imobiliário.">ⓘ</span></div>
+              <div class="cbox-sub">comparativo mês a mês por ano</div>
+            </div>
+            <button class="cbox-menu">⋯</button>
           </div>
+          <canvas id="csaz" style="max-height:240px"></canvas>
+          <div id="csaz-empty" class="chart-empty" style="display:none">Dados mensais não disponíveis para o filtro selecionado</div>
+        </div>
+        <!-- Natureza da transação -->
+        <div class="cardbox" style="flex:1;min-width:0">
+          <div class="cbox-head">
+            <div>
+              <div class="cbox-title">Natureza da transação<span class="cbox-tip" data-tip="Distribuição proporcional dos tipos de transferência: compra e venda, arrematação, doação, permuta, entre outros. Mostra qual modalidade domina no filtro ativo.">ⓘ</span></div>
+              <div class="cbox-sub">distribuição por tipo</div>
+            </div>
+            <button class="cbox-menu">⋯</button>
+          </div>
+          <canvas id="cdnt" style="max-height:240px"></canvas>
+        </div>
+      </div>
+
+      <!-- Histograma faixas de valor -->
+      <div class="cardbox" style="margin-top:16px">
+        <div class="cbox-head">
           <div>
-            <div class="calc-head-title">Calculadora de Ticket Médio por m²</div>
-            <div class="calc-head-sub">O ticket médio se atualiza automaticamente com os filtros globais. Digite a metragem real para calcular o valor estimado.</div>
+            <div class="cbox-title">Distribuição por faixa de valor<span class="cbox-tip" data-tip="Concentração de transações por faixa de preço declarado: até R$300k, R$300k–600k, R$600k–1M, R$1M–2M e acima de R$2M. A barra em destaque é a faixa com maior volume.">ⓘ</span></div>
+            <div class="cbox-sub">concentração do ticket médio por faixa de preço</div>
+          </div>
+          <button class="cbox-menu">⋯</button>
+        </div>
+        <canvas id="chist" style="max-height:200px"></canvas>
+        <div id="chist-empty" class="chart-empty" style="display:none">Dados de faixa de valor não disponíveis para o filtro selecionado</div>
+      </div>
+
+      <!-- ─── Calculadora ─── -->
+      <div class="calc-section" id="calc">
+        <div class="calc-header">
+          <div class="calc-header-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h4"/></svg>
+          </div>
+          <div class="calc-header-text">
+            <h3>Calculadora de Ticket Médio por m²</h3>
+            <p>Digite a área para calcular o valor estimado por metro quadrado com base no ticket médio do filtro atual</p>
           </div>
         </div>
         <div class="calc-body">
-          <div class="calc-field">
-            <div class="calc-label">Ticket Médio (filtros ativos)</div>
-            <div class="calc-readonly" id="calc-ticket">
-              <span id="calc-ticket-val">—</span>
-            </div>
-            <div style="font-size:11px;color:var(--mu);margin-top:5px" id="calc-ticket-info">Aguardando dados…</div>
+          <div class="calc-slot">
+            <label style="display:flex;align-items:center;justify-content:space-between">
+              <span>Ticket médio</span>
+              <button id="calc-tm-reset" onclick="resetCalcTm()" title="Restaurar valor original"
+                style="display:none;background:none;border:none;cursor:pointer;color:#ff8c42;font-size:10px;font-weight:700;padding:0;text-transform:uppercase;letter-spacing:.04em;gap:3px;align-items:center">
+                ↺ restaurar
+              </button>
+            </label>
+            <input id="calc-tm-input" type="text" inputmode="numeric" placeholder="—"
+              oninput="onCalcTmChange()" onblur="fmtCalcTmBlur()" onfocus="fmtCalcTmFocus()">
+            <div class="calc-slot-sub" id="calc-tm-sub">padrão: baseado no filtro</div>
           </div>
-          <div class="calc-divider">÷</div>
-          <div class="calc-field">
-            <div class="calc-label">Metragem real (m²)</div>
-            <div class="calc-input-wrap">
-              <span class="calc-prefix">m²</span>
-              <input type="number" id="calc-m2-input" min="1" max="99999" step="0.5" placeholder="Ex: 120">
-            </div>
-            <div style="font-size:11px;color:var(--mu);margin-top:5px">Digite a área construída real do imóvel</div>
+          <div class="calc-op">÷</div>
+          <div class="calc-slot">
+            <label>Área do imóvel (m²)</label>
+            <input id="calc-m2-main" type="number" min="1" placeholder="65" oninput="updateCalc()">
+            <div class="calc-slot-sub">informe a área construída</div>
           </div>
-          <div class="calc-divider" style="font-size:22px">=</div>
-          <div class="calc-field">
-            <div class="calc-label">Valor do m²</div>
-            <div class="calc-result-box" id="calc-result-box">
-              <div id="calc-result-val" class="calc-result-empty">Defina o m² para calcular</div>
-              <div id="calc-result-formula" class="calc-result-formula" style="display:none"></div>
+          <div class="calc-op">=</div>
+          <div class="calc-result-slot">
+            <label>Valor estimado do m²</label>
+            <div id="calc-output-big" class="calc-result-big" style="display:none"></div>
+            <div id="calc-output-empty" class="calc-result-empty">Digite a área →</div>
+            <div class="calc-result-sub">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              ticket médio ÷ área informada
             </div>
-            <div style="font-size:11px;color:var(--mu);margin-top:5px">Ticket médio ÷ metragem digitada</div>
           </div>
         </div>
       </div>
@@ -968,8 +1024,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 
 <!-- ─── Export bar ─── -->
 <div class="expbar" id="expbar" style="display:none">
-  <span class="expbar-count" id="exp-count">0 selecionados</span>
-  <span class="expbar-sub">linhas marcadas</span>
+  <span class="expbar-count" id="exp-count" onclick="toggleSelPopup()" style="cursor:pointer">0 selecionados</span>
   <div class="exp-divider"></div>
   <button class="exp-btn primary" onclick="exportar('excel')">Excel</button>
   <button class="exp-btn" onclick="exportar('pdf')">PDF</button>
@@ -977,8 +1032,50 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
   <button class="exp-clear" onclick="deselecionarTudo()">Limpar</button>
 </div>
 
+<!-- ─── Selection summary popup ─── -->
+<div class="selpop" id="selpop" style="display:none">
+  <div class="selpop-row selpop-head">
+    <span class="selpop-title">Resumo da seleção</span>
+    <button class="selpop-x" onclick="closeSelPopup()" title="Fechar">×</button>
+  </div>
+  <div class="selpop-row"><span class="selpop-lbl">Selecionados</span><b class="mono selpop-val" id="sp-count">—</b></div>
+  <div class="selpop-row"><span class="selpop-lbl">Volume</span><b class="mono selpop-val" id="sp-vol">—</b></div>
+  <div class="selpop-row"><span class="selpop-lbl">Ticket médio</span><b class="mono selpop-val" id="sp-tm">—</b></div>
+</div>
+
 <script>
 const API=location.hostname==='localhost'?'http://localhost:8000':`${location.protocol}//${location.hostname}`;
+
+/* ─── autenticação / assinatura ─── */
+const IS_LOCAL=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+const TOKEN=localStorage.getItem('itbi_token')||(IS_LOCAL?'dev-local':null);
+if(!TOKEN){ location.replace('/login.html'); }
+const _fetchOriginal=window.fetch.bind(window);
+window.fetch=async function(url,opts={}){
+  const isApi=String(url).includes('/api/') && !String(url).includes('/api/auth/') && !String(url).includes('/api/webhook');
+  if(isApi){
+    opts.headers={...(opts.headers||{}),Authorization:`Bearer ${TOKEN}`};
+  }
+  const res=await _fetchOriginal(url,opts);
+  if(isApi && res.status===401){
+    localStorage.removeItem('itbi_token');
+    location.replace('/login.html');
+    throw new Error('Sessão expirada');
+  }
+  if(isApi && res.status===402){
+    location.replace('/login.html?status=pendente');
+    throw new Error('Assinatura pendente');
+  }
+  return res;
+};
+function logout(){ localStorage.removeItem('itbi_token'); location.replace('/login.html'); }
+async function abrirPortalAssinatura(){
+  try{
+    const r=await fetch(`${API}/api/billing/portal`,{method:'POST'}).then(x=>x.json());
+    if(r.url) location.href=r.url;
+  }catch(e){}
+}
+
 let CH={},PG=1,SC='ano_referencia',SD='desc',allAnos=[],acT={},natFilter='all';
 
 /* ─── formatadores ─── */
@@ -1003,7 +1100,7 @@ function toggleTheme(){
   document.querySelectorAll('.icon-sun, .icon-sun-side').forEach(el=>el.style.display=newDark?'':'none');
   const btn=document.getElementById('btn-theme');
   if(btn)btn.title=newDark?'Modo claro':'Modo escuro · Claude';
-  if(lastResumo)renderCharts(lastResumo.por_ano||[],lastResumo.top_bairros||[]);
+  if(lastResumo)renderCharts(lastResumo.por_ano||[],lastResumo.top_bairros||[],lastResumo.por_mes||[],lastResumo.por_natureza||[],lastResumo.faixas_valor||[]);
 }
 
 /* ─── nav ─── */
@@ -1052,9 +1149,12 @@ function setPeriod(k){
 /* ─── init ─── */
 window.addEventListener('DOMContentLoaded',async()=>{
   await loadStatus();buscar(1);checkApiStatus();
-  _initTagInput('fl-wrap','fl','acl','logradouro');
-  _initTagInput('fb-wrap','fb','acb','bairro');
-  ['fc','fn','fvmin','fvmax','fnat','fsql'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')buscar(1)}));
+  _initTagInput('fl-wrap','fl','acl','logradouro',true);
+  _initTagInput('fb-wrap','fb','acb','bairro',true);
+  _initTagInput('fc-wrap','fc','acc','cep',true);
+  _initTagInput('fsql-wrap','fsql','acsql','sql',true);
+  _initTagInput('fn-wrap','fn','acn','numero',false);
+  ['fvmin','fvmax','fnat'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')buscar(1)}));
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
@@ -1148,16 +1248,16 @@ async function loadStatus(){
     document.getElementById('yrs-y3').textContent=`${mx-2}–${mx}`;
     document.getElementById('yrs-y5').textContent=`${mx-4}–${mx}`;
     document.getElementById('yrs-all').textContent=`${allAnos[0]}–${mx}`;
-    const dMin=allAnos.includes(2020)?2020:(allAnos.find(a=>a>=mx-6)||allAnos[0]||2020);
+    const dMin=allAnos.find(a=>a>=mx-2)||allAnos[0]||mx-2;  // padrão: últimos 3 anos
     document.getElementById('famin').value=dMin;
     document.getElementById('famax').value=mx;
-    document.getElementById('pp-label').textContent='Últimos 7 anos  ('+dMin+'–'+mx+')';
+    document.getElementById('pp-label').textContent='Últimos 3 anos  ('+dMin+'–'+mx+')';
     document.querySelectorAll('.pp-item').forEach(i=>i.classList.remove('act'));
-    document.querySelector('.pp-item:nth-child(3)')?.classList.add('act');
+    document.querySelector('.pp-item:nth-child(2)')?.classList.add('act');
     if(dMin>allAnos[0])document.getElementById('bold').style.display='inline-flex';
   }catch(e){
     // demo years
-    allAnos=[2020,2021,2022,2023,2024,2025,2026];
+    allAnos=Array.from({length:2026-2006+1},(_,i)=>2006+i);
     populateAnos();
     document.getElementById('famin').value=2024;
     document.getElementById('famax').value=2026;
@@ -1170,9 +1270,18 @@ async function loadStatus(){
 }
 function populateAnos(){
   const mn=document.getElementById('famin'),mx=document.getElementById('famax');
-  mn.innerHTML='';
-  mx.innerHTML='';
+  mn.innerHTML='<option value="">Todos</option>';
+  mx.innerHTML='<option value="">Todos</option>';
   allAnos.forEach(a=>{mn.innerHTML+=`<option value="${a}">${a}</option>`;mx.innerHTML+=`<option value="${a}">${a}</option>`});
+  populateMeses();
+}
+const NOMES_MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function populateMeses(){
+  const mn=document.getElementById('fmesmin'),mx=document.getElementById('fmesmax');
+  if(!mn||!mx)return;
+  mn.innerHTML='<option value="">Todos</option>';
+  mx.innerHTML='<option value="">Todos</option>';
+  NOMES_MES.forEach((nome,i)=>{const m=i+1;mn.innerHTML+=`<option value="${m}">${nome}</option>`;mx.innerHTML+=`<option value="${m}">${nome}</option>`});
 }
 
 function carregarAntigos(){
@@ -1193,12 +1302,14 @@ function getP(extra={}){
   const v=id=>document.getElementById(id)?.value?.trim()||'';
   const p=new URLSearchParams();
   const fl=_getTagValue('fl');if(fl)p.append('logradouro',fl);
-  if(v('fn'))p.append('numero',v('fn'));
+  const fn=_getTagValue('fn');if(fn)p.append('numero',fn);
   const fb=_getTagValue('fb');if(fb)p.append('bairro',fb);
-  if(v('fc'))p.append('cep',v('fc'));
-  if(v('fsql'))p.append('sql',v('fsql'));
+  const fc=_getTagValue('fc');if(fc)p.append('cep',fc);
+  const fsql=_getTagValue('fsql');if(fsql)p.append('sql',fsql);
   if(v('famin'))p.append('ano_min',v('famin'));
   if(v('famax'))p.append('ano_max',v('famax'));
+  if(v('fmesmin'))p.append('mes_min',v('fmesmin'));
+  if(v('fmesmax'))p.append('mes_max',v('fmesmax'));
   if(v('fvmin'))p.append('valor_min',v('fvmin'));
   if(v('fvmax'))p.append('valor_max',v('fvmax'));
   let nat=v('fnat');
@@ -1210,8 +1321,8 @@ function getP(extra={}){
 }
 
 function limpar(){
-  _clearTags('fl');_clearTags('fb');
-  ['fc','fn','fvmin','fvmax','fnat','fsql'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  _clearTags('fl');_clearTags('fb');_clearTags('fc');_clearTags('fn');_clearTags('fsql');
+  ['fvmin','fvmax','fnat','fmesmin','fmesmax'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
   natFilter='all';
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('act',b.dataset.tab==='all'));
   loadStatus().then(()=>buscar(1));
@@ -1229,6 +1340,8 @@ function renderPills(){
   add('iptu',v('fsql'),'fsql');
   const amin=v('famin'),amax=v('famax');
   if(amin||amax)pills.push({k:'período',val:`${amin||'…'}–${amax||'…'}`,id:'p',_multi:['famin','famax']});
+  const mmin=v('fmesmin'),mmax=v('fmesmax');
+  if(mmin||mmax)pills.push({k:'mês',val:`${mmin?NOMES_MES[mmin-1]:'…'}–${mmax?NOMES_MES[mmax-1]:'…'}`,id:'pm',_multi:['fmesmin','fmesmax']});
   if(v('fvmin'))add('mín',brlFull(v('fvmin')),'fvmin');
   if(v('fvmax'))add('máx',brlFull(v('fvmax')),'fvmax');
   add('natureza',v('fnat'),'fnat');
@@ -1292,8 +1405,9 @@ async function buscar(p=1){
         fetch(`${API}/api/resumo?${getP()}`).then(x=>x.json()),
       ]);
       lastResumo=r;
-      renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[]);
-      renderTable(d);renderM2();
+      selectedRowsData.clear();
+      renderKPI(r.geral);renderCharts(r.por_ano||[],r.top_bairros||[],r.por_mes||[],r.por_natureza||[],r.faixas_valor||[]);
+      renderTable(d);
     }else{
       const d=await fetch(`${API}/api/transacoes?${params}`).then(x=>x.json());
       renderTable(d);
@@ -1305,8 +1419,8 @@ async function buscar(p=1){
     hideLoading();
     const demo=buildDemo();lastResumo=demo.resumo;
     renderKPI(demo.resumo.geral);
-    renderCharts(demo.resumo.por_ano,demo.resumo.top_bairros);
-    renderTable(demo.tab);renderM2();renderPills();updateOverSub(true);
+    renderCharts(demo.resumo.por_ano,demo.resumo.top_bairros,[],demo.resumo.por_natureza||[],[]);
+    renderTable(demo.tab);renderPills();updateOverSub(true);
   }
 }
 
@@ -1320,17 +1434,144 @@ function updateOverSub(demo){
 }
 
 /* ─── KPIs ─── */
+let _calcTicketMedio = 0;
+let _calcTmDefault   = 0;   // guarda o valor original da API
+
+function _brlFmt(v){
+  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+}
+function _brlShort(v){
+  if(v>=1e9) return `R$ ${(v/1e9).toFixed(2).replace('.',',')} B`;
+  if(v>=1e6) return `R$ ${(v/1e6).toFixed(2).replace('.',',')} M`;
+  if(v>=1e3) return `R$ ${(v/1e3).toFixed(1).replace('.',',')} K`;
+  return `R$ ${Math.round(v).toLocaleString('pt-BR')}`;
+}
+function _parseCalcTm(str){
+  // aceita "635.533", "R$ 635.533", "635533"
+  return parseFloat(str.replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+}
+
+function _setCalcTm(val, isDefault){
+  const inp = document.getElementById('calc-tm-input');
+  const sub = document.getElementById('calc-tm-sub');
+  const rst = document.getElementById('calc-tm-reset');
+  if(!inp) return;
+  // se o campo está em foco, mostra só número puro; senão formata
+  if(document.activeElement === inp){
+    inp.value = Math.round(val);
+  } else {
+    inp.value = _brlFmt(val);
+  }
+  if(isDefault){
+    inp.classList.remove('modified');
+    if(rst) rst.style.display = 'none';
+    if(sub) sub.textContent = 'padrão: baseado no filtro';
+  } else {
+    inp.classList.add('modified');
+    if(rst) rst.style.display = 'inline-flex';
+    if(sub) sub.textContent = `padrão: ${_brlShort(_calcTmDefault)}`;
+  }
+}
+
+function fmtCalcTmFocus(){
+  // ao focar: remove "R$ " mas mantém pontos — já formatado para edição ao vivo
+  const inp = document.getElementById('calc-tm-input');
+  if(!inp) return;
+  const raw = _parseCalcTm(inp.value);
+  if(raw > 0) inp.value = Math.round(raw).toLocaleString('pt-BR');
+  inp.select();
+}
+
+function fmtCalcTmBlur(){
+  // ao sair: formata com R$ e pontos
+  const inp = document.getElementById('calc-tm-input');
+  if(!inp) return;
+  const raw = _parseCalcTm(inp.value);
+  if(raw > 0) inp.value = _brlFmt(raw);
+}
+
+function onCalcTmChange(){
+  const inp = document.getElementById('calc-tm-input');
+  // extrai só dígitos
+  const digits = (inp?.value || '').replace(/\D/g,'');
+  const val = parseFloat(digits) || 0;
+
+  // reformata com pontos mantendo cursor no fim
+  if(digits.length > 0){
+    const formatted = parseInt(digits).toLocaleString('pt-BR');
+    inp.value = formatted;
+  }
+
+  _calcTicketMedio = val > 0 ? val : 0;
+  const isDefault = Math.round(val) === Math.round(_calcTmDefault);
+  const sub = document.getElementById('calc-tm-sub');
+  const rst = document.getElementById('calc-tm-reset');
+  if(isDefault){
+    inp.classList.remove('modified');
+    if(rst) rst.style.display='none';
+    if(sub) sub.textContent='padrão: baseado no filtro';
+  } else {
+    inp.classList.add('modified');
+    if(rst) rst.style.display='inline-flex';
+    if(sub) sub.textContent=`padrão: ${_brlShort(_calcTmDefault)}`;
+  }
+  updateCalc();
+}
+
+function resetCalcTm(){
+  _calcTicketMedio = _calcTmDefault;
+  _setCalcTm(_calcTmDefault, true);
+  updateCalc();
+}
+
+function updateCalc(){
+  const m2El   = document.getElementById('calc-m2-main');
+  const kEl    = document.getElementById('calc-m2');       // mini input no KPI card
+  const bigEl  = document.getElementById('calc-output-big');
+  const emptyEl= document.getElementById('calc-output-empty');
+  const outKpi = document.getElementById('k-calc-result');
+
+  // sincroniza os dois inputs de m²
+  if(document.activeElement === m2El && kEl) kEl.value = m2El.value;
+  if(document.activeElement === kEl && m2El) m2El.value = kEl.value;
+
+  const m2 = parseFloat((m2El||kEl)?.value);
+  const tm = _calcTicketMedio;
+
+  if(!m2 || m2 <= 0 || !tm){
+    if(bigEl)  { bigEl.style.display='none'; bigEl.textContent=''; }
+    if(emptyEl){ emptyEl.style.display=''; emptyEl.textContent='Digite a área →'; }
+    if(outKpi) outKpi.textContent = 'Defina o m²';
+    return;
+  }
+  const resultado = tm / m2;
+  const fmt = resultado >= 1e6
+    ? `R$ ${(resultado/1e6).toFixed(2).replace('.',',')} M`
+    : resultado >= 1e3
+    ? `R$ ${(resultado/1e3).toFixed(1).replace('.',',')} K`
+    : `R$ ${resultado.toLocaleString('pt-BR',{maximumFractionDigits:0})}`;
+  const fmtFull = fmt + '/m²';
+  if(bigEl)  { bigEl.style.display=''; bigEl.textContent=fmtFull; }
+  if(emptyEl){ emptyEl.style.display='none'; }
+  if(outKpi) outKpi.textContent = fmtFull;
+}
+
 function renderKPI(g){
   const t=g.total_transacoes||0;
   const vol=bigK(g.volume_total);
   const tm=bigK(g.ticket_medio);
+  const ib=bigK(g.itbi_total);
+
+  // atualiza calculadora com novo ticket médio (sempre restaura o padrão)
+  _calcTmDefault   = g.ticket_medio || 0;
+  _calcTicketMedio = _calcTmDefault;
+  _setCalcTm(_calcTmDefault, true);
+  updateCalc();
 
   document.getElementById('kt').innerHTML=t.toLocaleString('pt-BR');
   document.getElementById('kv').innerHTML=`${vol.num}<span class="unit">${vol.unit}</span>`;
   document.getElementById('km').innerHTML=`R$ ${tm.num}<span class="unit">${tm.unit}</span>`;
-  _calcTicketMedio=g.ticket_medio||0;
-  updateCalc();
-
+  document.getElementById('ki').innerHTML=`R$ ${ib.num}<span class="unit">${ib.unit}</span>`;
 
   // tab counts (rough — we only have one number)
   document.getElementById('cnt-all').textContent=bigK(t).num+bigK(t).unit;
@@ -1339,25 +1580,23 @@ function renderKPI(g){
 
   // synthetic deltas: use first/last year deltas as a quick proxy
   const ano=lastResumo?.por_ano||[];
-  let deltaT=12.4,deltaV=18.2,deltaM=4.1;
+  let deltaT=12.4,deltaV=18.2,deltaM=4.1,deltaI=15.6;
   if(ano.length>=2){
     const last=ano[ano.length-1].transacoes,prev=ano[ano.length-2].transacoes;
     if(prev>0)deltaT=((last-prev)/prev)*100;
   }
-  setDelta('dt',deltaT);setDelta('dv',deltaV);setDelta('dm',deltaM);
+  setDelta('dt',deltaT);setDelta('dv',deltaV);setDelta('dm',deltaM);setDelta('di',deltaI);
 
   // gauge: percent of max year
   const years=(lastResumo?.por_ano||[]);
   if(years.length){
-    const last=years[years.length-1].transacoes;
-    const max=Math.max(...years.map(y=>y.transacoes));
-    const pct=Math.max(0,Math.min(100,Math.round(last/max*100)));
-    setGauge(pct,bigK(last).num+bigK(last).unit);
+    const lastYr=years[years.length-1];
+    const peakYr=years.reduce((a,b)=>b.transacoes>a.transacoes?b:a);
+    const pct=Math.max(0,Math.min(100,Math.round(lastYr.transacoes/peakYr.transacoes*100)));
+    setGauge(pct,bigK(lastYr.transacoes).num+bigK(lastYr.transacoes).unit,lastYr.ano_referencia,peakYr);
   }else{
-    setGauge(64,bigK(t).num+bigK(t).unit);
+    setGauge(64,bigK(t).num+bigK(t).unit,null,null);
   }
-  // bars tooltip
-  document.getElementById('bars-tip-pct').textContent=(deltaT>=0?'+':'')+deltaT.toFixed(1).replace('.',',')+'%';
   const peak=ano.reduce((a,b)=>b.transacoes>(a?.transacoes||0)?b:a,null);
   if(peak)document.getElementById('bars-headline').textContent=peak.ano_referencia;
 }
@@ -1370,114 +1609,254 @@ function setDelta(id,pct){
   el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="${arrow}"/></svg><span>${(up?'+':'')+pct.toFixed(2).replace('.',',')}%</span><span class="vs">vs período anterior</span>`;
 }
 
-function setGauge(pct,centerLabel){
-  const total=Math.PI*80; // half-circumference
-  // path length = 251 (matches d, 80 radius half-circle)
-  const len=251;
-  const off=len-(len*pct/100);
-  document.getElementById('gauge-arc').setAttribute('stroke-dashoffset',off);
-  // thumb position along the arc
-  const ang=Math.PI*(1-pct/100); // from 180deg → 0deg
-  const cx=100+80*Math.cos(ang);
-  const cy=110-80*Math.sin(ang);
-  const th=document.getElementById('gauge-thumb');
-  th.setAttribute('cx',cx);th.setAttribute('cy',cy);
-  document.getElementById('gauge-val').innerHTML=centerLabel;
-  document.getElementById('gauge-cap').innerHTML=`Você está em <b style="color:var(--ink)">${pct}%</b> do maior ano da série.`;
-  document.getElementById('gauge-sub').textContent=`Atividade · ${pct}% do pico`;
+function setGauge(pct,centerLabel,anoAtual,peakYr){
+  // pathLength="100" → dashoffset é diretamente o percentual (sem getTotalLength)
+  // off = 100 - pct  →  pct=0 → off=100 (vazio); pct=100 → off=0 (cheio)
+  document.getElementById('gauge-arc').setAttribute('stroke-dashoffset', 100 - pct);
+
+  // Thumb: arco vai de esquerda (ângulo π) até direita (ângulo 0) no sentido horário
+  // pct=0 → thumb na esquerda (20,110); pct=100 → thumb na direita (180,110)
+  const ang = Math.PI * (1 - pct / 100);
+  const th  = document.getElementById('gauge-thumb');
+  th.setAttribute('cx', (100 + 80 * Math.cos(ang)).toFixed(2));
+  th.setAttribute('cy', (110 - 80 * Math.sin(ang)).toFixed(2));
+
+  document.getElementById('gauge-val').innerHTML = centerLabel;
+
+  let capText;
+  if(anoAtual && peakYr){
+    const peakLabel = bigK(peakYr.transacoes).num + bigK(peakYr.transacoes).unit;
+    if(anoAtual === peakYr.ano_referencia){
+      capText = `<b style="color:var(--primary)">${anoAtual}</b> é o <b style="color:var(--primary)">ano recorde</b> da série histórica.`;
+    } else {
+      capText = `<b style="color:var(--primary)">${anoAtual}</b> representa <b style="color:var(--primary)">${pct}%</b> do recorde histórico <span style="color:var(--mu)">(${peakYr.ano_referencia} · ${peakLabel})</span>`;
+    }
+  } else {
+    capText = `Volume equivale a <b style="color:var(--primary)">${pct}%</b> do ano recorde da série.`;
+  }
+  document.getElementById('gauge-cap').innerHTML = capText;
+  document.getElementById('gauge-sub').textContent = `Atividade · ${pct}% do recorde`;
 }
 
 /* ─── charts ─── */
-function renderCharts(ano,bai){
+function renderCharts(ano,bai,porMes,porNat,faixas){
   Object.values(CH).forEach(c=>c.destroy());CH={};
   const cs=getComputedStyle(document.documentElement);
   const ink=cs.getPropertyValue('--ink').trim();
   const mu=cs.getPropertyValue('--mu').trim();
   const line=cs.getPropertyValue('--line').trim();
   const primary=cs.getPropertyValue('--primary').trim();
-  const surface=cs.getPropertyValue('--surface').trim();
   const surface2=cs.getPropertyValue('--surface-2').trim();
-  Chart.defaults.font.family="Plus Jakarta Sans, -apple-system, system-ui, sans-serif";
+  const TT={backgroundColor:'#111',titleColor:'#fff',bodyColor:'#ccc',padding:12,cornerRadius:10,displayColors:false,
+    titleFont:{family:'JetBrains Mono',size:10,weight:'500'},
+    bodyFont:{family:'Plus Jakarta Sans',size:12,weight:'600'}};
+  Chart.defaults.font.family="Plus Jakarta Sans,-apple-system,system-ui,sans-serif";
 
-  // peak gets primary color
-  const peakVal=Math.max(...ano.map(r=>r.transacoes));
-  CH.ano=new Chart(document.getElementById('cano').getContext('2d'),{
-    type:'bar',
-    data:{
-      labels:ano.map(r=>r.ano_referencia),
-      datasets:[{
-        data:ano.map(r=>r.transacoes),
-        backgroundColor:ctx=>{
-          const v=ctx.parsed?.y??ctx.raw;
-          return v===peakVal?primary:surface2;
+  /* ── 1. Transações por ano (barras) ───────────────────────────── */
+  if(ano.length){
+    const peakVal=Math.max(...ano.map(r=>r.transacoes));
+    CH.ano=new Chart(document.getElementById('cano').getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:ano.map(r=>r.ano_referencia),
+        datasets:[{
+          data:ano.map(r=>r.transacoes),
+          backgroundColor:ctx=>(ctx.parsed?.y??ctx.raw)===peakVal?primary:surface2,
+          hoverBackgroundColor:primary,
+          borderRadius:8,borderSkipped:false,barPercentage:.6,categoryPercentage:.85
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...TT,
+          callbacks:{
+            title:ctx=>`${ctx[0].label}`,
+            label:ctx=>{
+              const v=ctx.parsed.y;
+              const pct=peakVal>0?((v/peakVal)*100).toFixed(1):'0';
+              return `${v.toLocaleString('pt-BR')} transações  (${pct}% do pico)`;
+            }
+          }
+        }},
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{color:mu,font:{size:11,weight:'500'}}},
+          y:{grid:{color:line,drawTicks:false},border:{display:false},
+            ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:10,maxTicksLimit:5,
+              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+        }
+      }
+    });
+  }
+
+  /* ── 2. Top bairros (barras horizontais) — sem S/D ────────────── */
+  const sdEntry=bai.find(r=>!r.bairro||r.bairro.trim()==='');
+  const sdBadge=document.getElementById('sd-badge');
+  if(sdEntry){
+    sdBadge.style.display='inline';
+    sdBadge.textContent=`${sdEntry.transacoes.toLocaleString('pt-BR')} sem bairro`;
+  }else{sdBadge.style.display='none';}
+  const bb=bai.filter(r=>r.bairro&&r.bairro.trim()!=='').slice(0,10);
+  if(bb.length){
+    CH.bai=new Chart(document.getElementById('cbai').getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:bb.map(r=>r.bairro),
+        datasets:[{
+          data:bb.map(r=>r.transacoes),
+          backgroundColor:ctx=>ctx.dataIndex===0?primary:surface2,
+          hoverBackgroundColor:primary,borderRadius:8,barPercentage:.7
+        }]
+      },
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...TT,
+          callbacks:{label:ctx=>ctx.parsed.x.toLocaleString('pt-BR')+' transações'}}},
+        onClick:(e,els)=>{
+          if(!els.length)return;
+          const b=bb[els[0].index]?.bairro;
+          if(b){document.getElementById('fb').value=b;buscar(1);}
         },
-        borderRadius:8,borderSkipped:false,
-        barPercentage:.6,categoryPercentage:.85,
-        hoverBackgroundColor:primary
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#16182a',titleColor:'#fff',bodyColor:'#fff',
-          padding:12,cornerRadius:10,displayColors:false,
-          titleFont:{family:'JetBrains Mono',size:10,weight:'500'},
-          bodyFont:{family:'Plus Jakarta Sans',size:12,weight:'600'},
-          callbacks:{label:ctx=>ctx.parsed.y.toLocaleString('pt-BR')+' transações'}
+        scales:{
+          x:{grid:{color:line,drawTicks:false},border:{display:false},
+            ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:10,maxTicksLimit:5,
+              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}},
+          y:{grid:{display:false},border:{display:false},
+            ticks:{color:ink,font:{size:12,weight:'600'},padding:10}}
         }
-      },
-      scales:{
-        x:{grid:{display:false},border:{display:false},ticks:{color:mu,font:{size:11,family:'Plus Jakarta Sans',weight:'500'}}},
-        y:{grid:{color:line,drawTicks:false},border:{display:false},ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:10,maxTicksLimit:5,callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
       }
-    }
-  });
+    });
+  }
 
-  const bb=bai.slice(0,10);
-  CH.bai=new Chart(document.getElementById('cbai').getContext('2d'),{
-    type:'bar',
-    data:{
-      labels:bb.map(r=>r.bairro||'S/D'),
-      datasets:[{
-        data:bb.map(r=>r.transacoes),
-        backgroundColor:ctx=>ctx.dataIndex===0?primary:surface2,
-        hoverBackgroundColor:primary,
-        borderRadius:8,
-        barPercentage:.7
-      }]
-    },
-    options:{
-      indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#16182a',titleColor:'#fff',bodyColor:'#fff',
-          padding:12,cornerRadius:10,displayColors:false,
-          titleFont:{family:'Plus Jakarta Sans',size:12,weight:'700'},
-          bodyFont:{family:'Plus Jakarta Sans',size:12,weight:'500'},
-          callbacks:{label:ctx=>ctx.parsed.x.toLocaleString('pt-BR')+' transações'}
+  /* ── 3. Sazonalidade mensal (linha) ───────────────────────────── */
+  const sazCanvas=document.getElementById('csaz');
+  const sazEmpty=document.getElementById('csaz-empty');
+  if(porMes&&porMes.length){
+    if(sazEmpty)sazEmpty.style.display='none';
+    sazCanvas.style.display='block';
+    const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const anos=[...new Set(porMes.map(r=>r.ano_referencia))].sort().slice(-3);
+    const CORES=['#e08560','#c4a080','#808080'];
+    const datasets=anos.map((a,i)=>{
+      const byMes=Array(12).fill(null);
+      porMes.filter(r=>r.ano_referencia===a).forEach(r=>{if(r.mes_referencia>=1&&r.mes_referencia<=12)byMes[r.mes_referencia-1]=r.transacoes;});
+      return{label:String(a),data:byMes,borderColor:CORES[i],backgroundColor:CORES[i]+'22',
+        pointBackgroundColor:CORES[i],pointRadius:4,pointHoverRadius:6,
+        tension:.35,fill:false,spanGaps:true};
+    });
+    CH.saz=new Chart(sazCanvas.getContext('2d'),{
+      type:'line',
+      data:{labels:MESES,datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:true,position:'top',align:'end',labels:{color:ink,usePointStyle:true,pointStyleWidth:8,boxHeight:6,font:{size:11}}},
+          tooltip:{...TT,mode:'index',intersect:false,
+            callbacks:{label:ctx=>`${ctx.dataset.label}: ${(ctx.parsed.y||0).toLocaleString('pt-BR')}`}}
+        },
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{color:mu,font:{size:11}}},
+          y:{grid:{color:line,drawTicks:false},border:{display:false},
+            ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:8,maxTicksLimit:5,
+              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
         }
-      },
-      onClick:(e,els)=>{
-        if(!els.length)return;
-        const bairro=bb[els[0].index]?.bairro;
-        if(bairro&&bairro!=='S/D'){document.getElementById('fb').value=bairro;buscar(1)}
-      },
-      scales:{
-        x:{grid:{color:line,drawTicks:false},border:{display:false},ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:10,maxTicksLimit:5,callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}},
-        y:{grid:{display:false},border:{display:false},ticks:{color:ink,font:{size:12,family:'Plus Jakarta Sans',weight:'600'},padding:10}}
       }
-    }
-  });
+    });
+  }else{
+    sazCanvas.style.display='none';
+    if(sazEmpty)sazEmpty.style.display='flex';
+  }
+
+  /* ── 4. Donut — natureza da transação ────────────────────────── */
+  if(porNat&&porNat.length){
+    // coral dominante + cores distinguíveis para fatias menores
+    const DORES=['#e08560','#5b9bd5','#6ec47e','#e8c44a','#c45b8a','#8b7fe8','#4ec9c9','#e87a5b','#a0c45b','#b07040'];
+    const labels=porNat.map(r=>{
+      const n=String(r.natureza_transacao||'Outros');
+      return n.replace(/^\d+\.\s*/,'').slice(0,36);
+    });
+    CH.dnt=new Chart(document.getElementById('cdnt').getContext('2d'),{
+      type:'doughnut',
+      data:{labels,datasets:[{data:porNat.map(r=>r.total),
+        backgroundColor:DORES.slice(0,porNat.length),
+        borderColor:'#111',borderWidth:2,hoverOffset:6}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,cutout:'68%',
+        plugins:{
+          legend:{display:true,position:'right',maxWidth:260,
+            labels:{color:ink,usePointStyle:true,pointStyleWidth:9,boxHeight:9,
+              font:{size:11,weight:'600'},padding:9,maxWidth:240,
+              generateLabels:chart=>{
+                const ds=chart.data.datasets[0];
+                const total=ds.data.reduce((a,b)=>a+b,0);
+                return chart.data.labels.map((l,i)=>{
+                  const pct=total>0?((ds.data[i]/total)*100).toFixed(1)+'%':'';
+                  const label=l.length>26?l.slice(0,24)+'…':l;
+                  return{
+                    text:`${label}  ${pct}`,
+                    fillStyle:ds.backgroundColor[i],strokeStyle:'transparent',
+                    fontColor:ink,index:i
+                  };
+                });
+              }
+            }},
+          tooltip:{...TT,callbacks:{label:ctx=>`${ctx.parsed.toLocaleString('pt-BR')} transações`}}
+        }
+      }
+    });
+  }
+
+  /* ── 5. Histograma — faixas de valor ─────────────────────────── */
+  const histCanvas=document.getElementById('chist');
+  const histEmpty=document.getElementById('chist-empty');
+  if(faixas&&faixas.length){
+    if(histEmpty)histEmpty.style.display='none';
+    histCanvas.style.display='block';
+    const FORDER=['Ate 300k','300k-600k','600k-1M','1M-2M','Acima 2M'];
+    const fOrdenado=FORDER.map(f=>faixas.find(r=>r.faixa===f)||{faixa:f,transacoes:0});
+    const totFx=fOrdenado.reduce((a,r)=>a+r.transacoes,0);
+    // bucket com maior volume em destaque (coral); demais em surface-2
+    const maxFx=Math.max(...fOrdenado.map(r=>r.transacoes));
+    CH.hist=new Chart(histCanvas.getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:['Até R$300k','R$300k–600k','R$600k–1M','R$1M–2M','Acima R$2M'],
+        datasets:[{
+          data:fOrdenado.map(r=>r.transacoes),
+          backgroundColor:fOrdenado.map(r=>r.transacoes===maxFx?primary:surface2),
+          hoverBackgroundColor:primary,borderRadius:8,barPercentage:.65
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...TT,
+          callbacks:{
+            label:ctx=>{
+              const v=ctx.parsed.y;
+              const pct=totFx>0?((v/totFx)*100).toFixed(1):'0';
+              return `${v.toLocaleString('pt-BR')} transações  ·  ${pct}% do total`;
+            }
+          }
+        }},
+        scales:{
+          x:{grid:{display:false},border:{display:false},ticks:{color:mu,font:{size:11,weight:'500'}}},
+          y:{grid:{color:line,drawTicks:false},border:{display:false},
+            ticks:{color:mu,font:{size:11,family:'JetBrains Mono'},padding:8,maxTicksLimit:5,
+              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+        }
+      }
+    });
+  }else{
+    histCanvas.style.display='none';
+    if(histEmpty)histEmpty.style.display='flex';
+  }
 }
 
 /* ─── tabela ─── */
+let lastDadosMap=new Map();
 function renderTable({dados,total,pagina,paginas,por_pagina}){
-  lastDados=dados||[];
   const tb=document.getElementById('tbody'),meta=document.getElementById('tmeta'),emp=document.getElementById('empty');
   tb.innerHTML='';
+  lastDadosMap=new Map((dados||[]).map(d=>[d.id,d]));
   if(!dados||dados.length===0){emp.style.display='block';meta.textContent='';renderPag(0,1,1);return}
   emp.style.display='none';
   meta.textContent=`${((pagina-1)*por_pagina+1).toLocaleString('pt-BR')}–${Math.min(pagina*por_pagina,total).toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')}`;
@@ -1586,57 +1965,58 @@ function renderPag(total,pagina,paginas){
 /* ─── tag input ─── */
 const _tags={};
 
-function _initTagInput(wrapId,inputId,listId,ep){
+function _initTagInput(wrapId,inputId,listId,ep,previewOnFocus=false){
   const wrap=document.getElementById(wrapId),lst=document.getElementById(listId);
   if(!wrap)return;
   _tags[inputId]=[];
-  // cria o input dentro do wrap
   const inp=document.createElement('input');
   inp.id=inputId;inp.type='text';inp.autocomplete='off';
   inp.placeholder='Digite e selecione…';
   wrap.appendChild(inp);
 
+  let _acOffset=0,_acQ='',_acLoading=false,_acHasMore=false;
+
+  function _appendItems(items){
+    items.forEach(i=>{
+      const dv=document.createElement('div');dv.textContent=i;
+      dv.onmousedown=e=>{e.preventDefault();_addTag(inputId,i);inp.value='';lst.style.display='none';};
+      lst.appendChild(dv);
+    });
+  }
+
+  async function _fetchAc(q,reset=true){
+    if(_acLoading)return;
+    _acLoading=true;
+    if(reset){_acOffset=0;_acQ=q;}
+    const res=await fetch(`${API}/api/autocomplete/${ep}?q=${encodeURIComponent(_acQ)}&offset=${_acOffset}`).then(r=>r.json()).catch(()=>({items:[],has_more:false}));
+    if(reset){lst.innerHTML='';}
+    _appendItems(res.items||[]);
+    _acHasMore=res.has_more||false;
+    _acOffset+=res.items?.length||0;
+    _acLoading=false;
+    if(lst.children.length===0){lst.style.display='none';}
+    else lst.style.display='block';
+  }
+
+  lst.addEventListener('scroll',()=>{
+    if(!_acHasMore||_acLoading)return;
+    if(lst.scrollTop+lst.clientHeight>=lst.scrollHeight-20) _fetchAc(_acQ,false);
+  });
+
+  if(previewOnFocus){
+    inp.addEventListener('focus',()=>{if(!inp.value.trim())_fetchAc('');});
+  }
+
   inp.addEventListener('input',()=>{
     clearTimeout(acT[inputId]);
     const q=inp.value.trim();
-    if(q.length<2){lst.style.display='none';return}
-    acT[inputId]=setTimeout(async()=>{
-      const it=await fetch(`${API}/api/autocomplete/${ep}?q=${encodeURIComponent(q)}`).then(r=>r.json()).catch(()=>[]);
-      lst.innerHTML='';
-      if(!it.length){lst.style.display='none';return}
-      it.forEach(i=>{
-        const already=(_tags[inputId]||[]).includes(i);
-        const dv=document.createElement('div');
-        if(already)dv.classList.add('acl-selected');
-        dv.innerHTML=`
-          <span class="acl-cb">${already?'<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>':''}</span>
-          <span class="acl-label">${i}</span>`;
-        dv.onclick=(e)=>{
-          e.stopPropagation();
-          if(already){
-            const idx=(_tags[inputId]||[]).indexOf(i);
-            if(idx>-1)_removeTag(inputId,idx);
-          }else{
-            _addTag(inputId,i);
-          }
-          // atualiza o item visualmente sem fechar o dropdown
-          const nowSelected=(_tags[inputId]||[]).includes(i);
-          dv.classList.toggle('acl-selected',nowSelected);
-          dv.querySelector('.acl-cb').innerHTML=nowSelected
-            ?'<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg>'
-            :'';
-        };
-        lst.appendChild(dv);
-      });
-      lst.style.display='block';
-    },120);
+    if(!q){if(previewOnFocus)_fetchAc('');else lst.style.display='none';return;}
+    acT[inputId]=setTimeout(()=>_fetchAc(q),80);
   });
 
   inp.addEventListener('keydown',e=>{
-    if(e.key==='Backspace'&&!inp.value&&_tags[inputId].length){
-      _removeTag(inputId,_tags[inputId].length-1);
-    }
-    if(e.key==='Enter'||e.key==='Escape'){lst.style.display='none';inp.value='';}
+    if(e.key==='Backspace'&&!inp.value&&_tags[inputId].length)_removeTag(inputId,_tags[inputId].length-1);
+    if(e.key==='Escape'||e.key==='Enter')lst.style.display='none';
   });
 
   document.addEventListener('click',e=>{
@@ -1699,68 +2079,96 @@ function setupAC(iid,lid,ep){
       if(!it.length){lst.style.display='none';return}
       it.forEach(i=>{const dv=document.createElement('div');dv.textContent=i;dv.onclick=()=>{inp.value=i;lst.style.display='none'};lst.appendChild(dv)});
       lst.style.display='block';
-    },120);
+    },80);
   });
   document.addEventListener('click',e=>{if(!inp.contains(e.target)&&!lst.contains(e.target))lst.style.display='none'});
 }
 
 /* ─── seleção / export ─── */
 let selectedIds=new Set();
-let lastDados=[];
-
-function _hasPropertyFilter(){
-  return !!(
-    _getTagValue('fl') ||
-    _getTagValue('fb') ||
-    document.getElementById('fc')?.value?.trim() ||
-    document.getElementById('fsql')?.value?.trim() ||
-    document.getElementById('fn')?.value?.trim()
-  );
-}
-
-function renderM2(){
-  let m2t=null,m2c=null;
-
-  if(selectedIds.size>0){
-    const sel=lastDados.filter(d=>selectedIds.has(d.id));
-    const sumV =sel.reduce((s,d)=>s+(Number(d.valor_declarado)||0),0);
-    const sumAt=sel.reduce((s,d)=>s+(Number(d.area_terreno)||0),0);
-    const sumAc=sel.reduce((s,d)=>s+(Number(d.area_construida)||0),0);
-    if(sumAt>0)m2t=sumV/sumAt;
-    if(sumAc>0)m2c=sumV/sumAc;
-  } else if(_hasPropertyFilter()){
-    m2t=lastResumo?.geral?.preco_m2_terreno??null;
-    m2c=lastResumo?.geral?.preco_m2_construida??null;
-  }
-
-  const m2tK=bigK(m2t),m2cK=bigK(m2c);
-  document.getElementById('km2t').innerHTML=m2t?`R$ ${m2tK.num}<span class="unit">${m2tK.unit}</span>`:'—';
-  document.getElementById('km2c').innerHTML=m2c?`R$ ${m2cK.num}<span class="unit">${m2cK.unit}</span>`:'—';
-  const sub=(v,tipo)=>v?'R$ '+Math.round(v).toLocaleString('pt-BR')+'/m² · '+tipo:'selecione ou filtre imóveis';
-  document.getElementById('dm2t').textContent=sub(m2t,selectedIds.size>0?selectedIds.size+' selecionados':'filtro ativo');
-  document.getElementById('dm2c').textContent=sub(m2c,selectedIds.size>0?selectedIds.size+' selecionados':'filtro ativo');
-}
+let selectedRowsData=new Map();
 function toggleAll(cb){
   if(cb.checked){
-    document.querySelectorAll('.row-cb').forEach(c=>{c.checked=true;selectedIds.add(parseInt(c.dataset.id))});
+    document.querySelectorAll('.row-cb').forEach(c=>{
+      const id=parseInt(c.dataset.id);
+      c.checked=true;selectedIds.add(id);
+      const d=lastDadosMap.get(id);if(d)selectedRowsData.set(id,d);
+    });
   }else{
-    selectedIds.clear();
+    selectedIds.clear();selectedRowsData.clear();
     document.querySelectorAll('.row-cb').forEach(c=>{c.checked=false});
   }
-  updateExpBar();renderM2();
+  updateExpBar();applySelectionToKPI();
 }
 function toggleRow(cb){
   const id=parseInt(cb.dataset.id);
-  cb.checked?selectedIds.add(id):selectedIds.delete(id);
+  if(cb.checked){
+    selectedIds.add(id);
+    const d=lastDadosMap.get(id);if(d)selectedRowsData.set(id,d);
+  }else{
+    selectedIds.delete(id);selectedRowsData.delete(id);
+  }
   const allCbs=document.querySelectorAll('.row-cb');
   document.getElementById('cb-all').checked=[...allCbs].every(c=>c.checked);
-  updateExpBar();renderM2();
+  updateExpBar();applySelectionToKPI();
 }
-function deselecionarTudo(){selectedIds.clear();document.querySelectorAll('.row-cb').forEach(c=>c.checked=false);document.getElementById('cb-all').checked=false;updateExpBar();renderM2();}
+function deselecionarTudo(){
+  selectedIds.clear();selectedRowsData.clear();
+  document.querySelectorAll('.row-cb').forEach(c=>c.checked=false);
+  document.getElementById('cb-all').checked=false;
+  updateExpBar();applySelectionToKPI();
+}
+function applySelectionToKPI(){
+  if(selectedRowsData.size===0){
+    if(lastResumo)renderKPI(lastResumo.geral);
+    return;
+  }
+  let count=0,volume=0,itbi=0;
+  selectedRowsData.forEach(d=>{
+    count++;
+    volume+=Number(d.valor_declarado)||0;
+    itbi+=Number(d.valor_itbi)||0;
+  });
+  renderKPI({total_transacoes:count,volume_total:volume,ticket_medio:count?volume/count:0,itbi_total:itbi});
+}
 function updateExpBar(){
   const bar=document.getElementById('expbar'),cnt=document.getElementById('exp-count');
-  if(selectedIds.size>0){cnt.textContent=selectedIds.size.toLocaleString('pt-BR')+' selecionados';bar.style.display='flex'}
-  else{bar.style.display='none'}
+  if(selectedIds.size>0){
+    cnt.textContent=selectedIds.size.toLocaleString('pt-BR')+' selecionados';
+    bar.style.display='flex';
+    updateSelPopup();
+    openSelPopup();
+  }else{
+    bar.style.display='none';
+    closeSelPopup();
+  }
+}
+function updateSelPopup(){
+  const pop=document.getElementById('selpop');
+  if(!pop)return;
+  let volume=0;
+  selectedRowsData.forEach(d=>volume+=Number(d.valor_declarado)||0);
+  const count=selectedRowsData.size;
+  document.getElementById('sp-count').textContent=count.toLocaleString('pt-BR');
+  document.getElementById('sp-vol').textContent=_brlShort(volume);
+  document.getElementById('sp-tm').textContent=_brlShort(count?volume/count:0);
+}
+function openSelPopup(){
+  const pop=document.getElementById('selpop');
+  if(!pop)return;
+  pop.style.display='flex';
+  requestAnimationFrame(()=>pop.classList.add('open'));
+}
+function closeSelPopup(){
+  const pop=document.getElementById('selpop');
+  if(!pop)return;
+  pop.classList.remove('open');
+  setTimeout(()=>{if(!pop.classList.contains('open'))pop.style.display='none'},200);
+}
+function toggleSelPopup(){
+  const pop=document.getElementById('selpop');
+  if(!pop||selectedIds.size===0)return;
+  if(pop.classList.contains('open'))closeSelPopup();else{updateSelPopup();openSelPopup();}
 }
 function _showPdfToast(){
   const t=document.getElementById('pdf-toast');
@@ -1859,62 +2267,64 @@ async function carregarPontos(){
 }
 function filtrarPorCEP(cep){document.getElementById('fc').value=cep.replace(/^(\d{5})(\d{3})$/,'$1-$2');mapaInst?.closePopup();buscar(1);if(mapaVisivel)setTimeout(carregarPontos,800)}
 
-async function sync(){
-  try{await fetch(`${API}/api/sincronizar`,{method:'POST'});alert('Sincronização iniciada em background!')}
-  catch(e){alert('API offline em localhost:8000.')}
+/* ─── modal de sincronização ─── */
+let _syncPollTimer=null;
+
+function sync(){
+  document.getElementById('sync-modal').style.display='flex';
+  document.getElementById('sync-log').textContent='';
+  document.getElementById('sync-status').textContent='Aguardando...';
+  document.getElementById('sync-btn-start').disabled=false;
+  document.getElementById('sync-btn-start').textContent='▶  Sincronizar agora';
+  // pré-preenche ano atual
+  const anoAtual=new Date().getFullYear();
+  document.getElementById('sync-anos').value=anoAtual;
 }
-
-/* ─── calculadora m² ─── */
-let _calcTicketMedio=null;
-
-function updateCalc(){
-  const tm=_calcTicketMedio;
-  const m2=parseFloat(document.getElementById('calc-m2-input')?.value)||0;
-
-  // atualiza display do ticket médio
-  const tvEl=document.getElementById('calc-ticket-val');
-  const tiEl=document.getElementById('calc-ticket-info');
-  if(tm&&tm>0){
-    const tk=bigK(tm);
-    if(tvEl)tvEl.innerHTML=`R$ ${tk.num}<span style="font-size:14px;font-weight:600;color:var(--mu);margin-left:3px">${tk.unit}</span>`;
-    if(tiEl)tiEl.textContent=`R$ ${Math.round(tm).toLocaleString('pt-BR')} · média ponderada`;
-  }else{
-    if(tvEl)tvEl.textContent='—';
-    if(tiEl)tiEl.textContent='Sem dados para os filtros atuais';
-  }
-
-  // atualiza resultado
-  const resEl=document.getElementById('calc-result-val');
-  const fmlEl=document.getElementById('calc-result-formula');
-  const kcEl=document.getElementById('kcalc-val');
-  const ksEl=document.getElementById('kcalc-sub');
-
-  if(tm&&tm>0&&m2>0){
-    const resultado=tm/m2;
-    const rK=bigK(resultado);
-    const res=`R$ ${rK.num}${rK.unit?'<span style="font-size:16px;font-weight:600;color:var(--mu);margin-left:3px">'+rK.unit+'</span>':''}<span style="font-size:13px;font-weight:600;color:var(--mu);margin-left:4px">/m²</span>`;
-    if(resEl){resEl.className='calc-result-val';resEl.innerHTML=res}
-    if(fmlEl){fmlEl.style.display='';fmlEl.textContent=`R$ ${Math.round(tm).toLocaleString('pt-BR')} ÷ ${m2.toLocaleString('pt-BR')} m² = R$ ${Math.round(resultado).toLocaleString('pt-BR')}/m²`}
-    // card KPI
-    const cK=bigK(resultado);
-    if(kcEl)kcEl.innerHTML=`<span class="kcard-calc-result">R$ ${cK.num}<span style="font-size:16px;font-weight:600;color:var(--mu);margin-left:2px">${cK.unit}</span></span>`;
-    if(ksEl)ksEl.textContent=`${m2.toLocaleString('pt-BR')} m² · preço/m² estimado`;
-  }else if(m2>0&&(!tm||tm===0)){
-    if(resEl){resEl.className='calc-result-empty';resEl.textContent='Sem ticket médio para estes filtros'}
-    if(fmlEl)fmlEl.style.display='none';
-    if(kcEl)kcEl.innerHTML='<span class="kcard-calc-empty">Sem dados</span>';
-    if(ksEl)ksEl.textContent='ticket médio indisponível';
-  }else{
-    if(resEl){resEl.className='calc-result-empty';resEl.textContent='Defina o m² para calcular'}
-    if(fmlEl)fmlEl.style.display='none';
-    if(kcEl)kcEl.innerHTML='<span class="kcard-calc-empty">Defina o m²</span>';
-    if(ksEl)ksEl.textContent='ticket médio × m² digitado';
-  }
+function closeSyncModal(){
+  clearInterval(_syncPollTimer);
+  document.getElementById('sync-modal').style.display='none';
 }
-
-document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('calc-m2-input')?.addEventListener('input',updateCalc);
-});
+async function iniciarSync(){
+  const anos=document.getElementById('sync-anos').value.trim();
+  const btn=document.getElementById('sync-btn-start');
+  btn.disabled=true;
+  btn.textContent='⏳  Sincronizando...';
+  document.getElementById('sync-log').textContent='Iniciando...\n';
+  document.getElementById('sync-status').textContent='🔄 Rodando';
+  try{
+    const url=anos?`${API}/api/sincronizar?anos=${encodeURIComponent(anos)}`:`${API}/api/sincronizar`;
+    const r=await fetch(url,{method:'POST'});
+    if(r.status===409){
+      document.getElementById('sync-log').textContent='⚠️ Sincronização já está rodando em background.';
+      document.getElementById('sync-status').textContent='⚠️ Já rodando';
+      btn.disabled=false; btn.textContent='▶  Sincronizar agora';
+      return;
+    }
+  }catch(e){
+    document.getElementById('sync-log').textContent='❌ Falha ao conectar na API.';
+    document.getElementById('sync-status').textContent='❌ Erro';
+    btn.disabled=false; btn.textContent='▶  Sincronizar agora';
+    return;
+  }
+  // poll de status a cada 2s
+  clearInterval(_syncPollTimer);
+  _syncPollTimer=setInterval(async()=>{
+    try{
+      const s=await fetch(`${API}/api/sincronizar/status`).then(x=>x.json());
+      const logEl=document.getElementById('sync-log');
+      logEl.textContent=s.log.join('\n');
+      logEl.scrollTop=logEl.scrollHeight;
+      if(!s.rodando){
+        clearInterval(_syncPollTimer);
+        const ok=s.log.some(l=>l.includes('✅'));
+        document.getElementById('sync-status').textContent=ok?'✅ Concluído':'❌ Erro';
+        btn.disabled=false;
+        btn.textContent='▶  Sincronizar novamente';
+        if(ok){ setTimeout(()=>buscar(1),1500); }
+      }
+    }catch{}
+  },2000);
+}
 
 /* ─── demo data ─── */
 function buildDemo(){
@@ -1958,6 +2368,41 @@ function buildDemo(){
 <div id="pdf-toast">
   <div class="pdf-spinner"></div>
   <div><div class="pdf-txt">Gerando PDF...</div><div class="pdf-sub">Isso pode levar alguns segundos</div></div>
+</div>
+
+<!-- ── Modal Sincronização ── -->
+<div id="sync-modal" style="display:none;position:fixed;inset:0;background:#0009;z-index:10000;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:18px;padding:28px 28px 22px;width:520px;max-width:95vw;box-shadow:0 24px 64px #0008;border:1px solid var(--line)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div>
+        <div style="font-size:17px;font-weight:800;color:var(--ink);letter-spacing:-.02em">🔄 Sincronizar dados</div>
+        <div style="font-size:12px;color:var(--mu);margin-top:3px">Baixa as planilhas mais recentes da Prefeitura SP</div>
+      </div>
+      <button onclick="closeSyncModal()" style="background:var(--surface-2);border:none;border-radius:9px;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--mu)">✕</button>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:var(--mu);display:block;margin-bottom:6px">Anos a sincronizar (separados por vírgula — deixe em branco para todos)</label>
+      <input id="sync-anos" type="text" placeholder="ex: 2025, 2026"
+        style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--ink);font-family:inherit;outline:none">
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <button id="sync-btn-start" onclick="iniciarSync()"
+        style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s">
+        ▶  Sincronizar agora
+      </button>
+      <span id="sync-status" style="font-size:12px;color:var(--mu)">Aguardando...</span>
+    </div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--mu);margin-bottom:5px;letter-spacing:.04em">LOG</div>
+    <pre id="sync-log"
+      style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:11px;color:var(--ink-2);font-family:'JetBrains Mono',monospace;height:200px;overflow-y:auto;margin:0;white-space:pre-wrap;word-break:break-all"></pre>
+
+    <div style="margin-top:14px;font-size:11px;color:var(--mu);line-height:1.5">
+      ⚠️ A sincronização pode levar vários minutos dependendo dos anos selecionados. Não feche o servidor durante o processo.
+    </div>
+  </div>
 </div>
 </body>
 </html>

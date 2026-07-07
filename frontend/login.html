@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Dashboard ITBI-SP</title>
+<style>
+  :root{--bg:#0a0a0a;--card:#141414;--border:#262626;--text:#eee;--muted:#888;--accent:#3b82f6;--err:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);
+       display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:380px}
+  h1{font-size:1.3rem;margin:0 0 4px}
+  p.sub{color:var(--muted);font-size:.85rem;margin:0 0 24px}
+  label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:6px}
+  input{width:100%;padding:10px 12px;margin-bottom:16px;background:#1c1c1c;border:1px solid var(--border);
+        border-radius:8px;color:var(--text);font-size:.95rem}
+  input:focus{outline:none;border-color:var(--accent)}
+  button{width:100%;padding:11px;border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;margin-bottom:10px}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+  .btn-link{background:none;color:var(--muted);text-decoration:underline}
+  .msg{font-size:.85rem;margin-bottom:14px;min-height:18px}
+  .msg.err{color:var(--err)}
+  .msg.ok{color:#22c55e}
+  .tabs{display:flex;gap:8px;margin-bottom:20px}
+  .tab{flex:1;padding:8px;text-align:center;border-radius:8px;cursor:pointer;color:var(--muted);font-size:.85rem}
+  .tab.active{background:#1c1c1c;color:var(--text)}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Dashboard ITBI-SP</h1>
+  <p class="sub">Acesse sua conta para consultar os dados</p>
+
+  <div class="tabs">
+    <div class="tab active" id="tabLogin" onclick="trocarAba('login')">Entrar</div>
+    <div class="tab" id="tabCadastro" onclick="trocarAba('cadastro')">Criar conta</div>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <form id="form" onsubmit="enviar(event)">
+    <label>E-mail</label>
+    <input type="email" id="email" required autocomplete="email">
+    <label>Senha</label>
+    <input type="password" id="senha" required minlength="6" autocomplete="current-password">
+    <button type="submit" class="btn-primary" id="btnSubmit">Entrar</button>
+  </form>
+</div>
+
+<script>
+const API=location.hostname==='localhost'?'http://localhost:8000':`${location.protocol}//${location.hostname}`;
+let modo='login';
+
+/* Se chegou aqui por assinatura pendente (token ainda válido), pula direto pro checkout */
+(async function checarPendente(){
+  const params=new URLSearchParams(location.search);
+  const token=localStorage.getItem('itbi_token');
+  if(params.get('status')==='pendente' && token){
+    document.querySelector('.card').innerHTML=`
+      <h1>Assinatura pendente</h1>
+      <p class="sub">Sua assinatura não está ativa. Finalize o pagamento para continuar acessando o dashboard.</p>
+      <button class="btn-primary" id="btnPagar">Finalizar pagamento</button>
+      <button class="btn-primary" id="btnBeta" style="background:#22c55e">Usar grátis por enquanto (beta)</button>
+      <button class="btn-link" onclick="logout()">Usar outra conta</button>`;
+    document.getElementById('btnPagar').onclick=async()=>{
+      const chk=await fetch(`${API}/api/billing/checkout`,{
+        method:'POST', headers:{Authorization:`Bearer ${token}`}
+      }).then(r=>r.json());
+      if(chk.url) location.href=chk.url;
+    };
+    document.getElementById('btnBeta').onclick=async()=>{
+      await fetch(`${API}/api/billing/liberar-beta`,{method:'POST',headers:{Authorization:`Bearer ${token}`}});
+      location.href='/';
+    };
+  }
+})();
+
+function logout(){ localStorage.removeItem('itbi_token'); location.href='/login.html'; }
+
+function trocarAba(m){
+  modo=m;
+  document.getElementById('tabLogin').classList.toggle('active',m==='login');
+  document.getElementById('tabCadastro').classList.toggle('active',m==='cadastro');
+  document.getElementById('btnSubmit').textContent=m==='login'?'Entrar':'Criar conta';
+  document.getElementById('msg').textContent='';
+}
+
+async function enviar(ev){
+  ev.preventDefault();
+  const email=document.getElementById('email').value.trim();
+  const senha=document.getElementById('senha').value;
+  const msg=document.getElementById('msg');
+  const btn=document.getElementById('btnSubmit');
+  msg.className='msg'; msg.textContent='';
+  btn.disabled=true;
+
+  try{
+    const rota=modo==='login'?'/api/auth/login':'/api/auth/registrar';
+    const res=await fetch(`${API}${rota}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,senha})
+    });
+    const data=await res.json();
+    if(!res.ok){ msg.className='msg err'; msg.textContent=data.detail||'Erro'; btn.disabled=false; return; }
+
+    localStorage.setItem('itbi_token',data.token);
+
+    // verifica status da assinatura
+    const me=await fetch(`${API}/api/auth/me`,{headers:{Authorization:`Bearer ${data.token}`}}).then(r=>r.json());
+    if(me.assinatura_status==='active'||me.assinatura_status==='trialing'){
+      location.href='/';
+      return;
+    }
+
+    // sem assinatura ativa → mostra opção de pagar ou liberar grátis (beta)
+    document.getElementById('form').style.display='none';
+    msg.className='msg ok'; msg.textContent='';
+    const wrap=document.createElement('div');
+    wrap.innerHTML=`
+      <button class="btn-primary" id="btnPagar2">Finalizar pagamento</button>
+      <button class="btn-primary" id="btnBeta2" style="background:#22c55e">Usar grátis por enquanto (beta)</button>`;
+    document.querySelector('.card').appendChild(wrap);
+    document.getElementById('btnPagar2').onclick=async()=>{
+      const chk=await fetch(`${API}/api/billing/checkout`,{
+        method:'POST', headers:{Authorization:`Bearer ${data.token}`}
+      }).then(r=>r.json());
+      if(chk.url) location.href=chk.url;
+    };
+    document.getElementById('btnBeta2').onclick=async()=>{
+      await fetch(`${API}/api/billing/liberar-beta`,{method:'POST',headers:{Authorization:`Bearer ${data.token}`}});
+      location.href='/';
+    };
+  }catch(e){
+    msg.className='msg err'; msg.textContent='Falha de conexão com o servidor.';
+    btn.disabled=false;
+  }
+}
+</script>
+</body>
+</html>
