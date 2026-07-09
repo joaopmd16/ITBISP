@@ -5,7 +5,7 @@ billing.py — integração com Stripe (assinatura recorrente mensal).
 import os
 import stripe
 
-stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 
 PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
 WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")

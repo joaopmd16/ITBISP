@@ -34,9 +34,9 @@
   --warn:#c98a16;
   --shadow:0 1px 2px #1a23410a, 0 4px 14px #1a23410a;
   --shadow-lg:0 14px 40px #1a234118;
-  --r-card:16px;
+  --r-card:20px;
   --r-pill:999px;
-  --r-input:10px;
+  --r-input:16px;
 }
 :root[data-theme="dark"]{
   --bg:#000000;
@@ -61,6 +61,9 @@
   --warn:#e8b955;
   --shadow:0 1px 2px #0006, 0 6px 20px #0008;
   --shadow-lg:0 18px 50px #000a;
+  --r-card:20px;
+  --r-pill:999px;
+  --r-input:16px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -319,8 +322,8 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .filt-body-foot .hint{margin-left:auto;font-size:11px;color:var(--mu)}
 .btn-ghost-2{background:var(--surface-2);color:var(--ink-2);border:none;border-radius:10px;padding:0 16px;height:38px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:background .15s}
 .btn-ghost-2:hover{background:var(--line)}
-.acl{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:99;background:var(--surface);border:1px solid var(--line);border-radius:10px;max-height:220px;overflow-y:auto;box-shadow:var(--shadow-lg);padding:6px}
-.acl div{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--ink-2);border-radius:7px}
+.acl{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:99;background:var(--surface);border:1px solid var(--line);border-radius:20px;max-height:220px;overflow-y:auto;box-shadow:var(--shadow-lg);padding:6px}
+.acl div{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--ink-2);border-radius:14px}
 .acl div:hover{background:var(--primary-soft);color:var(--primary-ink)}
 
 /* ─── map card ─── */
@@ -493,6 +496,18 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
   .settings-panel{width:calc(100vw - 24px);right:12px}
   .section-head{flex-wrap:wrap;gap:8px}
 }
+/* ─── sidebar: animação de hover (sem mexer no layout) ─── */
+.nav-btn{transition:transform .2s cubic-bezier(.2,.8,.2,1),background .15s,color .15s}
+.nav-btn:hover{transform:scale(1.1);background:var(--surface-2);color:var(--ink)}
+.nav-btn:active{transform:scale(.94)}
+.side-logo{transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+.side-logo:hover{transform:scale(1.06)}
+.side{margin:10px;height:calc(100vh - 20px);border:1px solid var(--line);border-radius:999px;top:10px;padding:20px 0;gap:6px}
+.nav-btn,.side-logo{border-radius:13px}
+.nav-btn.active::before{display:none}
+.side-divider{margin:6px 0}
+.side-logo{margin-bottom:10px}
+#btn-status{cursor:default}
 </style>
 </head>
 <body>
@@ -527,6 +542,9 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
     </button>
     <div class="side-spacer"></div>
     <div class="side-divider"></div>
+    <button class="nav-btn" id="btn-status" title="Status da API">
+      <span id="status-dot" class="status-dot status-checking"></span>
+    </button>
     <button class="nav-btn" title="Alternar tema" onclick="toggleTheme()">
       <svg class="icon-moon-side" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       <svg class="icon-sun-side" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
@@ -534,26 +552,15 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
     <button class="nav-btn" title="Sincronizar" onclick="sync()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
     </button>
+    <button class="nav-btn" title="Configurações" onclick="toggleSettings()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1A2 2 0 1 1 19.7 7l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.2.4.5.7 1 .8.3.1.7.2 1 .2H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
   </aside>
 
   <!-- ─── MAIN ─── -->
   <main class="main">
 
-    <!-- topbar -->
-    <div class="top">
-      <div class="top-spacer"></div>
-      <button class="top-btn" id="btn-theme" title="Modo escuro · Claude" onclick="toggleTheme()">
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      </button>
-      <button class="top-btn" id="btn-status" title="Status da API">
-        <span id="status-dot" class="status-dot status-checking"></span>
-      </button>
-      <button class="top-btn" id="btn-settings" title="Configurações" onclick="toggleSettings()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1A2 2 0 1 1 19.7 7l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.2.4.5.7 1 .8.3.1.7.2 1 .2H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-      </button>
-
-      <!-- Painel de configurações -->
+      <!-- Painel de configurações (fora da topbar removida · position:fixed) -->
       <div class="settings-panel" id="settingsPanel">
         <div class="settings-header">
           <span class="settings-title">Configurações</span>
@@ -597,7 +604,6 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
           </div>
         </div>
       </div>
-    </div>
 
     <!-- page -->
     <div class="page">
@@ -1044,12 +1050,11 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 </div>
 
 <script>
-const API=location.hostname==='localhost'?'http://localhost:8000':`${location.protocol}//${location.hostname}`;
+const API=location.origin;
 
 /* ─── autenticação / assinatura ─── */
 const IS_LOCAL=location.hostname==='localhost'||location.hostname==='127.0.0.1';
-const TOKEN=localStorage.getItem('itbi_token')||(IS_LOCAL?'dev-local':null);
-if(!TOKEN){ location.replace('/login.html'); }
+const TOKEN='dev-local';
 const _fetchOriginal=window.fetch.bind(window);
 window.fetch=async function(url,opts={}){
   const isApi=String(url).includes('/api/') && !String(url).includes('/api/auth/') && !String(url).includes('/api/webhook');
@@ -1059,16 +1064,14 @@ window.fetch=async function(url,opts={}){
   const res=await _fetchOriginal(url,opts);
   if(isApi && res.status===401){
     localStorage.removeItem('itbi_token');
-    location.replace('/login.html');
     throw new Error('Sessão expirada');
   }
   if(isApi && res.status===402){
-    location.replace('/login.html?status=pendente');
     throw new Error('Assinatura pendente');
   }
   return res;
 };
-function logout(){ localStorage.removeItem('itbi_token'); location.replace('/login.html'); }
+function logout(){ localStorage.removeItem('itbi_token'); }
 async function abrirPortalAssinatura(){
   try{
     const r=await fetch(`${API}/api/billing/portal`,{method:'POST'}).then(x=>x.json());
@@ -1740,7 +1743,7 @@ function renderCharts(ano,bai,porMes,porNat,faixas){
       const byMes=Array(12).fill(null);
       porMes.filter(r=>r.ano_referencia===a).forEach(r=>{if(r.mes_referencia>=1&&r.mes_referencia<=12)byMes[r.mes_referencia-1]=r.transacoes;});
       return{label:String(a),data:byMes,borderColor:CORES[i],backgroundColor:CORES[i]+'22',
-        pointBackgroundColor:CORES[i],pointRadius:4,pointHoverRadius:6,
+        pointBackgroundColor:CORES[i],pointRadius:4,pointHoverRadius:6,borderWidth:2.5,
         tension:.35,fill:false,spanGaps:true};
     });
     CH.saz=new Chart(sazCanvas.getContext('2d'),{
@@ -1978,8 +1981,17 @@ function _initTagInput(wrapId,inputId,listId,ep,previewOnFocus=false){
 
   function _appendItems(items){
     items.forEach(i=>{
-      const dv=document.createElement('div');dv.textContent=i;
-      dv.onmousedown=e=>{e.preventDefault();_addTag(inputId,i);inp.value='';lst.style.display='none';};
+      const dv=document.createElement('div');
+      const isSel=(_tags[inputId]||[]).includes(i);
+      if(isSel){
+        const ck=document.createElement('span');ck.textContent='✓ ';ck.style.color='var(--primary)';
+        dv.appendChild(ck);dv.appendChild(document.createTextNode(i));
+        dv.style.color='var(--primary)';dv.style.fontWeight='600';dv.style.opacity='.85';
+        dv.onmousedown=e=>{e.preventDefault();const idx=_tags[inputId].indexOf(i);if(idx>-1)_removeTag(inputId,idx);_fetchAc(_acQ,true);};
+      }else{
+        dv.textContent=i;
+        dv.onmousedown=e=>{e.preventDefault();_addTag(inputId,i);inp.value='';lst.style.display='none';};
+      }
       lst.appendChild(dv);
     });
   }
@@ -2118,18 +2130,43 @@ function deselecionarTudo(){
   document.getElementById('cb-all').checked=false;
   updateExpBar();applySelectionToKPI();
 }
+function _aggSelecao(rows){
+  const byAno={},byBairro={},byMes={},byNat={},byFaixa={};
+  rows.forEach(d=>{
+    const ano=d.ano_referencia,mes=d.mes_referencia,v=Number(d.valor_declarado)||0,itbi=Number(d.valor_itbi)||0;
+    const bairro=d.bairro||'',nat=d.natureza_transacao||'Outros';
+    if(ano){if(!byAno[ano])byAno[ano]={ano_referencia:ano,transacoes:0,_vol:0,itbi_total:0};byAno[ano].transacoes++;byAno[ano]._vol+=v;byAno[ano].itbi_total+=itbi;}
+    if(bairro){if(!byBairro[bairro])byBairro[bairro]={bairro,transacoes:0,_vol:0};byBairro[bairro].transacoes++;byBairro[bairro]._vol+=v;}
+    if(ano&&mes){const k=ano+'-'+mes;if(!byMes[k])byMes[k]={ano_referencia:ano,mes_referencia:mes,transacoes:0};byMes[k].transacoes++;}
+    byNat[nat]=(byNat[nat]||0)+1;
+    if(v>0){let f;if(v<300000)f='Ate 300k';else if(v<600000)f='300k-600k';else if(v<1000000)f='600k-1M';else if(v<2000000)f='1M-2M';else f='Acima 2M';byFaixa[f]=(byFaixa[f]||0)+1;}
+  });
+  return {
+    por_ano:Object.values(byAno).sort((a,b)=>a.ano_referencia-b.ano_referencia).map(o=>({ano_referencia:o.ano_referencia,transacoes:o.transacoes,ticket_medio:o.transacoes?o._vol/o.transacoes:0,volume:o._vol,itbi_total:o.itbi_total})),
+    top_bairros:Object.values(byBairro).sort((a,b)=>b.transacoes-a.transacoes).slice(0,15).map(o=>({bairro:o.bairro,transacoes:o.transacoes,ticket_medio:o.transacoes?o._vol/o.transacoes:0})),
+    por_mes:Object.values(byMes).sort((a,b)=>a.ano_referencia-b.ano_referencia||a.mes_referencia-b.mes_referencia),
+    por_natureza:Object.entries(byNat).map(([natureza_transacao,total])=>({natureza_transacao,total})).sort((a,b)=>b.total-a.total).slice(0,10),
+    faixas_valor:Object.entries(byFaixa).map(([faixa,transacoes])=>({faixa,transacoes})),
+  };
+}
 function applySelectionToKPI(){
   if(selectedRowsData.size===0){
-    if(lastResumo)renderKPI(lastResumo.geral);
+    if(lastResumo){
+      renderKPI(lastResumo.geral);
+      renderCharts(lastResumo.por_ano||[],lastResumo.top_bairros||[],lastResumo.por_mes||[],lastResumo.por_natureza||[],lastResumo.faixas_valor||[]);
+    }
     return;
   }
+  const rows=[...selectedRowsData.values()];
   let count=0,volume=0,itbi=0;
-  selectedRowsData.forEach(d=>{
+  rows.forEach(d=>{
     count++;
     volume+=Number(d.valor_declarado)||0;
     itbi+=Number(d.valor_itbi)||0;
   });
   renderKPI({total_transacoes:count,volume_total:volume,ticket_medio:count?volume/count:0,itbi_total:itbi});
+  const sel=_aggSelecao(rows);
+  renderCharts(sel.por_ano,sel.top_bairros,sel.por_mes,sel.por_natureza,sel.faixas_valor);
 }
 function updateExpBar(){
   const bar=document.getElementById('expbar'),cnt=document.getElementById('exp-count');

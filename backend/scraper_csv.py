@@ -41,7 +41,7 @@ CSV_DIR.mkdir(exist_ok=True)
 ANOS_DEFAULT = [2026, 2025, 2024]
 
 ARQUIVOS = {
-    2026: "https://prefeitura.sp.gov.br/documents/d/fazenda/guias-de-itbi-pagas-3-xlsx",
+    2026: "https://prefeitura.sp.gov.br/documents/d/fazenda/guias-de-itbi-pagas-4-xlsx",
     2025: "https://prefeitura.sp.gov.br/cidade/secretarias/upload/fazenda/arquivos/itbi/GUIAS%20DE%20ITBI%20PAGAS%20%2828012026%29%20XLS.xlsx",
     2024: "https://prefeitura.sp.gov.br/cidade/secretarias/upload/fazenda/arquivos/itbi/GUIAS-DE-ITBI-PAGAS-2024.xlsx",
     2023: "https://www.prefeitura.sp.gov.br/cidade/secretarias/upload/fazenda/arquivos/XLSX/GUIAS-DE-ITBI-PAGAS-2023.xlsx",
@@ -409,6 +409,12 @@ def mes_da_aba(nome_aba: str) -> int | None:
     return None
 
 
+def ano_da_aba(nome_aba: str) -> int | None:
+    """Extrai o ano (20xx) do nome da aba, ex.: JAN-2025 -> 2025."""
+    m = re.search(r'(20\d{2})', str(nome_aba))
+    return int(m.group(1)) if m else None
+
+
 def normalizar_df(df: pd.DataFrame, ano: int, mes: int | None) -> pd.DataFrame:
     df.columns = [limpar_col(c) for c in df.columns]
     df = df.loc[:, ~df.columns.duplicated()]
@@ -578,10 +584,11 @@ def processar_ano_csv(xlsx_path: Path, ano: int, forcar_csv: bool = False) -> pd
         for csv_path in csv_files:
             sheet_name = csv_path.stem[len(f"itbi_{ano}_"):]
             mes = mes_da_aba(sheet_name)
+            ano_sheet = ano_da_aba(sheet_name) or ano
             try:
                 df_raw = pd.read_csv(csv_path, dtype=str, keep_default_na=False)
                 df_raw = df_raw.replace({'': None, 'nan': None, 'None': None})
-                df = normalizar_df(df_raw, ano, mes)
+                df = normalizar_df(df_raw, ano_sheet, mes)
                 if not df.empty:
                     frames_csv.append(df)
                     print(f"      [CSV] {sheet_name:<14} > {len(df):>7,} registros")
@@ -603,6 +610,7 @@ def processar_ano_csv(xlsx_path: Path, ano: int, forcar_csv: bool = False) -> pd
 
     for sheet_name in sheet_names:
         mes = mes_da_aba(sheet_name)
+        ano_sheet = ano_da_aba(sheet_name) or ano
         # Nome seguro para o arquivo CSV
         safe_name = re.sub(r'[^\w]', '_', sheet_name)
         csv_path  = CSV_DIR / f"itbi_{ano}_{safe_name}.csv"
@@ -612,7 +620,7 @@ def processar_ano_csv(xlsx_path: Path, ano: int, forcar_csv: bool = False) -> pd
             try:
                 df_raw_cached = pd.read_csv(csv_path, dtype=str, keep_default_na=False)
                 df_raw_cached = df_raw_cached.replace({'': None, 'nan': None, 'None': None})
-                df = normalizar_df(df_raw_cached, ano, mes)
+                df = normalizar_df(df_raw_cached, ano_sheet, mes)
                 if not df.empty:
                     frames.append(df)
                     print(f"      📂 {sheet_name:<14} → {len(df):>7,} registros  (CSV cache)")
@@ -648,7 +656,7 @@ def processar_ano_csv(xlsx_path: Path, ano: int, forcar_csv: bool = False) -> pd
             except Exception:
                 pass  # falha no cache não é crítica
 
-            df = normalizar_df(df_raw, ano, mes)
+            df = normalizar_df(df_raw, ano_sheet, mes)
             del df_raw
             gc.collect()
 
@@ -675,7 +683,9 @@ def processar_ano_csv(xlsx_path: Path, ano: int, forcar_csv: bool = False) -> pd
 
 def salvar_no_banco(df: pd.DataFrame, ano: int, hash_arquivo: str):
     conn = sqlite3.connect(DB_PATH)
-    conn.execute("DELETE FROM transacoes WHERE ano_referencia = ?", (ano,))
+    anos_df = sorted({int(a) for a in df["ano_referencia"].dropna().unique()})
+    for _a in (anos_df or [ano]):
+        conn.execute("DELETE FROM transacoes WHERE ano_referencia = ?", (_a,))
     df.to_sql("transacoes", conn, if_exists="append", index=False)
     conn.execute("""
         INSERT OR REPLACE INTO arquivos_processados (ano, hash, linhas, updated_at)
@@ -717,7 +727,7 @@ def sincronizar(anos: list[int] = None, forcar: bool = False, limpar_csv: bool =
     for ano in anos_alvo:
         url = ARQUIVOS.get(ano)
         # Para o ano atual e anterior, sempre tenta pegar URL dinâmica da página oficial
-        if ano in (ano_atual, ano_anterior) or not url:
+        if ano == ano_atual or not url:
             url_din = buscar_url_dinamica(ano)
             if url_din:
                 url = url_din

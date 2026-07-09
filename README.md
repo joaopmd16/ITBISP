@@ -3,106 +3,118 @@
 Dashboard para consulta das transações imobiliárias com recolhimento de ITBI da Prefeitura de SP.
 Dados de **2006 a 2026**, atualizados mensalmente direto da fonte oficial.
 
-Produção: **https://itbisp.mooo.com**
+Produção atual: **VPS Hostinger** — `http://179.197.67.42:8000`
+
+> Deploy anterior (legado): Oracle Cloud VM · `https://itbisp.mooo.com`
 
 ---
 
 ## Estrutura do projeto
 
 ```
-itbi-dashboard/
+ITBISP/
 ├── backend/
 │   ├── main.py             — API FastAPI + serve frontend estático
 │   ├── scraper.py          — Baixa planilhas XLSX e salva no SQLite
-│   ├── scraper_csv.py      — Variante CSV do scraper
+│   ├── scraper_csv.py      — Scraper otimizado (XLSX→CSV) p/ VMs com pouca RAM
 │   ├── exportar.py         — Exportação Excel/PDF
 │   ├── geo.py              — Geocodificação (mapa, desativado)
 │   ├── auth.py             — Autenticação JWT
 │   ├── billing.py          — Integração Stripe
 │   ├── requirements.txt
 │   └── itbi.db             — Banco SQLite (gerado pelo scraper, não commitado)
-├── frontend/
-│   └── index.html          — SPA single-file (vanilla JS + Chart.js)
-├── deploy-v2.ps1           — Deploy para VM (scp + restart)
-├── rollback-v1.ps1         — Rollback para v1-stable na VM
-└── backup-v1/              — Snapshot dos arquivos antes do deploy v2
+└── frontend/
+    └── index.html          — SPA single-file (vanilla JS + Chart.js)
 ```
 
 ---
 
-## Como rodar localmente (Windows)
+## Como rodar localmente
 
 ### 1. Instalar dependências
 
-```powershell
-cd D:\itbi-dashboard\backend
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Criar flag de dev local (desativa tarefas pesadas em background)
+### 2. Configurar `.env` (em `backend/.env`)
 
-```powershell
-New-Item backend\.dev_local -ItemType File
+```
+JWT_SECRET=uma_chave_secreta_longa
+STRIPE_SECRET_KEY=sk_test_...    # opcional se billing desligado
+FRONTEND_URL=http://localhost:8000
 ```
 
 ### 3. Baixar os dados
 
-```powershell
-# Recentes apenas (rápido, para testar)
-python scraper.py --anos 2024 2025 2026
+```bash
+# Recentes (2024-2026) — carga leve, padrão
+python scraper_csv.py
 
-# Todos os anos (10-20 min)
-python scraper.py
+# Forçar re-download + limpar cache CSV
+python scraper_csv.py --forcar --limpar-csv
+
+# Estender para anos antigos
+python scraper_csv.py --anos 2020 2021 2022 2023 2024 2025 2026
 ```
 
 ### 4. Subir a API
 
-```powershell
-python -m uvicorn main:app --reload
-# → http://localhost:8000  (sem login — bypass automático em localhost)
+```bash
+uvicorn main:app --reload
+# → http://localhost:8000   (sem login — bypass automático em localhost)
+# → http://localhost:8000/docs   (Swagger)
 ```
 
 ---
 
-## Produção (Oracle Cloud VM)
+## Produção (VPS Hostinger · Ubuntu 24.04)
 
-**IP:** `137.131.160.254`  
-**Domínio:** `https://itbisp.mooo.com`  
-**Chave SSH:** `C:\Users\gel\.ssh\itbi.key`
+**IP:** `179.197.67.42` · **Porta:** `8000` · **App:** `/root/ITBISP`
 
-### Deploy
+O app roda como serviço `systemd` (`itbi`), que sobe no boot e reinicia sozinho se cair.
 
-```powershell
-# Deploy completo v2
-.\deploy-v2.ps1
-
-# Rollback para v1 se der problema
-.\rollback-v1.ps1
-```
-
-### Manual (SSH)
-
-```powershell
-$KEY = "C:/Users/gel/.ssh/itbi.key"
-$VM  = "ubuntu@137.131.160.254"
-
-# Conectar
-ssh -i $KEY $VM
-
-# Enviar arquivos
-scp -i $KEY backend\main.py    "${VM}:~/backend/main.py"
-scp -i $KEY frontend\index.html "${VM}:~/frontend/index.html"
-
-# Reiniciar serviço
-ssh -i $KEY $VM "sudo systemctl restart itbi"
-```
-
-### Comandos na VM
+### Deploy do zero
 
 ```bash
-sudo systemctl restart itbi
-sudo systemctl status itbi
-sudo journalctl -u itbi -f
+apt update && apt install -y python3 python3-venv git
+cd /opt && git clone https://github.com/joaopmd16/ITBISP.git
+cd ITBISP && python3 -m venv venv && source venv/bin/activate
+pip install -r backend/requirements.txt
+# criar backend/.env (ver seção acima)
+cd backend && python scraper_csv.py --forcar
+```
+
+### Serviço systemd (`/etc/systemd/system/itbi.service`)
+
+```ini
+[Unit]
+Description=Dashboard ITBI-SP
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/ITBISP/backend
+ExecStart=/root/ITBISP/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Comandos úteis
+
+```bash
+systemctl status itbi        # ver estado
+systemctl restart itbi       # reiniciar (após atualizar código)
+journalctl -u itbi -f        # logs ao vivo
+
+# atualizar código do GitHub e reiniciar
+cd /root/ITBISP && git pull && systemctl restart itbi
 ```
 
 ---
@@ -123,7 +135,21 @@ GET  /api/exportar/pdf
 POST /api/sincronizar
 ```
 
-Documentação interativa: `https://itbisp.mooo.com/docs`
+Documentação interativa: `/docs`
+
+---
+
+## Fonte dos dados (Prefeitura SP)
+
+O scraper decide a URL de cada ano pelo dicionário `ARQUIVOS` em `scraper_csv.py`.
+Para o **ano atual** a URL é buscada dinamicamente na página oficial (o nome do arquivo
+muda a cada atualização). Para os demais anos usa-se a URL fixa.
+
+**Importante:** o **ano de cada registro é lido pelo nome da aba** (ex.: `JAN-2025`),
+não pela "gaveta" do ano. Isso evita que um arquivo publicado fora de ordem (ex.: o
+consolidado de 2025 publicado em jan/2026) seja gravado com o ano errado.
+
+Total atual: **~539 mil transações** (2024–2026, com 2025 completo).
 
 ---
 
@@ -131,10 +157,5 @@ Documentação interativa: `https://itbisp.mooo.com/docs`
 
 ```
 main          — versão atual (v2)
-v1-stable     — tag apontando para o estado estável pré-v2 (commit ac4ce66)
-```
-
-Para fazer rollback de código:
-```powershell
-git checkout v1-stable
+v1-stable     — tag do estado estável pré-v2 (commit ac4ce66)
 ```

@@ -36,13 +36,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rotas que NÃO exigem login + assinatura ativa
-ROTAS_PUBLICAS = {
-    "/api", "/api/status",
-    "/api/auth/registrar", "/api/auth/login",
-    "/api/webhook/stripe",
-}
-
 
 @app.middleware("http")
 async def no_cache_html(request: Request, call_next):
@@ -53,17 +46,6 @@ async def no_cache_html(request: Request, call_next):
         response.headers["Expires"] = "0"
     return response
 
-
-@app.middleware("http")
-async def exigir_assinatura(request: Request, call_next):
-    path = request.url.path
-    # bypass auth em localhost (desenvolvimento local)
-    client_host = request.client.host if request.client else ""
-    if client_host in ("127.0.0.1", "::1"):
-        return await call_next(request)
-    if not path.startswith("/api") or path in ROTAS_PUBLICAS or path.startswith("/api/auth/me") \
-            or path.startswith("/api/billing"):
-        return await call_next(request)
 
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
