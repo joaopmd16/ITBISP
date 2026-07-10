@@ -755,8 +755,11 @@ def sincronizar_status():
     }
 
 @app.post("/api/sincronizar")
-def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None)):
-    """Dispara a sincronização em background. Use com cron ou botão no dashboard."""
+def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None), senha: Optional[str] = Query(None)):
+    """Dispara a sincronização em background."""
+    import os as _os
+    if senha != _os.environ.get("SYNC_SECRET", ""):
+        return JSONResponse({"detail": "Senha incorreta"}, status_code=401)
     global sincronizando, _sync_log, _sync_inicio
     if sincronizando:
         return JSONResponse({"status": "já rodando"}, status_code=409)

@@ -1900,7 +1900,12 @@ function openModal(d){
   document.getElementById('msub').textContent=[d.bairro,d.cep,am,d.data_transacao].filter(Boolean).join(' · ');
   document.getElementById('mmeta').textContent=`Transação · ${d.natureza_transacao||'detalhes'}`;
   const F=(l,v,cls='',key='')=>`<div class="mf"><div class="mfl">${l}</div><div class="mfv ${cls}"${key?` data-iptu="${key}"`:''}>${v}</div></div>`;
+  const _end=[d.logradouro,d.numero,d.bairro,d.cep,'São Paulo, SP, Brasil'].filter(Boolean).join(', ');
+  const _sv='https://maps.google.com/maps?q='+encodeURIComponent(_end)+'&layer=c&cbp=11,0,0,0,0&output=svembed';
+  const _mapsLink='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(_end);
   document.getElementById('mbody').innerHTML=`
+<div class="ms"><div class="mst" style="display:flex;align-items:center;justify-content:space-between">Localização <a id="sv-btn" href="${_mapsLink}" target="_blank" rel="noopener" style="font-size:11px;font-weight:700;color:#fff;background:var(--primary);padding:5px 12px;border-radius:8px;text-decoration:none">🧍 Abrir no Street View ↗</a></div>
+<iframe src="https://maps.google.com/maps?q=${encodeURIComponent(_end)}&z=17&output=embed" title="Mapa" style="width:100%;height:280px;border:0;border-radius:14px;background:var(--surface-2)" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
 <div class="ms"><div class="mst">Valores</div><div class="mg">
 ${F('Valor declarado',brlFull(d.valor_declarado),'hero')}
 ${F('Base de cálculo (ITBI)',brlFull(d.valor_itbi),'num')}
@@ -1924,6 +1929,16 @@ ${F('Natureza',s(d.natureza_transacao))}${F('Data',s(d.data_transacao),'num')}${
 ${F('Cartório',s(d.cartorio_registro))}${F('Matrícula',s(d.matricula_imovel),'num')}
 </div></div>`;
   document.getElementById('modal').classList.add('open');
+
+  // Botão "Abrir no Street View": geocodifica (OpenStreetMap) e aponta pro panorama; se falhar, abre a busca no Maps.
+  const _lograd=(d.logradouro||'').replace(/^R\.?\s+/i,'Rua ').replace(/^AV\.?\s+/i,'Avenida ').replace(/^AL\.?\s+/i,'Alameda ').replace(/^TV\.?\s+/i,'Travessa ').replace(/^EST\.?\s+/i,'Estrada ').replace(/^(PC|P[ÇC]A)\.?\s+/i,'Praça ').replace(/^LGO\.?\s+/i,'Largo ');
+  const _num=(d.numero!=null?String(d.numero):'').trim();
+  const _cep=(d.cep||'').replace(/\D/g,'');
+  const _rua=(_num?_num+' ':'')+_lograd;
+  fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&country=Brazil&city='+encodeURIComponent('São Paulo')+'&street='+encodeURIComponent(_rua)+(_cep?'&postalcode='+_cep:''))
+    .then(r=>r.json())
+    .then(a=>{if(a&&a[0]&&a[0].lat){const btn=document.getElementById('sv-btn');if(btn)btn.href='https://www.google.com/maps/@?api=1&map_action=pano&viewpoint='+a[0].lat+','+a[0].lon;}})
+    .catch(()=>{});
 
   // Busca dados da tabela IPTU pelo SQL quando disponível
   if(d.sql_terreno){
@@ -2322,6 +2337,8 @@ function closeSyncModal(){
   document.getElementById('sync-modal').style.display='none';
 }
 async function iniciarSync(){
+  const _syncSenha=prompt('Senha de sincronização:');
+  if(_syncSenha===null)return;
   const anos=document.getElementById('sync-anos').value.trim();
   const btn=document.getElementById('sync-btn-start');
   btn.disabled=true;
@@ -2329,8 +2346,14 @@ async function iniciarSync(){
   document.getElementById('sync-log').textContent='Iniciando...\n';
   document.getElementById('sync-status').textContent='🔄 Rodando';
   try{
-    const url=anos?`${API}/api/sincronizar?anos=${encodeURIComponent(anos)}`:`${API}/api/sincronizar`;
+    const url=`${API}/api/sincronizar?senha=${encodeURIComponent(_syncSenha)}`+(anos?`&anos=${encodeURIComponent(anos)}`:'');
     const r=await fetch(url,{method:'POST'});
+    if(r.status===401){
+      document.getElementById('sync-log').textContent='❌ Senha incorreta.';
+      document.getElementById('sync-status').textContent='❌ Senha incorreta';
+      btn.disabled=false; btn.textContent='▶  Sincronizar agora';
+      return;
+    }
     if(r.status===409){
       document.getElementById('sync-log').textContent='⚠️ Sincronização já está rodando em background.';
       document.getElementById('sync-status').textContent='⚠️ Já rodando';
