@@ -183,7 +183,7 @@ def status_geocoding() -> dict:
 # PONTOS DO MAPA — não-bloqueante
 # ──────────────────────────────────────────────
 
-def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 2000) -> dict:
+def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
     """
     Retorna pontos que JÁ estão geocodificados (cache).
     Dispara geocoding em background para os que faltam.
