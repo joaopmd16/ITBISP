@@ -992,17 +992,21 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="pag" id="pag"></div>
       </div>
 
-      <!-- ─── Mapa (em desenvolvimento) ─── -->
+      <!-- ─── Mapa ─── -->
       <div class="mapbox" id="map">
         <div class="mapbox-head">
           <span class="t">Mapa de transações</span>
-          <span class="s">Em breve disponível</span>
-          <span style="margin-left:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:6px 14px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.06em;text-transform:uppercase">In development</span>
+          <span class="s" id="map-info">Visualização geográfica por CEP</span>
+          <button class="map-toggle" id="map-toggle-btn" onclick="toggleMapa()">Mostrar mapa</button>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:56px 24px;color:var(--mu)">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-          <div style="font-size:14px;font-weight:600;color:var(--ink-2)">Mapa em desenvolvimento</div>
-          <div style="font-size:12px;color:var(--mu);text-align:center;max-width:340px;line-height:1.6">A visualização geográfica das transações estará disponível em breve.</div>
+        <div id="mapa"></div>
+        <div class="map-legend" id="map-legend" style="display:none">
+          <span class="ml-l">Transações por CEP:</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:50%;background:#cad9ff;display:inline-block"></span>1–5</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:50%;background:#7e9bff;display:inline-block"></span>6–20</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:13px;height:13px;border-radius:50%;background:#3a5bff;display:inline-block"></span>21–99</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:15px;height:15px;border-radius:50%;background:#1a2f9c;display:inline-block"></span>100+</span>
+          <span class="map-status" id="map-status"></span>
         </div>
       </div>
 
