@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 import auth
 import billing
+import geo
 
 DB_PATH = Path(__file__).parent / "itbi.db"
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -158,7 +159,10 @@ def startup():
         """)
         conn.commit()
 
-    # 2. Pré-aquece o cache do resumo para o range padrão do frontend (últimos 3 anos)
+    # 2. Cache de geocodificação (mapa)
+    geo.init_geo_cache()
+
+    # 3. Pré-aquece o cache do resumo para o range padrão do frontend (últimos 3 anos)
     import threading
     def _prewarm():
         import time
@@ -735,9 +739,31 @@ def status():
 
 # ── Mapa ──────────────────────────────────────
 
-# ── Mapa desativado temporariamente (in development) ──────────
-# @app.get("/api/mapa")
-# @app.get("/api/mapa/status")
+@app.get("/api/mapa")
+def mapa(
+    ids:        Optional[str]   = Query(None),
+    logradouro: Optional[str]   = Query(None),
+    numero:     Optional[str]   = Query(None),
+    bairro:     Optional[str]   = Query(None),
+    cep:        Optional[str]   = Query(None),
+    ano_min:    Optional[int]   = Query(None),
+    ano_max:    Optional[int]   = Query(None),
+    valor_min:  Optional[float] = Query(None),
+    valor_max:  Optional[float] = Query(None),
+):
+    """Pontos agregados por CEP para o mapa (geocodificação em background)."""
+    ids_list = [int(i) for i in ids.split(",") if i.strip().isdigit()] if ids else None
+    filtros = {
+        "logradouro": logradouro, "numero": numero, "bairro": bairro, "cep": cep,
+        "ano_min": ano_min, "ano_max": ano_max,
+        "valor_min": valor_min, "valor_max": valor_max,
+    }
+    return geo.pontos_mapa(filtros, ids=ids_list)
+
+
+@app.get("/api/mapa/status")
+def mapa_status():
+    return geo.status_geocoding()
 
 
 # ── Sincronização (trigger manual/cron) ──────
