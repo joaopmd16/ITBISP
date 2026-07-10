@@ -270,9 +270,8 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
         elif r["ok"] is None:  # nunca tentou geocodificar
             sem_geo.append(cep)
 
-    # Dispara geocoding em background para os sem coordenadas
-    if sem_geo:
-        iniciar_geocoding_background(sem_geo[:500])
+    # Geocodificação é feita por processo standalone (geocode_all.py) na VM,
+    # não mais disparada por acesso ao site — evita sobrecarregar visitas com requests externos.
 
     return {
         "pontos": pontos,
