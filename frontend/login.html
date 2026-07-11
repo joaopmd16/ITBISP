@@ -69,6 +69,11 @@
   input::placeholder{color:var(--mu-2,#606060)}
   input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
 
+  /* campos exclusivos do cadastro */
+  .only-cadastro{display:none}
+  .row{display:flex;gap:12px}
+  .row .col{flex:1;min-width:0}
+
   button{width:100%;padding:13px;border:none;border-radius:var(--r-pill);font-size:.95rem;
          font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:-.01em}
   .btn-primary{background:var(--primary);color:#fff;transition:filter .15s,transform .05s;
@@ -104,10 +109,32 @@
   <div id="msg" class="msg"></div>
 
   <form id="form" onsubmit="enviar(event)">
+    <div class="only-cadastro" id="camposCadastroTopo">
+      <div class="row">
+        <div class="col">
+          <label>Nome</label>
+          <input type="text" id="nome" autocomplete="given-name" placeholder="João" disabled>
+        </div>
+        <div class="col">
+          <label>Sobrenome</label>
+          <input type="text" id="sobrenome" autocomplete="family-name" placeholder="Silva" disabled>
+        </div>
+      </div>
+      <label>Telefone</label>
+      <input type="tel" id="telefone" autocomplete="tel" placeholder="(11) 91234-5678" oninput="mascaraTelefone(this)" disabled>
+    </div>
+
     <label>E-mail</label>
     <input type="email" id="email" required autocomplete="email" placeholder="voce@exemplo.com">
+
     <label>Senha</label>
     <input type="password" id="senha" required minlength="6" autocomplete="current-password" placeholder="••••••••">
+
+    <div class="only-cadastro" id="camposCadastroSenha">
+      <label>Confirmar senha</label>
+      <input type="password" id="senha2" minlength="6" autocomplete="new-password" placeholder="••••••••" disabled>
+    </div>
+
     <button type="submit" class="btn-primary" id="btnSubmit">Entrar</button>
   </form>
 </div>
@@ -146,13 +173,31 @@ async function irParaCheckout(token){
 
 function logout(){ localStorage.removeItem('itbi_token'); location.href='/dashboard/login.html'; }
 
+const CAMPOS_CADASTRO=['nome','sobrenome','telefone','senha2'];
+
 function trocarAba(m){
   modo=m;
-  document.getElementById('tabLogin').classList.toggle('active',m==='login');
-  document.getElementById('tabCadastro').classList.toggle('active',m==='cadastro');
-  document.getElementById('senha').setAttribute('autocomplete',m==='login'?'current-password':'new-password');
-  document.getElementById('btnSubmit').textContent=m==='login'?'Entrar':'Criar conta';
+  const ehCadastro=m==='cadastro';
+  document.getElementById('tabLogin').classList.toggle('active',!ehCadastro);
+  document.getElementById('tabCadastro').classList.toggle('active',ehCadastro);
+  document.getElementById('senha').setAttribute('autocomplete',ehCadastro?'new-password':'current-password');
+  document.getElementById('btnSubmit').textContent=ehCadastro?'Criar conta':'Entrar';
+  // mostra/oculta os campos extras e liga/desliga a validação nativa (required em campo oculto trava o submit)
+  document.querySelectorAll('.only-cadastro').forEach(el=>el.style.display=ehCadastro?'block':'none');
+  CAMPOS_CADASTRO.forEach(id=>{
+    const el=document.getElementById(id);
+    el.disabled=!ehCadastro;          // desabilitado = não é enviado nem validado
+    el.required=ehCadastro;
+  });
   document.getElementById('msg').textContent=''; document.getElementById('msg').className='msg';
+}
+
+function mascaraTelefone(el){
+  let v=el.value.replace(/\D/g,'').slice(0,11);
+  if(v.length>6)      v=`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+  else if(v.length>2) v=`(${v.slice(0,2)}) ${v.slice(2)}`;
+  else if(v.length>0) v=`(${v}`;
+  el.value=v;
 }
 
 async function enviar(ev){
@@ -162,6 +207,18 @@ async function enviar(ev){
   const msg=document.getElementById('msg');
   const btn=document.getElementById('btnSubmit');
   msg.className='msg'; msg.textContent='';
+
+  let corpo={email,senha};
+  if(modo==='cadastro'){
+    const senha2=document.getElementById('senha2').value;
+    if(senha!==senha2){ msg.className='msg err'; msg.textContent='As senhas não coincidem.'; return; }
+    corpo={
+      email, senha,
+      nome:document.getElementById('nome').value.trim(),
+      sobrenome:document.getElementById('sobrenome').value.trim(),
+      telefone:document.getElementById('telefone').value.trim(),
+    };
+  }
   btn.disabled=true;
 
   try{
@@ -169,7 +226,7 @@ async function enviar(ev){
     const res=await fetch(`${API}${rota}`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,senha})
+      body:JSON.stringify(corpo)
     });
     const data=await res.json();
     if(!res.ok){ msg.className='msg err'; msg.textContent=data.detail||'Erro'; btn.disabled=false; return; }

@@ -169,6 +169,12 @@ def startup():
                 atualizado_em       TEXT DEFAULT (datetime('now'))
             );
         """)
+        # Migração: colunas de perfil no cadastro (SQLite não tem ADD COLUMN IF NOT EXISTS)
+        for coluna in ("nome TEXT", "sobrenome TEXT", "telefone TEXT"):
+            try:
+                conn.execute(f"ALTER TABLE usuarios ADD COLUMN {coluna}")
+            except sqlite3.OperationalError:
+                pass  # coluna já existe
         conn.commit()
 
     # 2. Cache de geocodificação (mapa)
@@ -845,18 +851,33 @@ class CredenciaisIn(BaseModel):
     senha: str
 
 
+class CadastroIn(BaseModel):
+    email: str
+    senha: str
+    nome: str = ""
+    sobrenome: str = ""
+    telefone: str = ""
+
+
 @app.post("/api/auth/registrar")
-def registrar(dados: CredenciaisIn):
+def registrar(dados: CadastroIn):
     email = dados.email.strip().lower()
+    nome = dados.nome.strip()
+    sobrenome = dados.sobrenome.strip()
+    telefone = dados.telefone.strip()
     if not email or "@" not in email or len(dados.senha) < 6:
         raise HTTPException(400, "E-mail inválido ou senha muito curta (mín. 6 caracteres)")
+    if not nome or not sobrenome:
+        raise HTTPException(400, "Informe nome e sobrenome")
+    if not telefone:
+        raise HTTPException(400, "Informe o telefone")
     with get_db() as conn:
         existe = conn.execute("SELECT 1 FROM usuarios WHERE email = ?", (email,)).fetchone()
         if existe:
             raise HTTPException(409, "E-mail já cadastrado")
         cur = conn.execute(
-            "INSERT INTO usuarios (email, senha_hash) VALUES (?, ?)",
-            (email, auth.hash_senha(dados.senha)),
+            "INSERT INTO usuarios (email, senha_hash, nome, sobrenome, telefone) VALUES (?, ?, ?, ?, ?)",
+            (email, auth.hash_senha(dados.senha), nome, sobrenome, telefone),
         )
         usuario_id = cur.lastrowid
         conn.execute(
