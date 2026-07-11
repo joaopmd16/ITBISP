@@ -38,7 +38,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           <a
-            href="https://itbismart.com.br"
+            href="/dashboard"
             className="hidden rounded-lg border border-panel-border px-4 py-2 text-sm font-medium text-neutral-200 transition hover:border-neutral-600 sm:block"
           >
             Login

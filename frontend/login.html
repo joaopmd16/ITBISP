@@ -76,7 +76,7 @@ async function irParaCheckout(token){
   document.querySelector('.card').innerHTML+=`<p class="msg err">Não foi possível iniciar o pagamento. Tente novamente em instantes.</p>`;
 }
 
-function logout(){ localStorage.removeItem('itbi_token'); location.href='/login.html'; }
+function logout(){ localStorage.removeItem('itbi_token'); location.href='/dashboard/login.html'; }
 
 function trocarAba(m){
   modo=m;
@@ -110,7 +110,7 @@ async function enviar(ev){
     // verifica status da assinatura
     const me=await fetch(`${API}/api/auth/me`,{headers:{Authorization:`Bearer ${data.token}`}}).then(r=>r.json());
     if(me.assinatura_status==='active'||me.assinatura_status==='trialing'){
-      location.href='/';
+      location.href='/dashboard/';
       return;
     }
 

@@ -65,7 +65,7 @@ export default function Pricing() {
             </ul>
 
             <a
-              href="https://itbismart.com.br"
+              href="/dashboard"
               className="mt-8 block rounded-lg bg-accent px-5 py-3 text-center text-sm font-semibold text-white transition hover:brightness-110"
             >
               Começar agora

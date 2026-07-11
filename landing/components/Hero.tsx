@@ -48,7 +48,7 @@ export default function Hero() {
           className="mt-8 flex flex-wrap items-center justify-center gap-3"
         >
           <a
-            href="https://itbismart.com.br"
+            href="/dashboard"
             className="rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:brightness-110"
           >
             Entrar no dashboard

@@ -20,7 +20,7 @@ export default function Footer() {
           Dados públicos de ITBI · Prefeitura de São Paulo · 2006–2026
         </p>
         <a
-          href="https://itbismart.com.br"
+          href="/dashboard"
           className="text-xs text-neutral-400 transition hover:text-white"
         >
           Acessar dashboard →

@@ -967,4 +967,4 @@ async def webhook_stripe(request: Request):
 
 # Serve o frontend estático (deve ficar no final para não sobrescrever as rotas da API)
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    app.mount("/dashboard", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
