@@ -53,29 +53,28 @@
 const API=location.hostname==='localhost'?'http://localhost:8000':`${location.protocol}//${location.hostname}`;
 let modo='login';
 
-/* Se chegou aqui por assinatura pendente (token ainda válido), pula direto pro checkout */
+/* Se chegou aqui por assinatura pendente (token ainda válido), vai direto pro checkout */
 (async function checarPendente(){
   const params=new URLSearchParams(location.search);
   const token=localStorage.getItem('itbi_token');
   if(params.get('status')==='pendente' && token){
     document.querySelector('.card').innerHTML=`
-      <h1>Assinatura pendente</h1>
-      <p class="sub">Sua assinatura não está ativa. Finalize o pagamento para continuar acessando o dashboard.</p>
-      <button class="btn-primary" id="btnPagar">Finalizar pagamento</button>
-      <button class="btn-primary" id="btnBeta" style="background:#22c55e">Usar grátis por enquanto (beta)</button>
+      <h1>Redirecionando para o pagamento…</h1>
+      <p class="sub">Sua assinatura ainda não está ativa. Você será encaminhado ao checkout em instantes.</p>
       <button class="btn-link" onclick="logout()">Usar outra conta</button>`;
-    document.getElementById('btnPagar').onclick=async()=>{
-      const chk=await fetch(`${API}/api/billing/checkout`,{
-        method:'POST', headers:{Authorization:`Bearer ${token}`}
-      }).then(r=>r.json());
-      if(chk.url) location.href=chk.url;
-    };
-    document.getElementById('btnBeta').onclick=async()=>{
-      await fetch(`${API}/api/billing/liberar-beta`,{method:'POST',headers:{Authorization:`Bearer ${token}`}});
-      location.href='/';
-    };
+    await irParaCheckout(token);
   }
 })();
+
+async function irParaCheckout(token){
+  try{
+    const chk=await fetch(`${API}/api/billing/checkout`,{
+      method:'POST', headers:{Authorization:`Bearer ${token}`}
+    }).then(r=>r.json());
+    if(chk.url){ location.href=chk.url; return; }
+  }catch(e){}
+  document.querySelector('.card').innerHTML+=`<p class="msg err">Não foi possível iniciar o pagamento. Tente novamente em instantes.</p>`;
+}
 
 function logout(){ localStorage.removeItem('itbi_token'); location.href='/login.html'; }
 
@@ -115,24 +114,11 @@ async function enviar(ev){
       return;
     }
 
-    // sem assinatura ativa → mostra opção de pagar ou liberar grátis (beta)
+    // sem assinatura ativa → segue direto para o pagamento (cadastro e login)
     document.getElementById('form').style.display='none';
-    msg.className='msg ok'; msg.textContent='';
-    const wrap=document.createElement('div');
-    wrap.innerHTML=`
-      <button class="btn-primary" id="btnPagar2">Finalizar pagamento</button>
-      <button class="btn-primary" id="btnBeta2" style="background:#22c55e">Usar grátis por enquanto (beta)</button>`;
-    document.querySelector('.card').appendChild(wrap);
-    document.getElementById('btnPagar2').onclick=async()=>{
-      const chk=await fetch(`${API}/api/billing/checkout`,{
-        method:'POST', headers:{Authorization:`Bearer ${data.token}`}
-      }).then(r=>r.json());
-      if(chk.url) location.href=chk.url;
-    };
-    document.getElementById('btnBeta2').onclick=async()=>{
-      await fetch(`${API}/api/billing/liberar-beta`,{method:'POST',headers:{Authorization:`Bearer ${data.token}`}});
-      location.href='/';
-    };
+    msg.className='msg ok';
+    msg.textContent=modo==='cadastro'?'Conta criada! Redirecionando para o pagamento…':'Redirecionando para o pagamento…';
+    await irParaCheckout(data.token);
   }catch(e){
     msg.className='msg err'; msg.textContent='Falha de conexão com o servidor.';
     btn.disabled=false;

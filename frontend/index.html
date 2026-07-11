@@ -1059,7 +1059,10 @@ const API=location.origin;
 
 /* ─── autenticação / assinatura ─── */
 const IS_LOCAL=location.hostname==='localhost'||location.hostname==='127.0.0.1';
-const TOKEN='dev-local';
+const TOKEN=IS_LOCAL?'dev-local':localStorage.getItem('itbi_token');
+if(!IS_LOCAL && !TOKEN){
+  location.href='/login.html';
+}
 const _fetchOriginal=window.fetch.bind(window);
 window.fetch=async function(url,opts={}){
   const isApi=String(url).includes('/api/') && !String(url).includes('/api/auth/') && !String(url).includes('/api/webhook');
@@ -1069,14 +1072,16 @@ window.fetch=async function(url,opts={}){
   const res=await _fetchOriginal(url,opts);
   if(isApi && res.status===401){
     localStorage.removeItem('itbi_token');
+    if(!IS_LOCAL) location.href='/login.html';
     throw new Error('Sessão expirada');
   }
   if(isApi && res.status===402){
+    if(!IS_LOCAL) location.href='/login.html?status=pendente';
     throw new Error('Assinatura pendente');
   }
   return res;
 };
-function logout(){ localStorage.removeItem('itbi_token'); }
+function logout(){ localStorage.removeItem('itbi_token'); if(!IS_LOCAL) location.href='/login.html'; }
 async function abrirPortalAssinatura(){
   try{
     const r=await fetch(`${API}/api/billing/portal`,{method:'POST'}).then(x=>x.json());
