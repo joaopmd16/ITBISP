@@ -4,20 +4,54 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login — Dashboard ITBI-SP</title>
+<link rel="icon" type="image/png" href="/dashboard/assets/logo-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0a0a0a;--card:#141414;--border:#262626;--text:#eee;--muted:#888;--accent:#3b82f6;--err:#ef4444}
+  :root{--bg:#0a0a0a;--card:#141414;--border:#262626;--text:#eee;--muted:#888;--accent:#ff6a3d;--err:#ef4444}
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);
-       display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:380px}
-  h1{font-size:1.3rem;margin:0 0 4px}
+  html,body{height:100%}
+  body{margin:0;font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       background:var(--bg);color:var(--text);
+       display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;
+       position:relative;overflow:hidden}
+
+  /* ─── grid + glow de fundo (mesmo estilo da landing page) ─── */
+  .bg-grid{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(to right,#ffffff08 1px,transparent 1px),
+                      linear-gradient(to bottom,#ffffff08 1px,transparent 1px);
+    background-size:44px 44px;
+  }
+  .glow{
+    position:fixed;z-index:0;pointer-events:none;border-radius:9999px;
+    background:var(--accent);opacity:.22;filter:blur(120px);
+  }
+  .glow-1{width:640px;height:640px;top:-220px;left:-160px;animation:float1 16s ease-in-out infinite}
+  .glow-2{width:560px;height:560px;bottom:-240px;right:-160px;animation:float2 18s ease-in-out infinite}
+  @keyframes float1{
+    0%,100%{transform:translate(0,0) scale(1)}
+    50%{transform:translate(60px,40px) scale(1.15)}
+  }
+  @keyframes float2{
+    0%,100%{transform:translate(0,0) scale(1)}
+    50%{transform:translate(-50px,-30px) scale(1.1)}
+  }
+
+  .card{position:relative;z-index:1;background:var(--card);border:1px solid var(--border);
+        border-radius:16px;padding:36px;width:100%;max-width:380px;
+        box-shadow:0 20px 60px -20px rgba(0,0,0,.5)}
+  .logo{display:block;width:44px;height:44px;border-radius:11px;margin:0 0 18px;object-fit:cover}
+  h1{font-size:1.3rem;margin:0 0 4px;font-weight:700}
   p.sub{color:var(--muted);font-size:.85rem;margin:0 0 24px}
   label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:6px}
   input{width:100%;padding:10px 12px;margin-bottom:16px;background:#1c1c1c;border:1px solid var(--border);
-        border-radius:8px;color:var(--text);font-size:.95rem}
+        border-radius:8px;color:var(--text);font-size:.95rem;font-family:inherit}
   input:focus{outline:none;border-color:var(--accent)}
-  button{width:100%;padding:11px;border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;margin-bottom:10px}
-  .btn-primary{background:var(--accent);color:#fff}
+  button{width:100%;padding:11px;border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;margin-bottom:10px;font-family:inherit}
+  .btn-primary{background:var(--accent);color:#fff;transition:filter .15s}
+  .btn-primary:hover{filter:brightness(1.1)}
   .btn-primary:disabled{opacity:.5;cursor:not-allowed}
   .btn-link{background:none;color:var(--muted);text-decoration:underline}
   .msg{font-size:.85rem;margin-bottom:14px;min-height:18px}
@@ -29,7 +63,11 @@
 </style>
 </head>
 <body>
+<div class="bg-grid"></div>
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
 <div class="card">
+  <img class="logo" src="/dashboard/assets/logo-icon.png" alt="ITBI Smart">
   <h1>Dashboard ITBI-SP</h1>
   <p class="sub">Acesse sua conta para consultar os dados</p>
 
