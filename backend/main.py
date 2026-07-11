@@ -48,6 +48,18 @@ async def no_cache_html(request: Request, call_next):
     return response
 
 
+ROTAS_PROTEGIDAS_PREFIXO = "/api/"
+ROTAS_PUBLICAS = ("/api/auth/", "/api/webhook/")
+
+
+@app.middleware("http")
+async def exigir_assinatura_ativa(request: Request, call_next):
+    path = request.url.path
+    if not path.startswith(ROTAS_PROTEGIDAS_PREFIXO) or path.startswith(ROTAS_PUBLICAS):
+        return await call_next(request)
+    if request.client and request.client.host in ("127.0.0.1", "::1"):
+        return await call_next(request)
+
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         return JSONResponse({"detail": "Não autenticado"}, status_code=401)
