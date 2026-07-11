@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function Navbar() {
   return (
@@ -12,9 +13,14 @@ export default function Navbar() {
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <a href="#" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white">
-            I
-          </span>
+          <Image
+            src="/logo-icon.png"
+            alt="ITBI Smart"
+            width={38}
+            height={38}
+            className="rounded-lg"
+            priority
+          />
           <span className="text-sm font-semibold text-white">ITBI Smart</span>
         </a>
 

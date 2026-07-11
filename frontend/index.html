@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ITBI · São Paulo</title>
+<link rel="icon" type="image/png" href="/assets/logo-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -75,7 +76,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',
 
 /* ─── sidebar ─── */
 .side{position:sticky;top:0;height:100vh;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px;z-index:50}
-.side-logo{width:38px;height:38px;border-radius:11px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 6px 18px color-mix(in srgb,var(--primary) 35%,transparent)}
+.side-logo{width:44px;height:44px;border-radius:11px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 6px 18px color-mix(in srgb,var(--primary) 35%,transparent)}
 .side-logo svg{width:18px;height:18px}
 .nav-btn{width:40px;height:40px;border-radius:11px;background:none;border:none;color:var(--mu);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:all .15s}
 .nav-btn svg{width:18px;height:18px;stroke-width:1.6}
@@ -522,8 +523,8 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 
   <!-- ─── SIDEBAR ─── -->
   <aside class="side">
-    <div class="side-logo" title="ITBI SP">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1V8.5z"/></svg>
+    <div class="side-logo" title="ITBI Smart" style="background:transparent;padding:0;overflow:hidden">
+      <img src="/assets/logo-icon.png" alt="ITBI Smart" style="width:100%;height:100%;object-fit:cover;border-radius:11px">
     </div>
     <button class="nav-btn active" title="Overview" onclick="scrollToSection('over')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>

@@ -1,11 +1,17 @@
+import Image from "next/image";
+
 export default function Footer() {
   return (
     <footer className="border-t border-panel-border/60 px-6 py-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-xs font-bold text-white">
-            I
-          </span>
+          <Image
+            src="/logo-icon.png"
+            alt="ITBI Smart"
+            width={32}
+            height={32}
+            className="rounded-md"
+          />
           <span className="text-sm font-semibold text-white">
             ITBI Smart
           </span>
