@@ -1,35 +1,43 @@
 "use client";
 
 import { motion } from "framer-motion";
+import {
+  Search,
+  Map,
+  BarChart3,
+  Ruler,
+  FolderOutput,
+  Database,
+} from "lucide-react";
 
 const FEATURES = [
   {
-    icon: "🔍",
+    icon: Search,
     title: "Busca avançada",
     desc: "Filtre por logradouro, bairro, CEP, número de IPTU, natureza, período e faixa de valor — com autocomplete instantâneo.",
   },
   {
-    icon: "🗺️",
+    icon: Map,
     title: "Mapa geográfico",
     desc: "Visualize transações agrupadas por CEP em um mapa interativo, com volume e ticket médio por região.",
   },
   {
-    icon: "📊",
+    icon: BarChart3,
     title: "Painéis analíticos",
     desc: "Sazonalidade mensal, distribuição por faixa de valor, natureza da transação e top bairros em tempo real.",
   },
   {
-    icon: "📐",
+    icon: Ruler,
     title: "Calculadora de m²",
     desc: "Estime o valor do metro quadrado com base no ticket médio do filtro aplicado, na hora.",
   },
   {
-    icon: "📁",
+    icon: FolderOutput,
     title: "Exportação",
     desc: "Exporte qualquer resultado filtrado direto para Excel ou PDF, pronto para relatório.",
   },
   {
-    icon: "🗄️",
+    icon: Database,
     title: "Dados oficiais 2006–2026",
     desc: "Base atualizada continuamente a partir da fonte oficial da Prefeitura de São Paulo — mais de 2 milhões de registros.",
   },
@@ -66,8 +74,8 @@ export default function Features() {
               whileHover={{ y: -4 }}
               className="rounded-2xl border border-panel-border bg-panel p-6 transition-colors hover:border-neutral-600"
             >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-xl">
-                {f.icon}
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                <f.icon size={20} strokeWidth={2} />
               </div>
               <h3 className="text-base font-semibold text-white">
                 {f.title}
