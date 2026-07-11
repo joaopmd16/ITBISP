@@ -3,7 +3,7 @@
 Dashboard para consulta das transações imobiliárias com recolhimento de ITBI da Prefeitura de SP.
 Dados de **2006 a 2026**, atualizados mensalmente direto da fonte oficial.
 
-Produção atual: **VPS Hostinger** — `http://179.197.67.42:8000`
+Produção atual: **VPS Hostinger** — `https://itbismart.com.br` (landing na raiz, dashboard em `/dashboard`, também acessível em `http://179.197.67.42:8000`)
 
 > Deploy anterior (legado): Oracle Cloud VM · `https://itbisp.mooo.com`
 
@@ -44,9 +44,15 @@ pip install -r requirements.txt
 
 ```
 JWT_SECRET=uma_chave_secreta_longa
-STRIPE_SECRET_KEY=sk_test_...    # opcional se billing desligado
-FRONTEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:8000        # em produção: https://itbismart.com.br/dashboard
+
+# Stripe (assinatura mensal) — opcional em dev; obrigatório p/ cobrar em produção
+STRIPE_SECRET_KEY=sk_test_...             # em produção: sk_live_...
+STRIPE_PRICE_ID=price_...                 # se vazio, billing.py cria um Price R$30/mês na 1ª cobrança
+STRIPE_WEBHOOK_SECRET=whsec_...           # segredo do endpoint /api/webhook/stripe (ativa a assinatura após o pagamento)
 ```
+
+> Sem login em `localhost` — o middleware faz bypass de auth/paywall para `127.0.0.1`.
 
 ### 3. Baixar os dados
 
@@ -136,6 +142,23 @@ POST /api/sincronizar
 ```
 
 Documentação interativa: `/docs`
+
+---
+
+## Autenticação e assinatura (Stripe)
+
+- **Login/cadastro:** `frontend/login.html` (em produção `https://itbismart.com.br/dashboard/login.html`).
+  - **Entrar:** e-mail + senha.
+  - **Criar conta:** nome, sobrenome, telefone (com máscara BR), e-mail, senha + confirmação. Os campos extras
+    ficam `disabled` no modo login para não travar a validação nativa; o backend valida e grava tudo.
+- **Paywall:** o middleware `exigir_assinatura_ativa` (em `main.py`) protege as rotas `/api/` (exceto
+  `/api/auth/` e `/api/webhook/`). Só passam usuários com `assinaturas.status` em **`active`, `trialing` ou `dev`**;
+  os demais recebem **402** e são mandados ao checkout. O `login.html` espelha essa mesma lista (`ACESSO_LIBERADO`).
+- **Conta admin (bypass):** `admin@itbismart.com.br` com `status = 'dev'` entra direto no dashboard, sem Stripe.
+- **Cobrança:** assinatura mensal **R$ 30,00** via Stripe Checkout (`/api/billing/checkout`). Após o pagamento,
+  o Stripe chama o webhook `POST /api/webhook/stripe` (eventos `checkout.session.completed`,
+  `customer.subscription.updated/deleted`, `invoice.payment_failed`), que atualiza `assinaturas.status` para `active`.
+  Configurar `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` e `STRIPE_WEBHOOK_SECRET` no `.env` (ver seção de config).
 
 ---
 

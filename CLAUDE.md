@@ -14,8 +14,25 @@ Dashboard for querying ITBI (real estate transfer tax) transactions in São Paul
 
 - Domain `itbismart.com.br` is registered at registro.br, but DNS is managed via **Cloudflare** (nameservers `bristol.ns.cloudflare.com` / `felipe.ns.cloudflare.com`) because registro.br's own DNS panel (using their default nameservers) has no zone editor in this account — only a nameserver-swap screen.
 - A record in Cloudflare points to `179.197.67.42`, set to **DNS only** (grey cloud, not proxied) — Cloudflare is DNS-host only here, not a proxy/CDN. SSL/TLS termination happens directly on the VPS.
-- HTTPS on the VPS is handled by **Nginx** (reverse proxy, `/etc/nginx/sites-available/itbismart`, port 80/443 → `127.0.0.1:8000`) + **Certbot/Let's Encrypt** (auto-renewing cert).
+- HTTPS on the VPS is handled by **Nginx** (reverse proxy, `/etc/nginx/sites-available/itbismart`) + **Certbot/Let's Encrypt** (auto-renewing cert).
 - Root domain, `www`, and HTTP→HTTPS redirect are all confirmed working.
+
+### URL structure (root = landing page, /dashboard = app)
+
+- `itbismart.com.br` (root) serves the **static-exported Next.js landing page** directly via Nginx `root /var/www/itbismart-landing;` (`try_files $uri $uri.html $uri/ =404`) — not proxied to FastAPI. Static files are built locally (`next build`, `output: "export"` in `landing/next.config.ts`, since the VM has no Node.js runtime) and uploaded via SFTP.
+- `itbismart.com.br/dashboard` and `itbismart.com.br/api/` are `proxy_pass`'d to FastAPI on `127.0.0.1:8000`. In `backend/main.py`, the frontend `StaticFiles` mount is at `/dashboard` (not `/`), so all frontend asset paths, login/logout redirects, and post-checkout redirects in `frontend/index.html`/`frontend/login.html` use `/dashboard/...` prefixes.
+- `backend/.env`'s `FRONTEND_URL` on the VM is `https://itbismart.com.br/dashboard` (drives Stripe `success_url`/`cancel_url`/`return_url` in `backend/billing.py`).
+- Landing page CTAs (`Navbar.tsx`, `Hero.tsx`, `Pricing.tsx`, `Footer.tsx`) link to `/dashboard`.
+- Static landing files live at `/var/www/itbismart-landing` on the VM (not under `/root/...` — `/root` is `700` and blocks the `www-data` Nginx worker from traversing into anything beneath it, even if the target dir itself is world-readable).
+- `frontend/login.html` is styled to match the **dashboard** design tokens: dark theme (`--bg:#000`, `--surface:#0d0d0d`), primary `#e08560`, rounded card (`20px`) + inputs (`16px`) + pill buttons, a segmented "Entrar / Criar conta" toggle, plus the landing-page `.bg-grid` + two animated glow blobs (CSS-only). Plus Jakarta Sans font.
+
+### Authentication & billing (Stripe)
+
+- **Login/signup UI** (`frontend/login.html`): the "Entrar" tab is e-mail + senha; the "Criar conta" tab additionally collects **nome, sobrenome, telefone** (BR phone mask via `mascaraTelefone`) and a **password confirmation** (validated client-side). The extra fields live in `.only-cadastro` blocks and are toggled `disabled`/`required` per mode so native validation doesn't trip on hidden required fields.
+- **`usuarios` table** has `nome`, `sobrenome`, `telefone` columns added by an idempotent `ALTER TABLE ... ADD COLUMN` migration at `main.py` startup (SQLite has no `ADD COLUMN IF NOT EXISTS`; wrapped in try/except). `/api/auth/registrar` uses the `CadastroIn` model and validates/stores them; `/api/auth/login` still uses `CredenciaisIn` (e-mail + senha).
+- **Paywall:** the `exigir_assinatura_ativa` middleware (`main.py`) treats `assinaturas.status` in **`active`, `trialing`, `dev`** as allowed; others get **402**. `login.html`'s `ACESSO_LIBERADO = ['active','trialing','dev']` must mirror this list — a mismatch is what sent the `dev` admin to a broken Stripe checkout before it was fixed.
+- **Admin bypass:** `admin@itbismart.com.br` (password known to the user, not stored in repo or Claude's memory) has `status = 'dev'` → enters the dashboard directly, no Stripe.
+- **Stripe is LIVE in production** (as of this session). `backend/.env` on the VM holds a real `sk_live_` `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` (a **R$ 30,00/month** recurring price), and `STRIPE_WEBHOOK_SECRET`. `billing.py`'s `garantir_price_id()` fallback creates a R$30 (`unit_amount=3000`) price only if `STRIPE_PRICE_ID` is empty. A webhook endpoint `https://itbismart.com.br/api/webhook/stripe` is registered (status `enabled`) with events `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`; `checkout.session.completed` flips the user's `assinaturas.status` to `active`. **Secrets (`sk_live`, `whsec_`) are never pasted by Claude** — the user sets them directly on the VM; Claude only reads/creates non-secret resources (price id, endpoint listing) via scripts that read the key from `.env` without printing it.
 
 ### VPS access
 
@@ -88,9 +105,9 @@ frontend/
   index.html      — Single-file SPA (vanilla JS + Chart.js) — main dashboard, served by FastAPI
 landing/
   Next.js app (separate project, App Router + Tailwind + Framer Motion) — marketing landing page.
-  Not yet deployed/wired to a domain. Local dev: npm run dev --prefix landing (port 3000),
-  or via .claude/launch.json preview config ("landing"). Login/pricing CTAs currently link
-  to https://itbismart.com.br (the dashboard). Pricing values in components/Pricing.tsx are
+  Deployed as a static export at the domain root (see "URL structure" above). Local dev:
+  npm run dev --prefix landing (port 3000), or via .claude/launch.json preview config ("landing").
+  Login/pricing CTAs link to /dashboard. Pricing values in components/Pricing.tsx are
   placeholders pending real numbers from the user.
 ```
 

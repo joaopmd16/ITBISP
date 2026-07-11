@@ -21,7 +21,7 @@ def garantir_price_id() -> str:
     produto = stripe.Product.create(name="Dashboard ITBI-SP — Assinatura mensal")
     price = stripe.Price.create(
         product=produto.id,
-        unit_amount=2500,  # R$ 25,00
+        unit_amount=3000,  # R$ 30,00
         currency="brl",
         recurring={"interval": "month"},
     )
