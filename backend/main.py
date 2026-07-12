@@ -121,6 +121,40 @@ def get_db():
         conn.close()
 
 
+HISTORICO_SENHAS_LIMITE = 5  # quantas senhas anteriores ficam registradas por usuário
+
+
+def _senha_ja_usada(conn, usuario_id: int, nova_senha: str, senha_hash_atual: str | None) -> bool:
+    """Verifica se `nova_senha` coincide com a senha atual ou com alguma das últimas
+    HISTORICO_SENHAS_LIMITE senhas do usuário (registro de senhas antigas)."""
+    if senha_hash_atual and auth.verificar_senha(nova_senha, senha_hash_atual):
+        return True
+    historico = conn.execute(
+        "SELECT senha_hash FROM senhas_antigas WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT ?",
+        (usuario_id, HISTORICO_SENHAS_LIMITE),
+    ).fetchall()
+    return any(auth.verificar_senha(nova_senha, h["senha_hash"]) for h in historico)
+
+
+def _trocar_senha(conn, usuario_id: int, novo_hash: str) -> None:
+    """Atualiza a senha do usuário, arquivando a senha anterior em `senhas_antigas`
+    e mantendo apenas as últimas HISTORICO_SENHAS_LIMITE entradas."""
+    atual = conn.execute("SELECT senha_hash FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+    if atual and atual["senha_hash"]:
+        conn.execute(
+            "INSERT INTO senhas_antigas (usuario_id, senha_hash) VALUES (?, ?)",
+            (usuario_id, atual["senha_hash"]),
+        )
+        conn.execute(
+            """DELETE FROM senhas_antigas WHERE usuario_id = ? AND id NOT IN (
+                   SELECT id FROM senhas_antigas WHERE usuario_id = ?
+                   ORDER BY criado_em DESC LIMIT ?
+               )""",
+            (usuario_id, usuario_id, HISTORICO_SENHAS_LIMITE),
+        )
+    conn.execute("UPDATE usuarios SET senha_hash = ? WHERE id = ?", (novo_hash, usuario_id))
+
+
 def rows_to_list(rows) -> list[dict]:
     return [dict(r) for r in rows]
 
@@ -182,6 +216,12 @@ def startup():
                 stripe_subscription_id TEXT,
                 status              TEXT DEFAULT 'inativa',
                 atualizado_em       TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS senhas_antigas (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id  INTEGER NOT NULL REFERENCES usuarios(id),
+                senha_hash  TEXT NOT NULL,
+                criado_em   TEXT DEFAULT (datetime('now'))
             );
         """)
         # Migração: colunas de perfil no cadastro (SQLite não tem ADD COLUMN IF NOT EXISTS)
@@ -1022,15 +1062,18 @@ def redefinir_senha(dados: RedefinirSenhaIn):
         raise HTTPException(400, "Senha muito curta (mín. 6 caracteres)")
     with get_db() as conn:
         row = conn.execute(
-            "SELECT id, token_reset_senha_exp FROM usuarios WHERE token_reset_senha = ?", (dados.token,)
+            "SELECT id, senha_hash, token_reset_senha_exp FROM usuarios WHERE token_reset_senha = ?", (dados.token,)
         ).fetchone()
         if not row:
             raise HTTPException(400, "Link inválido ou já utilizado")
         if row["token_reset_senha_exp"] and datetime.fromisoformat(row["token_reset_senha_exp"]) < datetime.utcnow():
             raise HTTPException(400, "Link expirado. Solicite um novo.")
+        if _senha_ja_usada(conn, row["id"], dados.nova_senha, row["senha_hash"]):
+            raise HTTPException(400, "Você já usou essa senha antes. Escolha uma senha diferente.")
+        _trocar_senha(conn, row["id"], auth.hash_senha(dados.nova_senha))
         conn.execute(
-            "UPDATE usuarios SET senha_hash = ?, token_reset_senha = NULL, token_reset_senha_exp = NULL WHERE id = ?",
-            (auth.hash_senha(dados.nova_senha), row["id"]),
+            "UPDATE usuarios SET token_reset_senha = NULL, token_reset_senha_exp = NULL WHERE id = ?",
+            (row["id"],),
         )
         conn.commit()
     return {"status": "ok"}
@@ -1220,11 +1263,10 @@ def admin_pagamentos(usuario_id: int, admin: dict = Depends(exigir_admin)):
 def admin_resetar_senha(usuario_id: int, admin: dict = Depends(exigir_admin)):
     nova_senha = auth.gerar_senha_temporaria()
     with get_db() as conn:
-        cur = conn.execute(
-            "UPDATE usuarios SET senha_hash = ? WHERE id = ?", (auth.hash_senha(nova_senha), usuario_id)
-        )
-        if cur.rowcount == 0:
+        existe = conn.execute("SELECT id FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
             raise HTTPException(404, "Usuário não encontrado")
+        _trocar_senha(conn, usuario_id, auth.hash_senha(nova_senha))
         conn.commit()
     return {"senha_temporaria": nova_senha}
 
