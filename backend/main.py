@@ -155,6 +155,13 @@ def _trocar_senha(conn, usuario_id: int, novo_hash: str) -> None:
     conn.execute("UPDATE usuarios SET senha_hash = ? WHERE id = ?", (novo_hash, usuario_id))
 
 
+def _log_admin(conn, usuario_id: int, acao: str, detalhe: str | None = None) -> None:
+    conn.execute(
+        "INSERT INTO admin_logs (usuario_id, acao, detalhe) VALUES (?, ?, ?)",
+        (usuario_id, acao, detalhe),
+    )
+
+
 def rows_to_list(rows) -> list[dict]:
     return [dict(r) for r in rows]
 
@@ -223,6 +230,13 @@ def startup():
                 senha_hash  TEXT NOT NULL,
                 criado_em   TEXT DEFAULT (datetime('now'))
             );
+            CREATE TABLE IF NOT EXISTS admin_logs (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id  INTEGER NOT NULL REFERENCES usuarios(id),
+                acao        TEXT NOT NULL,
+                detalhe     TEXT,
+                criado_em   TEXT DEFAULT (datetime('now'))
+            );
         """)
         # Migração: colunas de perfil no cadastro (SQLite não tem ADD COLUMN IF NOT EXISTS)
         # email_verificado usa DEFAULT 1 para não travar contas já existentes; o cadastro
@@ -234,6 +248,7 @@ def startup():
             "token_verificacao_exp TEXT",
             "token_reset_senha TEXT",
             "token_reset_senha_exp TEXT",
+            "ultimo_acesso TEXT",
         ):
             try:
                 conn.execute(f"ALTER TABLE usuarios ADD COLUMN {coluna}")
@@ -1022,6 +1037,9 @@ def login(dados: CredenciaisIn):
         raise HTTPException(401, "E-mail ou senha incorretos")
     if not row["email_verificado"]:
         raise HTTPException(403, "E-mail ainda não verificado. Confira sua caixa de entrada.")
+    with get_db() as conn:
+        conn.execute("UPDATE usuarios SET ultimo_acesso = datetime('now') WHERE id = ?", (row["id"],))
+        conn.commit()
     token = auth.criar_token(row["id"], email)
     return {"token": token, "email": email}
 
@@ -1180,13 +1198,32 @@ def exigir_admin(usuario: dict = Depends(auth.get_usuario_atual)) -> dict:
 def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         rows = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado,
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso,
                    a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
             ORDER BY u.criado_em DESC
         """).fetchall()
     return {"usuarios": rows_to_list(rows)}
+
+
+@app.get("/api/admin/usuarios/{usuario_id}/detalhes")
+def admin_detalhes_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        usuario = conn.execute("""
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso,
+                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
+            FROM usuarios u
+            LEFT JOIN assinaturas a ON a.usuario_id = u.id
+            WHERE u.id = ?
+        """, (usuario_id,)).fetchone()
+        if not usuario:
+            raise HTTPException(404, "Usuário não encontrado")
+        logs = conn.execute(
+            "SELECT acao, detalhe, criado_em FROM admin_logs WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT 50",
+            (usuario_id,),
+        ).fetchall()
+    return {"usuario": dict(usuario), "logs": rows_to_list(logs)}
 
 
 @app.post("/api/admin/usuarios/{usuario_id}/revogar")
@@ -1206,6 +1243,7 @@ def admin_revogar(usuario_id: int, admin: dict = Depends(exigir_admin)):
             "UPDATE assinaturas SET status = 'inativa', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
             (usuario_id,),
         )
+        _log_admin(conn, usuario_id, "revogar")
         conn.commit()
     return {"status": "revogado"}
 
@@ -1226,6 +1264,7 @@ def admin_liberar(usuario_id: int, dados: LiberarAcessoIn, admin: dict = Depends
                 "UPDATE assinaturas SET status = 'dev', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
                 (usuario_id,),
             )
+            _log_admin(conn, usuario_id, "liberar", "vitalício")
         else:
             if dados.horas <= 0:
                 raise HTTPException(400, "Informe a duração em horas")
@@ -1234,6 +1273,7 @@ def admin_liberar(usuario_id: int, dados: LiberarAcessoIn, admin: dict = Depends
                 "UPDATE assinaturas SET status = 'trialing', acesso_expira_em = ?, atualizado_em = datetime('now') WHERE usuario_id = ?",
                 (expira, usuario_id),
             )
+            _log_admin(conn, usuario_id, "liberar", f"{dados.horas}h")
         conn.commit()
     return {"status": "liberado"}
 
@@ -1267,6 +1307,7 @@ def admin_resetar_senha(usuario_id: int, admin: dict = Depends(exigir_admin)):
         if not existe:
             raise HTTPException(404, "Usuário não encontrado")
         _trocar_senha(conn, usuario_id, auth.hash_senha(nova_senha))
+        _log_admin(conn, usuario_id, "resetar-senha")
         conn.commit()
     return {"senha_temporaria": nova_senha}
 
