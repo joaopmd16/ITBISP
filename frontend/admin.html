@@ -73,6 +73,19 @@
   .msg.ok{background:rgba(95,191,122,.12);color:var(--ok)}
   .msg.err{background:rgba(224,95,95,.12);color:var(--err)}
   .loading{padding:40px;text-align:center;color:var(--muted)}
+
+  #loginScreen{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;max-width:380px;width:100%}
+  .login-card h2{font-size:19px;font-weight:800;margin-bottom:6px}
+  .login-card p{color:var(--muted);font-size:13px;margin-bottom:22px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+  .field input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:12px;font-family:inherit;font-size:14px}
+  .field input:focus{outline:none;border-color:var(--primary)}
+  .btn-primary{width:100%;background:var(--primary);border:none;color:#000;font-weight:700;padding:13px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:14px;margin-top:6px}
+  .btn-primary:hover{background:var(--primary-dark)}
+  .btn-primary:disabled{opacity:.6;cursor:default}
+  #app{display:none}
 </style>
 </head>
 <body>
@@ -80,25 +93,46 @@
 <div class="blob blob1"></div>
 <div class="blob blob2"></div>
 
-<div class="wrap">
-  <header>
-    <h1>Painel <span>Admin</span></h1>
-    <button id="logout" onclick="logout()">Sair</button>
-  </header>
+<div id="loginScreen">
+  <div class="login-card">
+    <h2>Painel <span style="color:var(--primary)">Admin</span></h2>
+    <p>Acesso restrito. Entre com o e-mail e senha do administrador.</p>
+    <form id="loginForm" onsubmit="return fazerLogin(event)">
+      <div class="field">
+        <label for="lEmail">E-mail</label>
+        <input type="email" id="lEmail" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="lSenha">Senha</label>
+        <input type="password" id="lSenha" autocomplete="current-password" required>
+      </div>
+      <button class="btn-primary" id="loginBtn" type="submit">Entrar</button>
+      <div id="loginMsg"></div>
+    </form>
+  </div>
+</div>
 
-  <div class="stats" id="stats"></div>
+<div id="app">
+  <div class="wrap">
+    <header>
+      <h1>Painel <span>Admin</span></h1>
+      <button id="logout" onclick="logout()">Sair</button>
+    </header>
 
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Acesso até</th><th>Cadastro</th><th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr><td colspan="7" class="loading">Carregando...</td></tr>
-      </tbody>
-    </table>
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Acesso até</th><th>Cadastro</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="7" class="loading">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -135,19 +169,59 @@
 
 <script>
 const API = location.origin;
-const token = localStorage.getItem('token');
-if(!token){ location.href = '/dashboard/login.html'; }
-
+let token = localStorage.getItem('admin_token');
 let usuarioAtual = null;
 
-function logout(){ localStorage.removeItem('token'); location.href = '/dashboard/login.html'; }
+function mostrarApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  carregar();
+}
+
+function mostrarLogin(msg){
+  token = null;
+  localStorage.removeItem('admin_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginMsg').innerHTML = msg ? `<div class="msg err">${msg}</div>` : '';
+}
+
+function logout(){ mostrarLogin(); }
+
+async function fazerLogin(ev){
+  ev.preventDefault();
+  const email = document.getElementById('lEmail').value.trim();
+  const senha = document.getElementById('lSenha').value;
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  document.getElementById('loginMsg').innerHTML = '';
+  try{
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, senha })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ throw new Error(data.detail || 'E-mail ou senha incorretos'); }
+    // valida se o token realmente tem acesso de admin antes de considerar logado
+    const check = await fetch(`${API}/api/admin/usuarios`, { headers: { 'Authorization': `Bearer ${data.token}` } });
+    if(check.status === 403){ throw new Error('Este usuário não tem acesso ao painel admin.'); }
+    if(!check.ok){ throw new Error('Erro ao validar acesso.'); }
+    token = data.token;
+    localStorage.setItem('admin_token', token);
+    mostrarApp();
+  }catch(e){
+    document.getElementById('loginMsg').innerHTML = `<div class="msg err">${e.message}</div>`;
+  }finally{
+    btn.disabled = false;
+  }
+}
 
 async function api(path, opts={}){
   const res = await fetch(`${API}${path}`, {
     ...opts,
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers||{}) }
   });
-  if(res.status === 401 || res.status === 403){ logout(); throw new Error('sem acesso'); }
+  if(res.status === 401 || res.status === 403){ mostrarLogin('Sessão expirada ou sem acesso. Entre novamente.'); throw new Error('sem acesso'); }
   if(!res.ok){ throw new Error((await res.json().catch(()=>({}))).detail || 'erro'); }
   return res.json();
 }
@@ -287,7 +361,7 @@ async function abrirPagamentos(id, nome){
   }
 }
 
-carregar();
+if(token){ mostrarApp(); } else { mostrarLogin(); }
 </script>
 </body>
 </html>
