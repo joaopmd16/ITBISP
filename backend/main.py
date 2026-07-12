@@ -5,24 +5,26 @@ Acesse:       http://localhost:8000
 Docs:         http://localhost:8000/docs
 """
 
+import secrets
 import sqlite3
 import time
 from pathlib import Path
 from typing import Optional
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import auth
 import billing
+import emailing
 import geo
 
 DB_PATH = Path(__file__).parent / "itbi.db"
@@ -170,7 +172,14 @@ def startup():
             );
         """)
         # Migração: colunas de perfil no cadastro (SQLite não tem ADD COLUMN IF NOT EXISTS)
-        for coluna in ("nome TEXT", "sobrenome TEXT", "telefone TEXT"):
+        # email_verificado usa DEFAULT 1 para não travar contas já existentes; o cadastro
+        # (registrar()) grava 0 explicitamente para exigir confirmação nas contas novas.
+        for coluna in (
+            "nome TEXT", "sobrenome TEXT", "telefone TEXT",
+            "email_verificado INTEGER DEFAULT 1",
+            "token_verificacao TEXT",
+            "token_verificacao_exp TEXT",
+        ):
             try:
                 conn.execute(f"ALTER TABLE usuarios ADD COLUMN {coluna}")
             except sqlite3.OperationalError:
@@ -871,30 +880,86 @@ def registrar(dados: CadastroIn):
         raise HTTPException(400, "Informe nome e sobrenome")
     if not telefone:
         raise HTTPException(400, "Informe o telefone")
+    token_verificacao = secrets.token_urlsafe(32)
+    expira_em = (datetime.utcnow() + timedelta(hours=24)).isoformat()
     with get_db() as conn:
         existe = conn.execute("SELECT 1 FROM usuarios WHERE email = ?", (email,)).fetchone()
         if existe:
             raise HTTPException(409, "E-mail já cadastrado")
         cur = conn.execute(
-            "INSERT INTO usuarios (email, senha_hash, nome, sobrenome, telefone) VALUES (?, ?, ?, ?, ?)",
-            (email, auth.hash_senha(dados.senha), nome, sobrenome, telefone),
+            """INSERT INTO usuarios
+               (email, senha_hash, nome, sobrenome, telefone, email_verificado, token_verificacao, token_verificacao_exp)
+               VALUES (?, ?, ?, ?, ?, 0, ?, ?)""",
+            (email, auth.hash_senha(dados.senha), nome, sobrenome, telefone, token_verificacao, expira_em),
         )
         usuario_id = cur.lastrowid
         conn.execute(
             "INSERT INTO assinaturas (usuario_id, status) VALUES (?, 'inativa')", (usuario_id,)
         )
         conn.commit()
-    token = auth.criar_token(usuario_id, email)
-    return {"token": token, "email": email}
+    try:
+        emailing.enviar_verificacao(email, nome, token_verificacao)
+    except Exception:
+        raise HTTPException(500, "Conta criada, mas não foi possível enviar o e-mail de verificação. Tente reenviar em instantes.")
+    return {"status": "verificacao_enviada", "email": email}
+
+
+@app.get("/api/auth/verificar")
+def verificar_email(token: str):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, token_verificacao_exp FROM usuarios WHERE token_verificacao = ?", (token,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(400, "Link de verificação inválido")
+        if row["token_verificacao_exp"] and datetime.fromisoformat(row["token_verificacao_exp"]) < datetime.utcnow():
+            raise HTTPException(400, "Link de verificação expirado. Solicite um novo.")
+        conn.execute(
+            "UPDATE usuarios SET email_verificado = 1, token_verificacao = NULL, token_verificacao_exp = NULL WHERE id = ?",
+            (row["id"],),
+        )
+        conn.commit()
+    return RedirectResponse(url="/dashboard/login.html?verificado=1")
+
+
+class ReenviarIn(BaseModel):
+    email: str
+
+
+@app.post("/api/auth/reenviar-verificacao")
+def reenviar_verificacao(dados: ReenviarIn):
+    email = dados.email.strip().lower()
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, nome, email_verificado FROM usuarios WHERE email = ?", (email,)
+        ).fetchone()
+        if row and not row["email_verificado"]:
+            token_verificacao = secrets.token_urlsafe(32)
+            expira_em = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+            conn.execute(
+                "UPDATE usuarios SET token_verificacao = ?, token_verificacao_exp = ? WHERE id = ?",
+                (token_verificacao, expira_em, row["id"]),
+            )
+            conn.commit()
+            try:
+                emailing.enviar_verificacao(email, row["nome"] or "", token_verificacao)
+            except Exception:
+                raise HTTPException(500, "Não foi possível enviar o e-mail agora. Tente novamente em instantes.")
+    # Resposta genérica mesmo se o e-mail não existir ou já estiver verificado (evita enumeração de contas)
+    return {"status": "ok"}
 
 
 @app.post("/api/auth/login")
 def login(dados: CredenciaisIn):
     email = dados.email.strip().lower()
     with get_db() as conn:
-        row = conn.execute("SELECT id, senha_hash FROM usuarios WHERE email = ?", (email,)).fetchone()
+        row = conn.execute(
+            "SELECT id, senha_hash, email_verificado FROM usuarios WHERE email = ?", (email,)
+        ).fetchone()
     if not row or not auth.verificar_senha(dados.senha, row["senha_hash"]):
         raise HTTPException(401, "E-mail ou senha incorretos")
+    if not row["email_verificado"]:
+        raise HTTPException(403, "E-mail ainda não verificado. Confira sua caixa de entrada.")
     token = auth.criar_token(row["id"], email)
     return {"token": token, "email": email}
 

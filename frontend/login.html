@@ -158,20 +158,53 @@ const ACESSO_LIBERADO=['active','trialing','dev'];
       <p class="sub">Sua assinatura ainda não está ativa. Você será encaminhado ao checkout em instantes.</p>
       <button class="btn-link" onclick="logout()">Usar outra conta</button>`;
     await irParaCheckout(token);
+    return;
+  }
+  if(params.get('verificado')==='1'){
+    const msg=document.getElementById('msg');
+    msg.className='msg ok';
+    msg.textContent='E-mail confirmado! Faça login para continuar.';
   }
 })();
 
 async function irParaCheckout(token){
   try{
-    const chk=await fetch(`${API}/api/billing/checkout`,{
+    const res=await fetch(`${API}/api/billing/checkout`,{
       method:'POST', headers:{Authorization:`Bearer ${token}`}
-    }).then(r=>r.json());
+    });
+    if(res.status===401){ logout(); return; }
+    const chk=await res.json();
     if(chk.url){ location.href=chk.url; return; }
   }catch(e){}
   document.querySelector('.card').innerHTML+=`<p class="msg err">Não foi possível iniciar o pagamento. Tente novamente em instantes.</p>`;
 }
 
 function logout(){ localStorage.removeItem('itbi_token'); location.href='/dashboard/login.html'; }
+
+function mostrarAguardandoVerificacao(email, textoTopo){
+  document.querySelector('.card').innerHTML=`
+    <img class="logo" src="/dashboard/assets/logo-icon.png" alt="ITBI Smart">
+    <h1>Confirme seu e-mail</h1>
+    <p class="sub">${textoTopo} Enviamos um link de confirmação para <strong>${email}</strong>. Verifique também a caixa de spam.</p>
+    <div id="msgReenvio" class="msg"></div>
+    <button class="btn-primary" id="btnReenviar" onclick="reenviarVerificacao('${email.replace(/'/g,"\\'")}')">Reenviar e-mail</button>
+    <button class="btn-link" onclick="location.href='/dashboard/login.html'">Voltar ao login</button>`;
+}
+
+async function reenviarVerificacao(email){
+  const btn=document.getElementById('btnReenviar');
+  const msg=document.getElementById('msgReenvio');
+  btn.disabled=true;
+  try{
+    await fetch(`${API}/api/auth/reenviar-verificacao`,{
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})
+    });
+    msg.className='msg ok'; msg.textContent='E-mail reenviado.';
+  }catch(e){
+    msg.className='msg err'; msg.textContent='Falha de conexão. Tente novamente.';
+  }
+  btn.disabled=false;
+}
 
 const CAMPOS_CADASTRO=['nome','sobrenome','telefone','senha2'];
 
@@ -229,7 +262,19 @@ async function enviar(ev){
       body:JSON.stringify(corpo)
     });
     const data=await res.json();
-    if(!res.ok){ msg.className='msg err'; msg.textContent=data.detail||'Erro'; btn.disabled=false; return; }
+
+    if(!res.ok){
+      if(res.status===403 && modo==='login'){
+        mostrarAguardandoVerificacao(email, 'Sua conta ainda não foi confirmada.');
+        return;
+      }
+      msg.className='msg err'; msg.textContent=data.detail||'Erro'; btn.disabled=false; return;
+    }
+
+    if(modo==='cadastro'){
+      mostrarAguardandoVerificacao(email, 'Conta criada!');
+      return;
+    }
 
     localStorage.setItem('itbi_token',data.token);
 
@@ -240,10 +285,10 @@ async function enviar(ev){
       return;
     }
 
-    // sem assinatura ativa → segue direto para o pagamento (cadastro e login)
+    // sem assinatura ativa → segue direto para o pagamento
     document.getElementById('form').style.display='none';
     msg.className='msg ok';
-    msg.innerHTML='<span class="spin"></span>'+(modo==='cadastro'?'Conta criada! Redirecionando para o pagamento…':'Redirecionando para o pagamento…');
+    msg.innerHTML='<span class="spin"></span>Redirecionando para o pagamento…';
     await irParaCheckout(data.token);
   }catch(e){
     msg.className='msg err'; msg.textContent='Falha de conexão com o servidor.';
