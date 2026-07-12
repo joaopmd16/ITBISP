@@ -1100,10 +1100,19 @@ def redefinir_senha(dados: RedefinirSenhaIn):
 @app.get("/api/auth/me")
 def me(usuario: dict = Depends(auth.get_usuario_atual)):
     with get_db() as conn:
+        u = conn.execute(
+            "SELECT nome, sobrenome FROM usuarios WHERE id = ?", (usuario["id"],)
+        ).fetchone()
         row = conn.execute(
             "SELECT status FROM assinaturas WHERE usuario_id = ?", (usuario["id"],)
         ).fetchone()
-    return {"email": usuario["email"], "assinatura_status": row["status"] if row else "inativa"}
+    return {
+        "email": usuario["email"],
+        "nome": u["nome"] if u else "",
+        "sobrenome": u["sobrenome"] if u else "",
+        "assinatura_status": row["status"] if row else "inativa",
+        "is_admin": usuario["email"] == ADMIN_EMAIL,
+    }
 
 
 # ──────────────────────────────────────────────
@@ -1143,6 +1152,52 @@ def abrir_portal(usuario: dict = Depends(auth.get_usuario_atual)):
         raise HTTPException(400, "Nenhuma assinatura encontrada")
     url = billing.criar_portal_session(row["stripe_customer_id"])
     return {"url": url}
+
+
+@app.get("/api/billing/minha-conta")
+def minha_conta(usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        u = conn.execute(
+            "SELECT nome, sobrenome, email, criado_em, ultimo_acesso FROM usuarios WHERE id = ?",
+            (usuario["id"],),
+        ).fetchone()
+        a = conn.execute(
+            """SELECT status, stripe_customer_id, stripe_subscription_id, acesso_expira_em
+               FROM assinaturas WHERE usuario_id = ?""",
+            (usuario["id"],),
+        ).fetchone()
+
+    assinatura = {
+        "status": a["status"] if a else "inativa",
+        "acesso_expira_em": a["acesso_expira_em"] if a else None,
+        "inicio": None,
+        "periodo_fim": None,
+        "cancela_no_fim": False,
+    }
+    faturas: list[dict] = []
+    if a and a["stripe_subscription_id"]:
+        try:
+            detalhes = billing.detalhes_assinatura(a["stripe_subscription_id"])
+            if detalhes:
+                assinatura.update(detalhes)
+        except Exception:
+            pass
+    if a and a["stripe_customer_id"]:
+        try:
+            faturas = billing.listar_faturas(a["stripe_customer_id"], limite=12)
+        except Exception:
+            pass
+
+    return {
+        "nome": u["nome"] if u else "",
+        "sobrenome": u["sobrenome"] if u else "",
+        "email": u["email"] if u else usuario["email"],
+        "criado_em": u["criado_em"] if u else None,
+        "ultimo_acesso": u["ultimo_acesso"] if u else None,
+        "is_admin": usuario["email"] == ADMIN_EMAIL,
+        "assinatura": assinatura,
+        "faturas": faturas,
+    }
 
 
 @app.post("/api/webhook/stripe")

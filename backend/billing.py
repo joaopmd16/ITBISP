@@ -93,6 +93,7 @@ def detalhes_assinatura(stripe_subscription_id: str) -> dict | None:
     periodo_fim = sub.get("current_period_end") or (item.get("current_period_end") if item else None)
     return {
         "status": sub.status,
+        "inicio": sub.get("start_date"),
         "periodo_fim": periodo_fim,
         "cancela_no_fim": sub.cancel_at_period_end,
     }

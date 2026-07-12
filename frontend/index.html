@@ -550,8 +550,11 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
       <svg class="icon-moon-side" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       <svg class="icon-sun-side" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
     </button>
-    <button class="nav-btn" title="Sincronizar" onclick="sync()">
+    <button class="nav-btn" id="btn-sync" title="Sincronizar" onclick="sync()" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
+    <button class="nav-btn" title="Minha conta" onclick="toggleConta()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </button>
     <button class="nav-btn" title="Configurações" onclick="toggleSettings()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1A2 2 0 1 1 19.7 7l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.2.4.5.7 1 .8.3.1.7.2 1 .2H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -600,10 +603,21 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="settings-section">
           <div class="settings-label">Conta</div>
           <div class="settings-options" style="flex-direction:column;gap:8px">
-            <button class="sopt" style="width:100%" onclick="abrirPortalAssinatura()">Gerenciar assinatura</button>
             <button class="sopt" style="width:100%" onclick="logout()">Sair</button>
           </div>
         </div>
+      </div>
+
+      <!-- Painel de minha conta -->
+      <div class="settings-panel" id="contaPanel">
+        <div class="settings-header">
+          <span class="settings-title" id="contaGreeting">Minha conta</span>
+          <button class="settings-close" onclick="toggleConta()">✕</button>
+        </div>
+        <div class="settings-section">
+          <div class="settings-info" id="contaEmail"></div>
+        </div>
+        <div id="contaBody"></div>
       </div>
 
     <!-- page -->
@@ -1084,9 +1098,85 @@ window.fetch=async function(url,opts={}){
 function logout(){ localStorage.removeItem('itbi_token'); if(!IS_LOCAL) location.href='/dashboard/login.html'; }
 async function abrirPortalAssinatura(){
   try{
-    const r=await fetch(`${API}/api/billing/portal`,{method:'POST'}).then(x=>x.json());
+    const res=await fetch(`${API}/api/billing/portal`,{method:'POST'});
+    const r=await res.json();
+    if(!res.ok){
+      alert(r.detail||'Não foi possível abrir o portal de assinatura. Tente novamente ou fale com o suporte.');
+      return;
+    }
     if(r.url) location.href=r.url;
+  }catch(e){
+    alert('Erro ao abrir o portal de assinatura: '+e.message);
+  }
+}
+
+/* ─── minha conta ─── */
+let MEU_USUARIO=null;
+async function carregarMeuUsuario(){
+  try{
+    const r=await fetch(`${API}/api/auth/me`).then(x=>x.json());
+    MEU_USUARIO=r;
+    const btnSync=document.getElementById('btn-sync');
+    if(btnSync) btnSync.style.display=r.is_admin?'':'none';
   }catch(e){}
+}
+function saudacao(nome){
+  const h=new Date().getHours();
+  const periodo=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
+  return nome?`${periodo}, ${nome}`:periodo;
+}
+function fmtDataHora(v){
+  if(!v)return'—';
+  const d=typeof v==='number'?new Date(v*1000):new Date(v.replace(' ','T')+(v.includes('Z')?'':'Z'));
+  if(isNaN(d))return'—';
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+const ASSINATURA_LABEL={active:'Ativa',trialing:'Período de teste',dev:'Acesso liberado',past_due:'Pagamento atrasado',canceled:'Cancelada',inativa:'Inativa'};
+async function toggleConta(){
+  const p=document.getElementById('contaPanel');
+  const abrindo=!p.classList.contains('open');
+  p.classList.toggle('open');
+  if(!abrindo)return;
+  document.getElementById('contaGreeting').textContent=saudacao(MEU_USUARIO?.nome);
+  document.getElementById('contaEmail').textContent=MEU_USUARIO?.email||'';
+  const body=document.getElementById('contaBody');
+  body.innerHTML='<div class="settings-info">Carregando...</div>';
+  try{
+    const r=await fetch(`${API}/api/billing/minha-conta`).then(x=>x.json());
+    document.getElementById('contaGreeting').textContent=saudacao(r.nome);
+    document.getElementById('contaEmail').textContent=r.email||'';
+    const a=r.assinatura||{};
+    let faturasHtml='<div class="settings-info">Nenhuma fatura encontrada.</div>';
+    if(r.faturas && r.faturas.length){
+      faturasHtml=r.faturas.map(f=>`
+        <div class="shortcut-row" style="justify-content:space-between">
+          <span>${fmtDataHora(f.criada_em)} · R$ ${Number(f.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+          ${f.url_hospedada?`<a href="${f.url_hospedada}" target="_blank" style="color:var(--primary)">ver</a>`:''}
+        </div>`).join('');
+    }
+    body.innerHTML=`
+      <div class="settings-section">
+        <div class="settings-label">Assinatura</div>
+        <div class="settings-info">
+          Status: ${ASSINATURA_LABEL[a.status]||a.status||'—'}<br>
+          Início: ${fmtDataHora(a.inicio)}<br>
+          Próxima renovação: ${fmtDataHora(a.periodo_fim)}${a.cancela_no_fim?' (cancela ao fim)':''}
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Faturas</div>
+        <div class="settings-shortcuts">${faturasHtml}</div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Conta</div>
+        <div class="settings-options" style="flex-direction:column;gap:8px">
+          <button class="sopt" style="width:100%" onclick="abrirPortalAssinatura()">Gerenciar assinatura</button>
+          <button class="sopt" style="width:100%" onclick="logout()">Sair</button>
+        </div>
+      </div>`;
+  }catch(e){
+    body.innerHTML='<div class="settings-info">Erro ao carregar dados da conta.</div>';
+  }
 }
 
 let CH={},PG=1,SC='ano_referencia',SD='desc',allAnos=[],acT={},natFilter='all';
@@ -1161,6 +1251,7 @@ function setPeriod(k){
 
 /* ─── init ─── */
 window.addEventListener('DOMContentLoaded',async()=>{
+  carregarMeuUsuario();
   await loadStatus();buscar(1);checkApiStatus();
   _initTagInput('fl-wrap','fl','acl','logradouro',true);
   _initTagInput('fb-wrap','fb','acb','bairro',true);
