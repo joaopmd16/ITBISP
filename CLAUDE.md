@@ -33,6 +33,8 @@ Dashboard for querying ITBI (real estate transfer tax) transactions in São Paul
 - **Paywall:** the `exigir_assinatura_ativa` middleware (`main.py`) treats `assinaturas.status` in **`active`, `trialing`, `dev`** as allowed; others get **402**. `login.html`'s `ACESSO_LIBERADO = ['active','trialing','dev']` must mirror this list — a mismatch is what sent the `dev` admin to a broken Stripe checkout before it was fixed.
 - **Admin bypass:** `admin@itbismart.com.br` (password known to the user, not stored in repo or Claude's memory) has `status = 'dev'` → enters the dashboard directly, no Stripe.
 - **Stripe is LIVE in production** (as of this session). `backend/.env` on the VM holds a real `sk_live_` `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` (a **R$ 30,00/month** recurring price), and `STRIPE_WEBHOOK_SECRET`. `billing.py`'s `garantir_price_id()` fallback creates a R$30 (`unit_amount=3000`) price only if `STRIPE_PRICE_ID` is empty. A webhook endpoint `https://itbismart.com.br/api/webhook/stripe` is registered (status `enabled`) with events `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`; `checkout.session.completed` flips the user's `assinaturas.status` to `active`. **Secrets (`sk_live`, `whsec_`) are never pasted by Claude** — the user sets them directly on the VM; Claude only reads/creates non-secret resources (price id, endpoint listing) via scripts that read the key from `.env` without printing it.
+- **Self-service "Minha conta" panel** (`frontend/index.html`): sidebar person-icon button opens a slide-out panel (`#contaPanel`) with a time-of-day greeting (`Bom dia/Boa tarde/Boa noite, {nome}`), subscription status/início/próxima renovação, and an invoice list — backed by `GET /api/billing/minha-conta` (`main.py`), which extends `billing.detalhes_assinatura()` (now returns `inicio` from Stripe's `start_date`) plus `billing.listar_faturas()`. `abrirPortalAssinatura()` surfaces errors via `alert()` instead of failing silently (was an empty `catch(e){}` — a user with no `stripe_customer_id`, e.g. the `dev`-status admin account, would previously see nothing happen when clicking "Gerenciar assinatura").
+- **Admin-only Sincronizar button:** `/api/auth/me` now also returns `is_admin` (`usuario["email"] == ADMIN_EMAIL`); `carregarMeuUsuario()` fetches it on page load and hides `#btn-sync` (`display:none` by default in the HTML) for anyone but the admin. This is a UI declutter only — the actual security boundary for `/api/sincronizar` is still the separate client-side `prompt()` password, not this JWT check (see roadmap below for closing that gap).
 
 ### VPS access
 
@@ -173,3 +175,16 @@ Current dataset: **~539k transactions** (2024–2026, with 2025 complete).
 - `v1-stable` — commit `ac4ce66`, stable state before v2 session changes
 - `main` — current v2 with autocomplete, glass popup, tag filters, cache fixes, the year-from-tab scraper fix, the reactivated/fixed map (`/api/mapa`), and the new `landing/` Next.js project
 - Repo also has several **untracked legacy/stray files at the root** (`main.py`, `geo.py`, `scraper.py`, `exportar.py`, old `index.html`, `backup-v1/`, etc.) from a pre-`backend/` layout — do not confuse these with the real `backend/*.py` files. `.claude/launch.json`'s uvicorn config uses `--app-dir backend` specifically to avoid accidentally importing these root-level stragglers.
+
+## Roadmap / backlog de melhorias
+
+Ideias levantadas em 2026-07-12, ainda não implementadas — usar como ponto de partida quando o usuário pedir sugestões de próximos passos:
+
+- **`/api/sincronizar` sem autenticação real:** o gate é uma senha fixa via `prompt()` client-side (`?senha=` query param), separado do JWT. Trocar por checagem `is_admin` real no backend (o campo já existe em `/api/auth/me` desde a sessão que adicionou o painel "Minha conta").
+- **Sem rate limiting** nas rotas de auth (`/api/auth/login`, esqueci senha) — risco de brute-force.
+- **Aviso de pagamento falho:** confirmar se o usuário vê algum aviso na UI quando `invoice.payment_failed` dispara, ou se ele só descobre ao ser bloqueado pelo paywall.
+- **Cancelamento self-service:** confirmar que o Stripe Customer Portal (live mode) permite cancelar a assinatura de dentro do portal.
+- **Painel "Minha conta" pode crescer:** hoje mostra saudação, status/datas da assinatura e faturas — espaço para mais dados de conta.
+- **`landing/components/Pricing.tsx`** ainda tem preços placeholder — fechar antes de divulgar a landing.
+- **Geocoding:** confirmar se os 3 shards do `geocode_all.py` já terminaram de cobrir todos os CEPs.
+- **Sem testes automatizados** — nem testes básicos de integração (login, checkout, paywall) para pegar regressões como a do status `dev` quebrando o checkout Stripe (já corrigida, commit `bde4970`).
