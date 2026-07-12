@@ -52,12 +52,17 @@ async def no_cache_html(request: Request, call_next):
 
 ROTAS_PROTEGIDAS_PREFIXO = "/api/"
 ROTAS_PUBLICAS = ("/api/auth/", "/api/webhook/")
+# Exige login (token válido) mas não assinatura ativa — é a própria rota que leva o
+# usuário inativo até o Stripe, então exigir assinatura ativa aqui é um paradoxo
+# que travava todo usuário novo antes de conseguir pagar.
+ROTAS_SEM_EXIGENCIA_ASSINATURA = ("/api/billing/checkout",)
 
 
 @app.middleware("http")
 async def exigir_assinatura_ativa(request: Request, call_next):
     path = request.url.path
-    if not path.startswith(ROTAS_PROTEGIDAS_PREFIXO) or path.startswith(ROTAS_PUBLICAS):
+    if (not path.startswith(ROTAS_PROTEGIDAS_PREFIXO) or path.startswith(ROTAS_PUBLICAS)
+            or path in ROTAS_SEM_EXIGENCIA_ASSINATURA):
         return await call_next(request)
     if request.client and request.client.host in ("127.0.0.1", "::1"):
         return await call_next(request)
