@@ -192,6 +192,8 @@ def startup():
             "email_verificado INTEGER DEFAULT 1",
             "token_verificacao TEXT",
             "token_verificacao_exp TEXT",
+            "token_reset_senha TEXT",
+            "token_reset_senha_exp TEXT",
         ):
             try:
                 conn.execute(f"ALTER TABLE usuarios ADD COLUMN {coluna}")
@@ -982,6 +984,56 @@ def login(dados: CredenciaisIn):
         raise HTTPException(403, "E-mail ainda não verificado. Confira sua caixa de entrada.")
     token = auth.criar_token(row["id"], email)
     return {"token": token, "email": email}
+
+
+class EsqueciSenhaIn(BaseModel):
+    email: str
+
+
+@app.post("/api/auth/esqueci-senha")
+def esqueci_senha(dados: EsqueciSenhaIn):
+    email = dados.email.strip().lower()
+    with get_db() as conn:
+        row = conn.execute("SELECT id, nome FROM usuarios WHERE email = ?", (email,)).fetchone()
+        if row:
+            token_reset = secrets.token_urlsafe(32)
+            expira_em = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+            conn.execute(
+                "UPDATE usuarios SET token_reset_senha = ?, token_reset_senha_exp = ? WHERE id = ?",
+                (token_reset, expira_em, row["id"]),
+            )
+            conn.commit()
+            try:
+                emailing.enviar_redefinicao_senha(email, row["nome"] or "", token_reset)
+            except Exception:
+                pass  # não expõe falha de envio — resposta segue genérica
+    # Resposta genérica mesmo se o e-mail não existir (evita enumeração de contas)
+    return {"status": "ok"}
+
+
+class RedefinirSenhaIn(BaseModel):
+    token: str
+    nova_senha: str
+
+
+@app.post("/api/auth/redefinir-senha")
+def redefinir_senha(dados: RedefinirSenhaIn):
+    if len(dados.nova_senha) < 6:
+        raise HTTPException(400, "Senha muito curta (mín. 6 caracteres)")
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, token_reset_senha_exp FROM usuarios WHERE token_reset_senha = ?", (dados.token,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(400, "Link inválido ou já utilizado")
+        if row["token_reset_senha_exp"] and datetime.fromisoformat(row["token_reset_senha_exp"]) < datetime.utcnow():
+            raise HTTPException(400, "Link expirado. Solicite um novo.")
+        conn.execute(
+            "UPDATE usuarios SET senha_hash = ?, token_reset_senha = NULL, token_reset_senha_exp = NULL WHERE id = ?",
+            (auth.hash_senha(dados.nova_senha), row["id"]),
+        )
+        conn.commit()
+    return {"status": "ok"}
 
 
 @app.get("/api/auth/me")

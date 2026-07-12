@@ -31,6 +31,23 @@ def enviar_verificacao(email: str, nome: str, token: str) -> None:
     _enviar(email, "Confirme seu e-mail — ITBI Smart", html)
 
 
+def enviar_redefinicao_senha(email: str, nome: str, token: str) -> None:
+    link = f"{FRONTEND_URL}/login.html?resetar={token}"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
+      <h2 style="color:#e08560">Redefinir senha</h2>
+      <p>Olá{f', {nome}' if nome else ''}! Recebemos um pedido para redefinir a senha da sua conta no ITBI Smart.</p>
+      <p>
+        <a href="{link}" style="background:#e08560;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">
+          Definir nova senha
+        </a>
+      </p>
+      <p style="color:#888;font-size:13px">Se você não pediu isso, ignore este e-mail — sua senha continua a mesma. Este link expira em 1 hora.</p>
+    </div>
+    """
+    _enviar(email, "Redefinir senha — ITBI Smart", html)
+
+
 def _enviar(destinatario: str, assunto: str, html: str) -> None:
     if not RESEND_API_KEY:
         raise RuntimeError("RESEND_API_KEY não configurado")

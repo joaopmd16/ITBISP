@@ -130,6 +130,10 @@
     <label>Senha</label>
     <input type="password" id="senha" required minlength="6" autocomplete="current-password" placeholder="••••••••">
 
+    <div id="linkEsqueciSenha" style="text-align:right;margin:-10px 0 16px">
+      <a href="#" onclick="mostrarEsqueciSenha();return false;" style="color:var(--mu);font-size:.8rem;text-decoration:underline">Esqueceu a senha?</a>
+    </div>
+
     <div class="only-cadastro" id="camposCadastroSenha">
       <label>Confirmar senha</label>
       <input type="password" id="senha2" minlength="6" autocomplete="new-password" placeholder="••••••••" disabled>
@@ -150,6 +154,11 @@ const ACESSO_LIBERADO=['active','trialing','dev'];
 /* Se chegou aqui por assinatura pendente (token ainda válido), vai direto pro checkout */
 (async function checarPendente(){
   const params=new URLSearchParams(location.search);
+  const tokenReset=params.get('resetar');
+  if(tokenReset){
+    mostrarRedefinirSenha(tokenReset);
+    return;
+  }
   const token=localStorage.getItem('itbi_token');
   if(params.get('status')==='pendente' && token){
     document.querySelector('.card').innerHTML=`
@@ -206,6 +215,81 @@ async function reenviarVerificacao(email){
   btn.disabled=false;
 }
 
+function mostrarEsqueciSenha(){
+  document.querySelector('.card').innerHTML=`
+    <img class="logo" src="/dashboard/assets/logo-icon.png" alt="ITBI Smart">
+    <h1>Esqueceu a senha?</h1>
+    <p class="sub">Informe seu e-mail e enviaremos um link para redefinir sua senha.</p>
+    <div id="msgEsqueci" class="msg"></div>
+    <form id="formEsqueci" onsubmit="return enviarEsqueciSenha(event)">
+      <label>E-mail</label>
+      <input type="email" id="emailEsqueci" required autocomplete="email" placeholder="voce@exemplo.com">
+      <button type="submit" class="btn-primary" id="btnEsqueci">Enviar link</button>
+    </form>
+    <button class="btn-link" onclick="location.href='/dashboard/login.html'">Voltar ao login</button>`;
+}
+
+async function enviarEsqueciSenha(ev){
+  ev.preventDefault();
+  const email=document.getElementById('emailEsqueci').value.trim();
+  const btn=document.getElementById('btnEsqueci');
+  const msg=document.getElementById('msgEsqueci');
+  btn.disabled=true;
+  try{
+    await fetch(`${API}/api/auth/esqueci-senha`,{
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})
+    });
+    msg.className='msg ok';
+    msg.textContent='Se esse e-mail estiver cadastrado, enviamos um link de redefinição. Verifique também a caixa de spam.';
+    document.getElementById('formEsqueci').style.display='none';
+  }catch(e){
+    msg.className='msg err'; msg.textContent='Falha de conexão. Tente novamente.';
+    btn.disabled=false;
+  }
+  return false;
+}
+
+function mostrarRedefinirSenha(token){
+  document.querySelector('.card').innerHTML=`
+    <img class="logo" src="/dashboard/assets/logo-icon.png" alt="ITBI Smart">
+    <h1>Nova senha</h1>
+    <p class="sub">Escolha uma nova senha para sua conta.</p>
+    <div id="msgRedefinir" class="msg"></div>
+    <form id="formRedefinir" onsubmit="return enviarRedefinirSenha(event)">
+      <label>Nova senha</label>
+      <input type="password" id="novaSenha" required minlength="6" autocomplete="new-password" placeholder="••••••••">
+      <label>Confirmar nova senha</label>
+      <input type="password" id="novaSenha2" required minlength="6" autocomplete="new-password" placeholder="••••••••">
+      <button type="submit" class="btn-primary" id="btnRedefinir">Salvar nova senha</button>
+    </form>`;
+  document.getElementById('formRedefinir').dataset.token=token;
+}
+
+async function enviarRedefinirSenha(ev){
+  ev.preventDefault();
+  const token=document.getElementById('formRedefinir').dataset.token;
+  const s1=document.getElementById('novaSenha').value;
+  const s2=document.getElementById('novaSenha2').value;
+  const msg=document.getElementById('msgRedefinir');
+  const btn=document.getElementById('btnRedefinir');
+  if(s1!==s2){ msg.className='msg err'; msg.textContent='As senhas não coincidem.'; return false; }
+  btn.disabled=true;
+  try{
+    const res=await fetch(`${API}/api/auth/redefinir-senha`,{
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token, nova_senha:s1})
+    });
+    const data=await res.json();
+    if(!res.ok){ msg.className='msg err'; msg.textContent=data.detail||'Erro ao redefinir senha.'; btn.disabled=false; return false; }
+    msg.className='msg ok'; msg.textContent='Senha redefinida! Redirecionando para o login…';
+    document.getElementById('formRedefinir').style.display='none';
+    setTimeout(()=>location.href='/dashboard/login.html',1500);
+  }catch(e){
+    msg.className='msg err'; msg.textContent='Falha de conexão. Tente novamente.';
+    btn.disabled=false;
+  }
+  return false;
+}
+
 const CAMPOS_CADASTRO=['nome','sobrenome','telefone','senha2'];
 
 function trocarAba(m){
@@ -217,6 +301,7 @@ function trocarAba(m){
   document.getElementById('btnSubmit').textContent=ehCadastro?'Criar conta':'Entrar';
   // mostra/oculta os campos extras e liga/desliga a validação nativa (required em campo oculto trava o submit)
   document.querySelectorAll('.only-cadastro').forEach(el=>el.style.display=ehCadastro?'block':'none');
+  document.getElementById('linkEsqueciSenha').style.display=ehCadastro?'none':'block';
   CAMPOS_CADASTRO.forEach(id=>{
     const el=document.getElementById(id);
     el.disabled=!ehCadastro;          // desabilitado = não é enviado nem validado
