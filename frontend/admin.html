@@ -84,6 +84,10 @@
   .log-row:last-child{border-bottom:none}
   .log-row .acao{font-weight:600}
   .log-row .quando{color:var(--muted);font-size:12px;white-space:nowrap}
+  .btn-novo{background:var(--primary);border:none;color:#000;font-weight:700;padding:9px 16px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:13px}
+  .btn-novo:hover{background:var(--primary-dark)}
+  .warn-email{display:inline-block;margin-left:6px;color:var(--warn);font-size:11px;font-weight:600;white-space:nowrap}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
   #loginScreen{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center}
   .login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;max-width:380px;width:100%}
@@ -127,7 +131,10 @@
   <div class="wrap">
     <header>
       <h1>Painel <span>Admin</span></h1>
-      <button id="logout" onclick="logout()">Sair</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn-novo" onclick="abrirCriar()">+ Criar usuário</button>
+        <button id="logout" onclick="logout()">Sair</button>
+      </div>
     </header>
 
     <div class="stats" id="stats"></div>
@@ -183,6 +190,27 @@
     <span class="close" onclick="fecharModais()">&times;</span>
     <h3 id="dNome"></h3>
     <div id="dConteudo" class="loading">Carregando...</div>
+  </div>
+</div>
+
+<div class="overlay" id="modalCriar">
+  <div class="modal">
+    <span class="close" onclick="fecharModais()">&times;</span>
+    <h3>Criar usuário</h3>
+    <p class="muted" style="font-size:13px;margin-bottom:16px">O usuário já entra com e-mail validado — não precisa confirmar por e-mail para acessar.</p>
+    <form id="formCriar" onsubmit="return criarUsuario(event)">
+      <div class="field-row">
+        <div class="field"><label>Nome</label><input id="cNome" type="text"></div>
+        <div class="field"><label>Sobrenome</label><input id="cSobrenome" type="text"></div>
+      </div>
+      <div class="field"><label>E-mail</label><input id="cEmail" type="email" required></div>
+      <div class="field-row">
+        <div class="field"><label>Telefone</label><input id="cTelefone" type="text"></div>
+        <div class="field"><label>Senha</label><input id="cSenha" type="text" minlength="6" required></div>
+      </div>
+      <button class="btn-primary" id="criarBtn" type="submit">Criar usuário</button>
+      <div id="cMsg"></div>
+    </form>
   </div>
 </div>
 
@@ -289,7 +317,7 @@ function renderTabela(usuarios){
   document.getElementById('tbody').innerHTML = usuarios.map(u => `
     <tr class="clicavel" onclick='abrirDetalhes(${u.id})'>
       <td>${(u.nome||'')} ${(u.sobrenome||'')}</td>
-      <td>${u.email}</td>
+      <td>${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</td>
       <td class="muted">${u.telefone || '—'}</td>
       <td>${badge(u.status)}</td>
       <td class="muted">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : '—'}</td>
@@ -310,6 +338,7 @@ const LOG_LABEL = {
   'liberar': 'Liberou acesso',
   'revogar': 'Revogou acesso',
   'resetar-senha': 'Resetou senha',
+  'criar-usuario': 'Usuário criado pelo admin',
 };
 
 async function abrirDetalhes(id){
@@ -330,7 +359,7 @@ async function abrirDetalhes(id){
       : `<p class="muted" style="font-size:13px">Nenhuma ação registrada ainda.</p>`;
     document.getElementById('dConteudo').innerHTML = `
       <div class="info-grid">
-        <div><div class="l">E-mail</div><div class="v">${u.email}</div></div>
+        <div><div class="l">E-mail</div><div class="v">${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</div></div>
         <div><div class="l">Telefone</div><div class="v">${u.telefone || '—'}</div></div>
         <div><div class="l">Status</div><div class="v">${badge(u.status)}</div></div>
         <div><div class="l">Acesso até</div><div class="v">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : '—'}</div></div>
@@ -355,6 +384,38 @@ async function abrirDetalhes(id){
 async function revogarDetalhe(id){
   await revogar(id);
   abrirDetalhes(id);
+}
+
+function abrirCriar(){
+  document.getElementById('formCriar').reset();
+  document.getElementById('cMsg').innerHTML = '';
+  document.getElementById('modalCriar').classList.add('open');
+}
+
+async function criarUsuario(ev){
+  ev.preventDefault();
+  const btn = document.getElementById('criarBtn');
+  const msg = document.getElementById('cMsg');
+  btn.disabled = true;
+  msg.innerHTML = '';
+  try{
+    await api('/api/admin/usuarios', {
+      method: 'POST',
+      body: JSON.stringify({
+        nome: document.getElementById('cNome').value.trim(),
+        sobrenome: document.getElementById('cSobrenome').value.trim(),
+        email: document.getElementById('cEmail').value.trim(),
+        telefone: document.getElementById('cTelefone').value.trim(),
+        senha: document.getElementById('cSenha').value,
+      })
+    });
+    msg.innerHTML = `<div class="msg ok">Usuário criado com sucesso.</div>`;
+    setTimeout(()=>{ fecharModais(); carregar(); }, 700);
+  }catch(e){
+    msg.innerHTML = `<div class="msg err">${e.message}</div>`;
+  }finally{
+    btn.disabled = false;
+  }
 }
 
 function abrirLiberar(u){

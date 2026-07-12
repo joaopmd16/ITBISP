@@ -1207,6 +1207,36 @@ def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
     return {"usuarios": rows_to_list(rows)}
 
 
+class CriarUsuarioAdminIn(BaseModel):
+    email: str
+    senha: str
+    nome: str = ""
+    sobrenome: str = ""
+    telefone: str = ""
+
+
+@app.post("/api/admin/usuarios")
+def admin_criar_usuario(dados: CriarUsuarioAdminIn, admin: dict = Depends(exigir_admin)):
+    email = dados.email.strip().lower()
+    if not email or "@" not in email or len(dados.senha) < 6:
+        raise HTTPException(400, "E-mail inválido ou senha muito curta (mín. 6 caracteres)")
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE email = ?", (email,)).fetchone()
+        if existe:
+            raise HTTPException(409, "E-mail já cadastrado")
+        # Criado pelo admin: já entra com e-mail validado, sem precisar do fluxo de confirmação.
+        cur = conn.execute(
+            """INSERT INTO usuarios (email, senha_hash, nome, sobrenome, telefone, email_verificado)
+               VALUES (?, ?, ?, ?, ?, 1)""",
+            (email, auth.hash_senha(dados.senha), dados.nome.strip(), dados.sobrenome.strip(), dados.telefone.strip()),
+        )
+        usuario_id = cur.lastrowid
+        conn.execute("INSERT INTO assinaturas (usuario_id, status) VALUES (?, 'inativa')", (usuario_id,))
+        _log_admin(conn, usuario_id, "criar-usuario")
+        conn.commit()
+    return {"status": "criado", "id": usuario_id}
+
+
 @app.get("/api/admin/usuarios/{usuario_id}/detalhes")
 def admin_detalhes_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
