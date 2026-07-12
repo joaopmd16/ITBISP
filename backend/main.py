@@ -5,6 +5,7 @@ Acesse:       http://localhost:8000
 Docs:         http://localhost:8000/docs
 """
 
+import os
 import secrets
 import sqlite3
 import time
@@ -57,6 +58,8 @@ ROTAS_PUBLICAS = ("/api/auth/", "/api/webhook/")
 # que travava todo usuário novo antes de conseguir pagar.
 ROTAS_SEM_EXIGENCIA_ASSINATURA = ("/api/billing/checkout",)
 
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@itbismart.com.br")
+
 
 @app.middleware("http")
 async def exigir_assinatura_ativa(request: Request, call_next):
@@ -77,9 +80,14 @@ async def exigir_assinatura_ativa(request: Request, call_next):
 
     with get_db() as conn:
         row = conn.execute(
-            "SELECT status FROM assinaturas WHERE usuario_id = ?", (int(payload["sub"]),)
+            "SELECT status, acesso_expira_em FROM assinaturas WHERE usuario_id = ?", (int(payload["sub"]),)
         ).fetchone()
-    if not row or row["status"] not in ("active", "trialing", "dev"):
+    liberado = bool(row) and row["status"] in ("active", "trialing", "dev")
+    # Acesso liberado manualmente pelo admin com prazo (status 'trialing' + acesso_expira_em) expira sozinho
+    if liberado and row["status"] == "trialing" and row["acesso_expira_em"]:
+        if datetime.fromisoformat(row["acesso_expira_em"]) < datetime.utcnow():
+            liberado = False
+    if not liberado:
         return JSONResponse({"detail": "Assinatura inativa"}, status_code=402)
 
     return await call_next(request)
@@ -189,6 +197,13 @@ def startup():
                 conn.execute(f"ALTER TABLE usuarios ADD COLUMN {coluna}")
             except sqlite3.OperationalError:
                 pass  # coluna já existe
+        # acesso_expira_em: usado só para acesso liberado manualmente pelo admin (status
+        # 'trialing' com prazo). Assinaturas reais via Stripe usam status 'active' e não
+        # mexem nessa coluna — o período delas é controlado pelo próprio Stripe.
+        try:
+            conn.execute("ALTER TABLE assinaturas ADD COLUMN acesso_expira_em TEXT")
+        except sqlite3.OperationalError:
+            pass  # coluna já existe
         conn.commit()
 
     # 2. Cache de geocodificação (mapa)
@@ -1054,6 +1069,112 @@ async def webhook_stripe(request: Request):
         conn.commit()
 
     return {"status": "ok"}
+
+
+# ──────────────────────────────────────────────
+# ADMIN — painel restrito (gestão de usuários e assinaturas)
+# ──────────────────────────────────────────────
+
+def exigir_admin(usuario: dict = Depends(auth.get_usuario_atual)) -> dict:
+    if usuario["email"] != ADMIN_EMAIL:
+        raise HTTPException(403, "Acesso restrito ao administrador")
+    return usuario
+
+
+@app.get("/api/admin/usuarios")
+def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado,
+                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
+            FROM usuarios u
+            LEFT JOIN assinaturas a ON a.usuario_id = u.id
+            ORDER BY u.criado_em DESC
+        """).fetchall()
+    return {"usuarios": rows_to_list(rows)}
+
+
+@app.post("/api/admin/usuarios/{usuario_id}/revogar")
+def admin_revogar(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT stripe_subscription_id FROM assinaturas WHERE usuario_id = ?", (usuario_id,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "Usuário não encontrado")
+        if row["stripe_subscription_id"]:
+            try:
+                billing.cancelar_assinatura(row["stripe_subscription_id"])
+            except Exception:
+                pass  # pode já estar cancelada no Stripe — segue revogando localmente
+        conn.execute(
+            "UPDATE assinaturas SET status = 'inativa', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
+            (usuario_id,),
+        )
+        conn.commit()
+    return {"status": "revogado"}
+
+
+class LiberarAcessoIn(BaseModel):
+    vitalicio: bool = False
+    horas: float = 0
+
+
+@app.post("/api/admin/usuarios/{usuario_id}/liberar")
+def admin_liberar(usuario_id: int, dados: LiberarAcessoIn, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        if dados.vitalicio:
+            conn.execute(
+                "UPDATE assinaturas SET status = 'dev', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
+                (usuario_id,),
+            )
+        else:
+            if dados.horas <= 0:
+                raise HTTPException(400, "Informe a duração em horas")
+            expira = (datetime.utcnow() + timedelta(hours=dados.horas)).isoformat()
+            conn.execute(
+                "UPDATE assinaturas SET status = 'trialing', acesso_expira_em = ?, atualizado_em = datetime('now') WHERE usuario_id = ?",
+                (expira, usuario_id),
+            )
+        conn.commit()
+    return {"status": "liberado"}
+
+
+@app.get("/api/admin/usuarios/{usuario_id}/pagamentos")
+def admin_pagamentos(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT stripe_customer_id, stripe_subscription_id FROM assinaturas WHERE usuario_id = ?", (usuario_id,)
+        ).fetchone()
+    if not row or not row["stripe_customer_id"]:
+        return {"faturas": [], "assinatura": None}
+    try:
+        faturas = billing.listar_faturas(row["stripe_customer_id"])
+    except Exception:
+        faturas = []
+    assinatura = None
+    if row["stripe_subscription_id"]:
+        try:
+            assinatura = billing.detalhes_assinatura(row["stripe_subscription_id"])
+        except Exception:
+            assinatura = None
+    return {"faturas": faturas, "assinatura": assinatura}
+
+
+@app.post("/api/admin/usuarios/{usuario_id}/resetar-senha")
+def admin_resetar_senha(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    nova_senha = auth.gerar_senha_temporaria()
+    with get_db() as conn:
+        cur = conn.execute(
+            "UPDATE usuarios SET senha_hash = ? WHERE id = ?", (auth.hash_senha(nova_senha), usuario_id)
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(404, "Usuário não encontrado")
+        conn.commit()
+    return {"senha_temporaria": nova_senha}
 
 
 # Serve o frontend estático (deve ficar no final para não sobrescrever as rotas da API)

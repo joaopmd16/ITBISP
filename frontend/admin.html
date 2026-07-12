@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — ITBI Smart</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000; --surface:#0d0d0d; --surface2:#151515; --border:#232323;
+    --primary:#e08560; --primary-dark:#c76a48; --text:#f2f2f2; --muted:#9a9a9a;
+    --ok:#5fbf7a; --warn:#e0b95f; --err:#e05f5f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text); font-family:'Plus Jakarta Sans',sans-serif;
+    min-height:100vh; padding:32px 20px;
+  }
+  .bg-grid{
+    position:fixed; inset:0; z-index:-2;
+    background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+    background-size:40px 40px;
+  }
+  .blob{position:fixed; border-radius:50%; filter:blur(90px); z-index:-1; opacity:.25}
+  .blob1{width:400px;height:400px;background:var(--primary);top:-120px;left:-100px}
+  .blob2{width:400px;height:400px;background:#5f7fe0;bottom:-150px;right:-100px}
+
+  .wrap{max-width:1200px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+  h1{font-size:22px;font-weight:800}
+  h1 span{color:var(--primary)}
+  #logout{background:none;border:1px solid var(--border);color:var(--muted);padding:8px 16px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:13px}
+  #logout:hover{color:var(--text);border-color:var(--primary)}
+
+  .stats{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 22px;min-width:140px}
+  .stat .n{font-size:24px;font-weight:800}
+  .stat .l{font-size:12px;color:var(--muted);margin-top:2px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;padding:14px 16px;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:14px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--surface2)}
+  .muted{color:var(--muted)}
+  .badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:11.5px;font-weight:600}
+  .b-active{background:rgba(95,191,122,.15);color:var(--ok)}
+  .b-trialing{background:rgba(224,185,95,.15);color:var(--warn)}
+  .b-dev{background:rgba(95,127,224,.15);color:#7f9bee}
+  .b-inativa,.b-none{background:rgba(224,95,95,.15);color:var(--err)}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  button.act{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:12px;white-space:nowrap}
+  button.act:hover{border-color:var(--primary);color:var(--primary)}
+  button.act.danger:hover{border-color:var(--err);color:var(--err)}
+  button.act.ok:hover{border-color:var(--ok);color:var(--ok)}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;max-width:480px;width:100%;max-height:85vh;overflow:auto}
+  .modal h3{font-size:17px;margin-bottom:16px}
+  .modal .close{float:right;cursor:pointer;color:var(--muted);font-size:20px;line-height:1}
+  .opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+  .opt-grid button{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:14px 10px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:600}
+  .opt-grid button:hover{border-color:var(--primary);color:var(--primary)}
+  .senha-box{background:var(--surface2);border:1px dashed var(--primary);border-radius:12px;padding:16px;text-align:center;margin-top:10px;font-family:monospace;font-size:16px;letter-spacing:1px;word-break:break-all}
+  .fatura-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .fatura-row:last-child{border-bottom:none}
+  .fatura-row a{color:var(--primary);text-decoration:none}
+  .msg{padding:10px 14px;border-radius:10px;font-size:13px;margin-top:12px}
+  .msg.ok{background:rgba(95,191,122,.12);color:var(--ok)}
+  .msg.err{background:rgba(224,95,95,.12);color:var(--err)}
+  .loading{padding:40px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+
+<div class="wrap">
+  <header>
+    <h1>Painel <span>Admin</span></h1>
+    <button id="logout" onclick="logout()">Sair</button>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Acesso até</th><th>Cadastro</th><th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="7" class="loading">Carregando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="overlay" id="modalLiberar">
+  <div class="modal">
+    <span class="close" onclick="fecharModais()">&times;</span>
+    <h3>Liberar acesso — <span id="lNome"></span></h3>
+    <div class="opt-grid">
+      <button onclick="liberar(2)">2 horas</button>
+      <button onclick="liberar(168)">7 dias</button>
+      <button onclick="liberar(720)">30 dias</button>
+      <button onclick="liberar(null,true)">Vitalício</button>
+    </div>
+    <div id="lMsg"></div>
+  </div>
+</div>
+
+<div class="overlay" id="modalSenha">
+  <div class="modal">
+    <span class="close" onclick="fecharModais()">&times;</span>
+    <h3>Resetar senha — <span id="sNome"></span></h3>
+    <p class="muted" style="font-size:13px">Gere uma senha temporária e repasse ao usuário manualmente. Ela não fica salva em nenhum lugar além desta tela.</p>
+    <div id="sConteudo"></div>
+  </div>
+</div>
+
+<div class="overlay" id="modalPagamentos">
+  <div class="modal">
+    <span class="close" onclick="fecharModais()">&times;</span>
+    <h3>Pagamentos — <span id="pNome"></span></h3>
+    <div id="pConteudo" class="loading">Carregando...</div>
+  </div>
+</div>
+
+<script>
+const API = location.origin;
+const token = localStorage.getItem('token');
+if(!token){ location.href = '/dashboard/login.html'; }
+
+let usuarioAtual = null;
+
+function logout(){ localStorage.removeItem('token'); location.href = '/dashboard/login.html'; }
+
+async function api(path, opts={}){
+  const res = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers||{}) }
+  });
+  if(res.status === 401 || res.status === 403){ logout(); throw new Error('sem acesso'); }
+  if(!res.ok){ throw new Error((await res.json().catch(()=>({}))).detail || 'erro'); }
+  return res.json();
+}
+
+function badge(status){
+  const s = status || 'none';
+  const label = {active:'ativo', trialing:'trial', dev:'vitalício', inativa:'inativo', none:'sem assinatura'}[s] || s;
+  return `<span class="badge b-${s}">${label}</span>`;
+}
+
+function fmtData(iso){
+  if(!iso) return '—';
+  try{ return new Date(iso).toLocaleString('pt-BR'); }catch(e){ return iso; }
+}
+
+function fecharModais(){
+  document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));
+}
+
+async function carregar(){
+  try{
+    const data = await api('/api/admin/usuarios');
+    renderStats(data.usuarios);
+    renderTabela(data.usuarios);
+  }catch(e){
+    document.getElementById('tbody').innerHTML = `<tr><td colspan="7" class="loading">Erro ao carregar: ${e.message}</td></tr>`;
+  }
+}
+
+function renderStats(usuarios){
+  const total = usuarios.length;
+  const ativos = usuarios.filter(u=>['active','trialing','dev'].includes(u.status)).length;
+  const pagantes = usuarios.filter(u=>u.status==='active').length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="n">${total}</div><div class="l">usuários</div></div>
+    <div class="stat"><div class="n">${ativos}</div><div class="l">com acesso</div></div>
+    <div class="stat"><div class="n">${pagantes}</div><div class="l">assinantes pagantes</div></div>
+  `;
+}
+
+function renderTabela(usuarios){
+  if(!usuarios.length){
+    document.getElementById('tbody').innerHTML = `<tr><td colspan="7" class="loading">Nenhum usuário cadastrado.</td></tr>`;
+    return;
+  }
+  document.getElementById('tbody').innerHTML = usuarios.map(u => `
+    <tr>
+      <td>${(u.nome||'')} ${(u.sobrenome||'')}</td>
+      <td>${u.email}</td>
+      <td class="muted">${u.telefone || '—'}</td>
+      <td>${badge(u.status)}</td>
+      <td class="muted">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : '—'}</td>
+      <td class="muted">${fmtData(u.criado_em)}</td>
+      <td>
+        <div class="actions">
+          <button class="act ok" onclick='abrirLiberar(${JSON.stringify(u)})'>Liberar</button>
+          <button class="act danger" onclick='revogar(${u.id})'>Revogar</button>
+          <button class="act" onclick='abrirSenha(${JSON.stringify(u)})'>Resetar senha</button>
+          <button class="act" onclick='abrirPagamentos(${u.id}, ${JSON.stringify(u.nome||u.email)})'>Pagamentos</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function abrirLiberar(u){
+  usuarioAtual = u;
+  document.getElementById('lNome').textContent = u.nome || u.email;
+  document.getElementById('lMsg').innerHTML = '';
+  document.getElementById('modalLiberar').classList.add('open');
+}
+
+async function liberar(horas, vitalicio=false){
+  try{
+    await api(`/api/admin/usuarios/${usuarioAtual.id}/liberar`, {
+      method:'POST', body: JSON.stringify({ horas: horas || 0, vitalicio })
+    });
+    document.getElementById('lMsg').innerHTML = `<div class="msg ok">Acesso liberado.</div>`;
+    setTimeout(()=>{ fecharModais(); carregar(); }, 700);
+  }catch(e){
+    document.getElementById('lMsg').innerHTML = `<div class="msg err">${e.message}</div>`;
+  }
+}
+
+async function revogar(id){
+  if(!confirm('Revogar o acesso deste usuário? A assinatura no Stripe (se houver) será cancelada.')) return;
+  try{
+    await api(`/api/admin/usuarios/${id}/revogar`, { method:'POST' });
+    carregar();
+  }catch(e){ alert('Erro: ' + e.message); }
+}
+
+function abrirSenha(u){
+  usuarioAtual = u;
+  document.getElementById('sNome').textContent = u.nome || u.email;
+  document.getElementById('sConteudo').innerHTML = `<button class="act ok" style="margin-top:14px" onclick="gerarSenha()">Gerar nova senha temporária</button>`;
+  document.getElementById('modalSenha').classList.add('open');
+}
+
+async function gerarSenha(){
+  document.getElementById('sConteudo').innerHTML = `<div class="loading">Gerando...</div>`;
+  try{
+    const data = await api(`/api/admin/usuarios/${usuarioAtual.id}/resetar-senha`, { method:'POST' });
+    document.getElementById('sConteudo').innerHTML = `
+      <div class="senha-box">${data.senha_temporaria}</div>
+      <p class="muted" style="font-size:12px;margin-top:10px">Copie e envie ao usuário. Essa senha não será mostrada novamente.</p>
+    `;
+  }catch(e){
+    document.getElementById('sConteudo').innerHTML = `<div class="msg err">${e.message}</div>`;
+  }
+}
+
+async function abrirPagamentos(id, nome){
+  document.getElementById('pNome').textContent = nome;
+  document.getElementById('pConteudo').innerHTML = `<div class="loading">Carregando...</div>`;
+  document.getElementById('modalPagamentos').classList.add('open');
+  try{
+    const data = await api(`/api/admin/usuarios/${id}/pagamentos`);
+    let html = '';
+    if(data.assinatura){
+      const fim = data.assinatura.periodo_fim ? new Date(data.assinatura.periodo_fim*1000).toLocaleDateString('pt-BR') : '—';
+      html += `<p style="font-size:13px;margin-bottom:14px">Status: <b>${data.assinatura.status}</b> · Renova/expira em: <b>${fim}</b>${data.assinatura.cancela_no_fim ? ' (cancela ao fim do período)' : ''}</p>`;
+    }
+    if(!data.faturas.length){
+      html += `<p class="muted" style="font-size:13px">Nenhuma fatura encontrada.</p>`;
+    }else{
+      html += data.faturas.map(f => `
+        <div class="fatura-row">
+          <span>${new Date(f.criada_em*1000).toLocaleDateString('pt-BR')} — R$ ${f.valor.toFixed(2)} — ${f.status}</span>
+          ${f.url_hospedada ? `<a href="${f.url_hospedada}" target="_blank">ver</a>` : ''}
+        </div>
+      `).join('');
+    }
+    document.getElementById('pConteudo').innerHTML = html;
+  }catch(e){
+    document.getElementById('pConteudo').innerHTML = `<div class="msg err">${e.message}</div>`;
+  }
+}
+
+carregar();
+</script>
+</body>
+</html>

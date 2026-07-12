@@ -3,6 +3,8 @@ auth.py — autenticação (JWT) e checagem de assinatura ativa.
 """
 
 import os
+import secrets
+import string
 import bcrypt
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -19,6 +21,11 @@ def hash_senha(senha: str) -> str:
 
 def verificar_senha(senha: str, hash_: str) -> bool:
     return bcrypt.checkpw(senha.encode(), hash_.encode())
+
+
+def gerar_senha_temporaria(tamanho: int = 12) -> str:
+    alfabeto = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alfabeto) for _ in range(tamanho))
 
 
 def criar_token(usuario_id: int, email: str) -> str:

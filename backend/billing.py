@@ -60,3 +60,46 @@ def construir_evento(payload: bytes, assinatura_header: str):
         import json
         return json.loads(payload)
     return stripe.Webhook.construct_event(payload, assinatura_header, WEBHOOK_SECRET)
+
+
+# ──────────────────────────────────────────────
+# ADMIN — histórico de pagamentos e gestão de assinatura
+# ──────────────────────────────────────────────
+
+def listar_faturas(stripe_customer_id: str, limite: int = 20) -> list[dict]:
+    faturas = stripe.Invoice.list(customer=stripe_customer_id, limit=limite)
+    return [
+        {
+            "id": f.id,
+            "status": f.status,
+            "valor": (f.amount_paid or f.amount_due or 0) / 100,
+            "moeda": f.currency,
+            "criada_em": f.created,
+            "paga_em": f.status_transitions.paid_at if f.status_transitions else None,
+            "url_pdf": f.invoice_pdf,
+            "url_hospedada": f.hosted_invoice_url,
+        }
+        for f in faturas.data
+    ]
+
+
+def detalhes_assinatura(stripe_subscription_id: str) -> dict | None:
+    if not stripe_subscription_id:
+        return None
+    sub = stripe.Subscription.retrieve(stripe_subscription_id)
+    item = sub["items"]["data"][0] if sub["items"]["data"] else None
+    # current_period_end mudou de posição entre versões da API do Stripe (objeto
+    # subscription vs. subscription item) — tenta os dois locais por segurança.
+    periodo_fim = sub.get("current_period_end") or (item.get("current_period_end") if item else None)
+    return {
+        "status": sub.status,
+        "periodo_fim": periodo_fim,
+        "cancela_no_fim": sub.cancel_at_period_end,
+    }
+
+
+def cancelar_assinatura(stripe_subscription_id: str) -> None:
+    """Cancela a assinatura no Stripe imediatamente (usado quando o admin revoga acesso
+    de um usuário pagante — sem isso o Stripe continuaria cobrando e o próximo webhook
+    reativaria o acesso local)."""
+    stripe.Subscription.cancel(stripe_subscription_id)
