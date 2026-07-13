@@ -53,7 +53,7 @@ FRONTEND_URL=http://localhost:8000        # em produção: https://itbismart.com
 
 # Stripe (assinatura mensal) — opcional em dev; obrigatório p/ cobrar em produção
 STRIPE_SECRET_KEY=sk_test_...             # em produção: sk_live_...
-STRIPE_PRICE_ID=price_...                 # se vazio, billing.py cria um Price R$5/mês na 1ª cobrança
+STRIPE_PRICE_ID=price_...                 # se vazio, billing.py cria um Price R$30/mês na 1ª cobrança
 STRIPE_WEBHOOK_SECRET=whsec_...           # segredo do endpoint /api/webhook/stripe (ativa a assinatura após o pagamento)
 ```
 
@@ -193,7 +193,7 @@ Documentação interativa: `/docs`
 - **Painel "Minha conta":** ícone de pessoa na sidebar do dashboard abre um painel com saudação por horário do
   dia, status/início/próxima renovação da assinatura e lista de faturas (`GET /api/billing/minha-conta`), além
   dos atalhos "Gerenciar assinatura" (Stripe Customer Portal) e "Sair".
-- **Cobrança:** assinatura mensal **R$ 5,00** via Stripe Checkout (`/api/billing/checkout`). Após o pagamento,
+- **Cobrança:** assinatura mensal **R$ 30,00** via Stripe Checkout (`/api/billing/checkout`). Após o pagamento,
   o Stripe chama o webhook `POST /api/webhook/stripe` (eventos `checkout.session.completed`,
   `customer.subscription.updated/deleted`, `invoice.payment_failed`), que atualiza `assinaturas.status` para `active`.
   Configurar `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` e `STRIPE_WEBHOOK_SECRET` no `.env` (ver seção de config).

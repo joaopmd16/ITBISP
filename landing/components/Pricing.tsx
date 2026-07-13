@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 const PLAN = {
   name: "Básico",
-  price: "R$ 5",
+  price: "R$ 30",
   period: "/mês",
   desc: "Para quem precisa consultar transações pontualmente.",
   features: [
