@@ -336,6 +336,12 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .map-toggle:hover{background:var(--line)}
 .map-toggle.active{background:var(--primary);color:#fff}
 #mapa{height:440px;display:none}
+.map-filtbar{display:flex;align-items:center;gap:8px;padding:12px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.map-ffield{min-width:130px;flex:1}
+.map-ffield input{width:100%;height:36px;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:0 12px;color:var(--ink);font-size:13px;font-family:inherit;outline:none;transition:all .15s}
+.map-ffield input:focus{border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 4px var(--primary-soft)}
+.map-ffield input::placeholder{color:var(--mu)}
+.map-filtbar-hint{font-size:11px;color:var(--mu);font-family:'JetBrains Mono';margin-left:auto}
 .map-legend{display:flex;align-items:center;gap:18px;padding:12px 22px;border-top:1px solid var(--line);flex-wrap:wrap;font-size:12px}
 .map-legend .ml-l{font-size:11px;color:var(--mu);font-weight:600}
 .leg-item{display:flex;align-items:center;gap:6px;color:var(--ink-2)}
@@ -1014,6 +1020,26 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
           <span class="s" id="map-info">Visualização geográfica por CEP</span>
           <button class="map-toggle" id="map-toggle-btn" onclick="toggleMapa()">Mostrar mapa</button>
         </div>
+        <div class="map-filtbar" id="map-filtbar">
+          <div class="map-ffield" style="position:relative">
+            <input id="map-rua" type="text" placeholder="Logradouro" autocomplete="off">
+            <div class="acl" id="map-ac-rua" style="display:none"></div>
+          </div>
+          <div class="map-ffield" style="position:relative">
+            <input id="map-bairro" type="text" placeholder="Bairro" autocomplete="off">
+            <div class="acl" id="map-ac-bairro" style="display:none"></div>
+          </div>
+          <div class="map-ffield" style="position:relative">
+            <input id="map-cep" type="text" placeholder="CEP" autocomplete="off">
+            <div class="acl" id="map-ac-cep" style="display:none"></div>
+          </div>
+          <div class="map-ffield" style="position:relative">
+            <input id="map-numero" type="text" placeholder="Número" autocomplete="off">
+          </div>
+          <button class="btn-primary" style="height:36px;padding:0 14px" onclick="buscarNoMapa()">Buscar no mapa</button>
+          <button class="btn-ghost-2" style="height:36px" onclick="limparMapa()">Limpar</button>
+          <span class="map-filtbar-hint" id="map-filtbar-hint"></span>
+        </div>
         <div id="mapa"></div>
         <div class="map-legend" id="map-legend" style="display:none">
           <span class="ml-l">Transações por CEP:</span>
@@ -1259,6 +1285,14 @@ window.addEventListener('DOMContentLoaded',async()=>{
   _initTagInput('fsql-wrap','fsql','acsql','sql',true);
   _initTagInput('fn-wrap','fn','acn','numero',false);
   ['fvmin','fvmax','fnat'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')buscar(1)}));
+  setupAC('map-rua','map-ac-rua','logradouro');
+  setupAC('map-bairro','map-ac-bairro','bairro');
+  setupAC('map-cep','map-ac-cep','cep');
+  ['map-rua','map-bairro','map-cep','map-numero'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.addEventListener('keydown',e=>{if(e.key==='Enter')buscarNoMapa()});
+    el.addEventListener('change',()=>buscarNoMapa());
+  });
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
@@ -2202,10 +2236,11 @@ function setupAC(iid,lid,ep){
     const q=inp.value.trim();
     if(q.length<2){lst.style.display='none';return}
     acT[iid]=setTimeout(async()=>{
-      const it=await fetch(`${API}/api/autocomplete/${ep}?q=${encodeURIComponent(q)}`).then(r=>r.json()).catch(()=>[]);
+      const res=await fetch(`${API}/api/autocomplete/${ep}?q=${encodeURIComponent(q)}`).then(r=>r.json()).catch(()=>({items:[]}));
+      const it=Array.isArray(res)?res:(res.items||[]);
       lst.innerHTML='';
       if(!it.length){lst.style.display='none';return}
-      it.forEach(i=>{const dv=document.createElement('div');dv.textContent=i;dv.onclick=()=>{inp.value=i;lst.style.display='none'};lst.appendChild(dv)});
+      it.forEach(i=>{const dv=document.createElement('div');dv.textContent=i;dv.onclick=()=>{inp.value=i;lst.style.display='none';inp.dispatchEvent(new Event('change'))};lst.appendChild(dv)});
       lst.style.display='block';
     },80);
   });
@@ -2271,6 +2306,7 @@ function applySelectionToKPI(){
       renderKPI(lastResumo.geral);
       renderCharts(lastResumo.por_ano||[],lastResumo.top_bairros||[],lastResumo.por_mes||[],lastResumo.por_natureza||[],lastResumo.faixas_valor||[]);
     }
+    if(mapaVisivel)carregarPontos();
     return;
   }
   const rows=[...selectedRowsData.values()];
@@ -2283,6 +2319,7 @@ function applySelectionToKPI(){
   renderKPI({total_transacoes:count,volume_total:volume,ticket_medio:count?volume/count:0,itbi_total:itbi});
   const sel=_aggSelecao(rows);
   renderCharts(sel.por_ano,sel.top_bairros,sel.por_mes,sel.por_natureza,sel.faixas_valor);
+  if(mapaVisivel)carregarPontos();
 }
 function updateExpBar(){
   const bar=document.getElementById('expbar'),cnt=document.getElementById('exp-count');
@@ -2383,12 +2420,38 @@ function corPonto(c){if(c>=100)return'#1a2f9c';if(c>=21)return'#3a5bff';if(c>=6)
 function tamanhoPonto(c){if(c>=100)return 14;if(c>=21)return 10;if(c>=6)return 7;return 5}
 function fmtBRL_map(v){if(!v||v===0)return'—';if(v>=1e6)return'R$ '+(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' Mi';if(v>=1e3)return'R$ '+(v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0})+' k';return'R$ '+Math.round(v).toLocaleString('pt-BR')}
 
+function _getMapaParams(){
+  const p=new URLSearchParams();
+  const v=id=>(document.getElementById(id)?.value||'').trim();
+  if(v('map-rua'))p.append('logradouro',v('map-rua'));
+  if(v('map-bairro'))p.append('bairro',v('map-bairro'));
+  if(v('map-cep'))p.append('cep',v('map-cep'));
+  if(v('map-numero'))p.append('numero',v('map-numero'));
+  return p;
+}
+function _atualizarHintMapa(){
+  const h=document.getElementById('map-filtbar-hint');if(!h)return;
+  if(selectedIds.size>0)h.textContent=`mostrando ${selectedIds.size.toLocaleString('pt-BR')} selecionado(s)`;
+  else{
+    const p=_getMapaParams();
+    h.textContent=[...p.keys()].length?'filtro do mapa ativo':'';
+  }
+}
+function buscarNoMapa(){
+  if(!mapaVisivel)toggleMapa();
+  else carregarPontos();
+}
+function limparMapa(){
+  ['map-rua','map-bairro','map-cep','map-numero'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  if(mapaVisivel)carregarPontos();
+}
 async function carregarPontos(){
   if(!mapaInst)return;
   const elStatus=document.getElementById('map-status'),elInfo=document.getElementById('map-info');
   elStatus.textContent='carregando…';
+  _atualizarHintMapa();
   try{
-    const p=getP();
+    const p=selectedIds.size>0?new URLSearchParams({ids:[...selectedIds].join(',')}):_getMapaParams();
     const data=await fetch(`${API}/api/mapa?${p}`).then(r=>r.json());
     if(mapaLayer)mapaInst.removeLayer(mapaLayer);
     mapaLayer=L.layerGroup();
@@ -2418,7 +2481,14 @@ async function carregarPontos(){
     elInfo.textContent='API offline em localhost:8000';
   }
 }
-function filtrarPorCEP(cep){document.getElementById('fc').value=cep.replace(/^(\d{5})(\d{3})$/,'$1-$2');mapaInst?.closePopup();buscar(1);if(mapaVisivel)setTimeout(carregarPontos,800)}
+function filtrarPorCEP(cep){
+  const cepFmt=cep.replace(/^(\d{5})(\d{3})$/,'$1-$2');
+  document.getElementById('fc').value=cepFmt;
+  const mc=document.getElementById('map-cep');if(mc)mc.value=cepFmt;
+  mapaInst?.closePopup();
+  buscar(1);
+  if(mapaVisivel)setTimeout(carregarPontos,800);
+}
 
 /* ─── modal de sincronização ─── */
 let _syncPollTimer=null;
