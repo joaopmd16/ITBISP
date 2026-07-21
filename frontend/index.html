@@ -337,10 +337,8 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .map-toggle.active{background:var(--primary);color:#fff}
 #mapa{height:440px;display:none}
 .map-filtbar{display:flex;align-items:center;gap:8px;padding:12px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.map-ffield{min-width:130px;flex:1}
-.map-ffield input{width:100%;height:36px;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:0 12px;color:var(--ink);font-size:13px;font-family:inherit;outline:none;transition:all .15s}
-.map-ffield input:focus{border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 4px var(--primary-soft)}
-.map-ffield input::placeholder{color:var(--mu)}
+.map-ffield{min-width:150px;flex:1}
+.map-ffield .tag-input-inner{min-height:36px}
 .map-filtbar-hint{font-size:11px;color:var(--mu);font-family:'JetBrains Mono';margin-left:auto}
 .map-legend{display:flex;align-items:center;gap:18px;padding:12px 22px;border-top:1px solid var(--line);flex-wrap:wrap;font-size:12px}
 .map-legend .ml-l{font-size:11px;color:var(--mu);font-weight:600}
@@ -1026,19 +1024,20 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         </div>
         <div class="map-filtbar" id="map-filtbar">
           <div class="map-ffield" style="position:relative">
-            <input id="map-rua" type="text" placeholder="Logradouro" autocomplete="off">
+            <div class="tag-input-inner" id="map-rua-wrap" onclick="document.getElementById('map-rua').focus()"></div>
             <div class="acl" id="map-ac-rua" style="display:none"></div>
           </div>
           <div class="map-ffield" style="position:relative">
-            <input id="map-bairro" type="text" placeholder="Bairro" autocomplete="off">
+            <div class="tag-input-inner" id="map-bairro-wrap" onclick="document.getElementById('map-bairro').focus()"></div>
             <div class="acl" id="map-ac-bairro" style="display:none"></div>
           </div>
           <div class="map-ffield" style="position:relative">
-            <input id="map-cep" type="text" placeholder="CEP" autocomplete="off">
+            <div class="tag-input-inner" id="map-cep-wrap" onclick="document.getElementById('map-cep').focus()"></div>
             <div class="acl" id="map-ac-cep" style="display:none"></div>
           </div>
           <div class="map-ffield" style="position:relative">
-            <input id="map-numero" type="text" placeholder="Número" autocomplete="off">
+            <div class="tag-input-inner" id="map-numero-wrap" onclick="document.getElementById('map-numero').focus()"></div>
+            <div class="acl" id="map-ac-numero" style="display:none"></div>
           </div>
           <button class="btn-primary" style="height:36px;padding:0 14px" onclick="buscarNoMapa()">Buscar no mapa</button>
           <button class="btn-ghost-2" style="height:36px" onclick="limparMapa()">Limpar</button>
@@ -1289,13 +1288,12 @@ window.addEventListener('DOMContentLoaded',async()=>{
   _initTagInput('fsql-wrap','fsql','acsql','sql',true);
   _initTagInput('fn-wrap','fn','acn','numero',false);
   ['fvmin','fvmax','fnat'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')buscar(1)}));
-  setupAC('map-rua','map-ac-rua','logradouro');
-  setupAC('map-bairro','map-ac-bairro','bairro');
-  setupAC('map-cep','map-ac-cep','cep');
+  _initTagInput('map-rua-wrap','map-rua','map-ac-rua','logradouro',true);
+  _initTagInput('map-bairro-wrap','map-bairro','map-ac-bairro','bairro',true);
+  _initTagInput('map-cep-wrap','map-cep','map-ac-cep','cep',true);
+  _initTagInput('map-numero-wrap','map-numero','map-ac-numero','numero',false);
   ['map-rua','map-bairro','map-cep','map-numero'].forEach(id=>{
-    const el=document.getElementById(id);if(!el)return;
-    el.addEventListener('keydown',e=>{if(e.key==='Enter')buscarNoMapa()});
-    el.addEventListener('change',()=>buscarNoMapa());
+    document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')buscarNoMapa()});
   });
 });
 document.addEventListener('keydown',e=>{
@@ -2144,7 +2142,7 @@ function _initTagInput(wrapId,inputId,listId,ep,previewOnFocus=false){
         dv.onmousedown=e=>{e.preventDefault();const idx=_tags[inputId].indexOf(i);if(idx>-1)_removeTag(inputId,idx);_fetchAc(_acQ,true);};
       }else{
         dv.textContent=i;
-        dv.onmousedown=e=>{e.preventDefault();_addTag(inputId,i);inp.value='';lst.style.display='none';};
+        dv.onmousedown=e=>{e.preventDefault();_addTag(inputId,i);inp.value='';_fetchAc(_acQ,true);};
       }
       lst.appendChild(dv);
     });
@@ -2229,26 +2227,6 @@ function _clearTags(inputId){
   _renderTags(inputId);
   const inp=document.getElementById(inputId);
   if(inp)inp.value='';
-}
-
-/* ─── autocomplete (campos simples sem tag) ─── */
-function setupAC(iid,lid,ep){
-  const inp=document.getElementById(iid),lst=document.getElementById(lid);
-  if(!inp||!lst)return;
-  inp.addEventListener('input',()=>{
-    clearTimeout(acT[iid]);
-    const q=inp.value.trim();
-    if(q.length<2){lst.style.display='none';return}
-    acT[iid]=setTimeout(async()=>{
-      const res=await fetch(`${API}/api/autocomplete/${ep}?q=${encodeURIComponent(q)}`).then(r=>r.json()).catch(()=>({items:[]}));
-      const it=Array.isArray(res)?res:(res.items||[]);
-      lst.innerHTML='';
-      if(!it.length){lst.style.display='none';return}
-      it.forEach(i=>{const dv=document.createElement('div');dv.textContent=i;dv.onclick=()=>{inp.value=i;lst.style.display='none';inp.dispatchEvent(new Event('change'))};lst.appendChild(dv)});
-      lst.style.display='block';
-    },80);
-  });
-  document.addEventListener('click',e=>{if(!inp.contains(e.target)&&!lst.contains(e.target))lst.style.display='none'});
 }
 
 /* ─── seleção / export ─── */
@@ -2428,11 +2406,10 @@ function fmtBRL_map(v){if(!v||v===0)return'—';if(v>=1e6)return'R$ '+(v/1e6).to
 
 function _getMapaParams(){
   const p=new URLSearchParams();
-  const v=id=>(document.getElementById(id)?.value||'').trim();
-  if(v('map-rua'))p.append('logradouro',v('map-rua'));
-  if(v('map-bairro'))p.append('bairro',v('map-bairro'));
-  if(v('map-cep'))p.append('cep',v('map-cep'));
-  if(v('map-numero'))p.append('numero',v('map-numero'));
+  const rua=_getTagValue('map-rua');if(rua)p.append('logradouro',rua);
+  const bairro=_getTagValue('map-bairro');if(bairro)p.append('bairro',bairro);
+  const cep=_getTagValue('map-cep');if(cep)p.append('cep',cep);
+  const numero=_getTagValue('map-numero');if(numero)p.append('numero',numero);
   return p;
 }
 function _atualizarHintMapa(){
@@ -2448,7 +2425,7 @@ function buscarNoMapa(){
   else carregarPontos();
 }
 function limparMapa(){
-  ['map-rua','map-bairro','map-cep','map-numero'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  ['map-rua','map-bairro','map-cep','map-numero'].forEach(id=>_clearTags(id));
   if(mapaVisivel)carregarPontos();
 }
 async function carregarPontos(){
@@ -2501,24 +2478,24 @@ async function carregarPontos(){
 }
 function filtrarPorCEP(cep){
   const cepFmt=cep.replace(/^(\d{5})(\d{3})$/,'$1-$2');
-  document.getElementById('fc').value=cepFmt;
-  const mc=document.getElementById('map-cep');if(mc)mc.value=cepFmt;
+  _addTag('fc',cepFmt);
+  _addTag('map-cep',cepFmt);
   mapaInst?.closePopup();
   buscar(1);
   if(mapaVisivel)setTimeout(carregarPontos,800);
 }
 function filtrarPorBairro(cep){
   const pt=_mapaPontosCache[cep];if(!pt||!pt.bairro)return;
-  document.getElementById('fb').value=pt.bairro;
-  const mb=document.getElementById('map-bairro');if(mb)mb.value=pt.bairro;
+  _addTag('fb',pt.bairro);
+  _addTag('map-bairro',pt.bairro);
   mapaInst?.closePopup();
   buscar(1);
   if(mapaVisivel)setTimeout(carregarPontos,800);
 }
 function filtrarPorLogradouro(cep){
   const pt=_mapaPontosCache[cep];if(!pt||!pt.logradouro)return;
-  document.getElementById('fl').value=pt.logradouro;
-  const mr=document.getElementById('map-rua');if(mr)mr.value=pt.logradouro;
+  _addTag('fl',pt.logradouro);
+  _addTag('map-rua',pt.logradouro);
   mapaInst?.closePopup();
   buscar(1);
   if(mapaVisivel)setTimeout(carregarPontos,800);

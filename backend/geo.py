@@ -192,6 +192,14 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
+    def _multi_like(col: str, value: str):
+        """Suporte a múltiplos valores separados por vírgula (chips) -> OR no SQL."""
+        vals = [v.strip() for v in value.split(",") if v.strip()]
+        if not vals:
+            return None, []
+        clauses = [f"UPPER({col}) LIKE UPPER(?)" for _ in vals]
+        return "(" + " OR ".join(clauses) + ")", [f"%{v}%" for v in vals]
+
     # Monta WHERE para a query de transações
     conds, params = [], []
     if ids:
@@ -200,17 +208,21 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
         params.extend(ids)
     else:
         if filtros.get('logradouro'):
-            conds.append("UPPER(t.logradouro) LIKE UPPER(?)")
-            params.append(f"%{filtros['logradouro']}%")
+            cl, pr = _multi_like("t.logradouro", filtros['logradouro'])
+            if cl: conds.append(cl); params.extend(pr)
         if filtros.get('bairro'):
-            conds.append("UPPER(t.bairro) LIKE UPPER(?)")
-            params.append(f"%{filtros['bairro']}%")
+            cl, pr = _multi_like("t.bairro", filtros['bairro'])
+            if cl: conds.append(cl); params.extend(pr)
         if filtros.get('cep'):
-            conds.append("t.cep LIKE ?")
-            params.append(f"{filtros['cep'].replace('-','')}%")
+            ceps = [v.strip().replace('-', '') for v in filtros['cep'].split(",") if v.strip()]
+            if ceps:
+                conds.append("(" + " OR ".join(["t.cep LIKE ?"] * len(ceps)) + ")")
+                params.extend(f"{c}%" for c in ceps)
         if filtros.get('numero'):
-            conds.append("t.numero = ?")
-            params.append(filtros['numero'])
+            numeros = [v.strip() for v in filtros['numero'].split(",") if v.strip()]
+            if numeros:
+                conds.append("(" + " OR ".join(["t.numero = ?"] * len(numeros)) + ")")
+                params.extend(numeros)
         if filtros.get('ano_min'):
             conds.append("t.ano_referencia >= ?")
             params.append(int(filtros['ano_min']))
