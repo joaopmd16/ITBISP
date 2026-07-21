@@ -144,7 +144,7 @@
 </div>
 
 <script>
-const API=location.hostname==='localhost'?'http://localhost:8000':`${location.protocol}//${location.hostname}`;
+const API=location.hostname==='localhost'?'http://localhost:8000':location.origin;
 let modo='login';
 
 /* Status de assinatura que já liberam o dashboard (sem passar pelo Stripe).
