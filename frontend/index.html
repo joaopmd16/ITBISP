@@ -354,18 +354,10 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .popup-row{font-size:12px;color:var(--mu);margin-bottom:4px;display:flex;justify-content:space-between;gap:12px}
 .popup-row b{color:var(--ink);font-family:'JetBrains Mono';font-weight:500}
 .popup-btn{margin-top:10px;background:var(--primary);color:#fff;border:none;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:12px;font-weight:600;width:100%;font-family:inherit}
-.popup-info-btn{flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--primary);color:var(--primary);background:none;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit;line-height:1;padding:0}
-.popup-info-btn:hover{background:var(--primary);color:#fff}
 .popup-filters{display:flex;gap:5px;margin-top:10px;flex-wrap:wrap}
 .popup-filt-btn{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);border-radius:8px;padding:6px 4px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .popup-filt-btn:hover{border-color:var(--primary);color:var(--primary)}
 .popup-filt-btn:disabled{opacity:.4;cursor:default}
-.popup-detail{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);max-height:180px;overflow-y:auto}
-.popup-detail-loading,.popup-detail-empty{font-size:11px;color:var(--mu);text-align:center;padding:8px 0}
-.popup-trans-row{display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:6px 4px;border-radius:6px;cursor:pointer;color:var(--ink-2)}
-.popup-trans-row:hover{background:var(--surface-2);color:var(--ink)}
-.popup-trans-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.popup-trans-row b{color:var(--ink);font-family:'JetBrains Mono';flex-shrink:0}
 
 /* ─── tabela ─── */
 .tbox{background:var(--surface);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--shadow)}
@@ -2410,7 +2402,7 @@ function exportarTudo(tipo){
 
 /* ─── mapa ─── */
 let mapaInst=null,mapaVisivel=false,mapaLayer=null,_mapaPolling=null;
-let _mapaPontosCache={},_mapaTransCache={};
+let _mapaPontosCache={};
 function _escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function toggleMapa(){
   const btn=document.getElementById('map-toggle-btn'),div=document.getElementById('mapa'),leg=document.getElementById('map-legend');
@@ -2476,7 +2468,7 @@ async function carregarPontos(){
       const cepFmt=pt.cep.replace(/^(\d{5})(\d{3})$/,'$1-$2');
       const dBairro=pt.bairro?'':'disabled',dRua=pt.logradouro?'':'disabled';
       circle.bindPopup(`
-<div class="popup-title"><span>${_escHtml(pt.bairro||cepFmt)}</span><button class="popup-info-btn" onclick="abrirInfoPonto('${pt.cep}')" title="Ver transações">ⓘ</button></div>
+<div class="popup-title"><span>${_escHtml(pt.bairro||cepFmt)}</span></div>
 <div class="popup-row"><span>CEP</span><b>${cepFmt}</b></div>
 <div class="popup-row"><span>Transações</span><b>${pt.count.toLocaleString('pt-BR')}</b></div>
 <div class="popup-row"><span>Ticket médio</span><b>${fmtBRL_map(pt.avg_valor)}</b></div>
@@ -2485,8 +2477,7 @@ async function carregarPontos(){
   <button class="popup-filt-btn" ${dBairro} onclick="filtrarPorBairro('${pt.cep}')" title="${_escHtml(pt.bairro)}">Bairro</button>
   <button class="popup-filt-btn" onclick="filtrarPorCEP('${pt.cep}')" title="${cepFmt}">CEP</button>
   <button class="popup-filt-btn" ${dRua} onclick="filtrarPorLogradouro('${pt.cep}')" title="${_escHtml(pt.logradouro)}">Logradouro</button>
-</div>
-<div class="popup-detail" id="popup-detail-${pt.cep}" style="display:none"></div>`,{maxWidth:270});
+</div>`,{maxWidth:270});
       mapaLayer.addLayer(circle);
     });
     mapaLayer.addTo(mapaInst);
@@ -2531,32 +2522,6 @@ function filtrarPorLogradouro(cep){
   mapaInst?.closePopup();
   buscar(1);
   if(mapaVisivel)setTimeout(carregarPontos,800);
-}
-async function abrirInfoPonto(cep){
-  const el=document.getElementById('popup-detail-'+cep);
-  if(!el)return;
-  if(el.style.display!=='none'){el.style.display='none';return}
-  el.style.display='block';
-  el.innerHTML='<div class="popup-detail-loading">Carregando…</div>';
-  try{
-    const data=await fetch(`${API}/api/transacoes?cep=${encodeURIComponent(cep)}&por_pagina=8&sort=data_transacao&dir=desc`).then(r=>r.json());
-    const dados=data.dados||[];
-    if(!dados.length){el.innerHTML='<div class="popup-detail-empty">Nenhuma transação encontrada.</div>';return}
-    if(dados.length===1){
-      el.style.display='none';
-      mapaInst?.closePopup();
-      openModal(dados[0]);
-      return;
-    }
-    _mapaTransCache[cep]=dados;
-    el.innerHTML=dados.map((d,i)=>`<div class="popup-trans-row" onclick="abrirTransDoCache('${cep}',${i})"><span>${_escHtml((d.logradouro||'—')+(d.numero?', '+d.numero:''))}</span><b>${brl(d.valor_declarado)}</b></div>`).join('');
-  }catch(e){
-    el.innerHTML='<div class="popup-detail-empty">Erro ao carregar.</div>';
-  }
-}
-function abrirTransDoCache(cep,idx){
-  const d=(_mapaTransCache[cep]||[])[idx];
-  if(d){mapaInst?.closePopup();openModal(d)}
 }
 
 /* ─── modal de sincronização ─── */
