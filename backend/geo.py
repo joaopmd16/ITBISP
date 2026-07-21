@@ -231,6 +231,7 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
         SELECT
             REPLACE(t.cep, '-', '') AS cep_clean,
             MAX(t.bairro) AS bairro_db,
+            MAX(t.logradouro) AS logradouro_db,
             COUNT(*) AS total,
             AVG(t.valor_declarado) AS avg_valor,
             MAX(t.valor_declarado) AS max_valor,
@@ -261,7 +262,8 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
                 "cep":       cep,
                 "lat":       r["lat"],
                 "lng":       r["lng"],
-                "bairro":    r["bairro_db"] or r["bairro_geo"] or "",
+                "bairro":     r["bairro_db"] or r["bairro_geo"] or "",
+                "logradouro": r["logradouro_db"] or "",
                 "count":     r["total"],
                 "avg_valor": round(r["avg_valor"] or 0),
                 "max_valor": round(r["max_valor"] or 0),
