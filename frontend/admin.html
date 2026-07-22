@@ -695,7 +695,7 @@ async function dispararSincronizacao(){
 
 async function atualizarStatusSync(){
   try{
-    const data = await fetch(`${API}/api/sincronizar/status`).then(r=>r.json());
+    const data = await api('/api/sincronizar/status');
     document.getElementById('syncStatusLabel').textContent = data.rodando ? 'Rodando...' : 'Parado';
     document.getElementById('syncLog').textContent = (data.log || []).join('\n');
     document.getElementById('syncBtn').disabled = data.rodando;
