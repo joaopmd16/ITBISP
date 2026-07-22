@@ -120,6 +120,9 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.create_function("UNACCENT", 1, _unaccent)   # disponível em todas as queries
+    # Sem isso, uma escrita concorrente com o scraper/popular_iptu (que segura o banco por
+    # bastante tempo) falha na hora com "database is locked" em vez de esperar a vaga.
+    conn.execute("PRAGMA busy_timeout = 10000")
     try:
         yield conn
     finally:
