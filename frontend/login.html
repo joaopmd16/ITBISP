@@ -69,6 +69,17 @@
   input::placeholder{color:var(--mu-2,#606060)}
   input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
 
+  .pw-wrap{position:relative;margin-bottom:16px}
+  .pw-wrap input{margin-bottom:0;padding-right:44px}
+  .pw-toggle{position:absolute;right:2px;top:0;bottom:0;width:40px;display:flex;
+             align-items:center;justify-content:center;background:none;border:none;
+             cursor:pointer;color:var(--mu);padding:0}
+  .pw-toggle:hover{color:var(--ink)}
+  .pw-toggle svg{width:18px;height:18px}
+  .pw-toggle .icon-off{display:none}
+  .pw-toggle.shown .icon-on{display:none}
+  .pw-toggle.shown .icon-off{display:block}
+
   /* campos exclusivos do cadastro */
   .only-cadastro{display:none}
   .row{display:flex;gap:12px}
@@ -128,7 +139,13 @@
     <input type="email" id="email" required autocomplete="email" placeholder="voce@exemplo.com">
 
     <label>Senha</label>
-    <input type="password" id="senha" required minlength="6" autocomplete="current-password" placeholder="••••••••">
+    <div class="pw-wrap">
+      <input type="password" id="senha" required minlength="6" autocomplete="current-password" placeholder="••••••••">
+      <button type="button" class="pw-toggle" onclick="toggleSenha('senha',this)" aria-label="Mostrar senha" tabindex="-1">
+        <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
 
     <div id="linkEsqueciSenha" style="text-align:right;margin:-10px 0 16px">
       <a href="#" onclick="mostrarEsqueciSenha();return false;" style="color:var(--mu);font-size:.8rem;text-decoration:underline">Esqueceu a senha?</a>
@@ -136,7 +153,13 @@
 
     <div class="only-cadastro" id="camposCadastroSenha">
       <label>Confirmar senha</label>
-      <input type="password" id="senha2" minlength="6" autocomplete="new-password" placeholder="••••••••" disabled>
+      <div class="pw-wrap">
+        <input type="password" id="senha2" minlength="6" autocomplete="new-password" placeholder="••••••••" disabled>
+        <button type="button" class="pw-toggle" onclick="toggleSenha('senha2',this)" aria-label="Mostrar senha" tabindex="-1">
+          <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
     </div>
 
     <button type="submit" class="btn-primary" id="btnSubmit">Entrar</button>
@@ -257,9 +280,21 @@ function mostrarRedefinirSenha(token){
     <div id="msgRedefinir" class="msg"></div>
     <form id="formRedefinir" onsubmit="return enviarRedefinirSenha(event)">
       <label>Nova senha</label>
-      <input type="password" id="novaSenha" required minlength="6" autocomplete="new-password" placeholder="••••••••">
+      <div class="pw-wrap">
+        <input type="password" id="novaSenha" required minlength="6" autocomplete="new-password" placeholder="••••••••">
+        <button type="button" class="pw-toggle" onclick="toggleSenha('novaSenha',this)" aria-label="Mostrar senha" tabindex="-1">
+          <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
       <label>Confirmar nova senha</label>
-      <input type="password" id="novaSenha2" required minlength="6" autocomplete="new-password" placeholder="••••••••">
+      <div class="pw-wrap">
+        <input type="password" id="novaSenha2" required minlength="6" autocomplete="new-password" placeholder="••••••••">
+        <button type="button" class="pw-toggle" onclick="toggleSenha('novaSenha2',this)" aria-label="Mostrar senha" tabindex="-1">
+          <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
       <button type="submit" class="btn-primary" id="btnRedefinir">Salvar nova senha</button>
     </form>`;
   document.getElementById('formRedefinir').dataset.token=token;
@@ -308,6 +343,15 @@ function trocarAba(m){
     el.required=ehCadastro;
   });
   document.getElementById('msg').textContent=''; document.getElementById('msg').className='msg';
+}
+
+function toggleSenha(id,btn){
+  const inp=document.getElementById(id);
+  if(!inp)return;
+  const mostrar=inp.type==='password';
+  inp.type=mostrar?'text':'password';
+  btn.classList.toggle('shown',mostrar);
+  btn.setAttribute('aria-label',mostrar?'Ocultar senha':'Mostrar senha');
 }
 
 function mascaraTelefone(el){
