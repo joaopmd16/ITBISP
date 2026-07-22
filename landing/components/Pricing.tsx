@@ -16,7 +16,7 @@ const PLAN = {
 };
 
 const PROMO = {
-  price: "R$ 30",
+  price: "R$ 29,90",
   meses: 3,
   cupom: "ITBIREMAX30",
   validoAte: "12/08/2026",
@@ -65,7 +65,7 @@ export default function Pricing() {
             <p className="mt-2 text-xs font-medium text-accent">
               nos {PROMO.meses} primeiros meses com o cupom{" "}
               <span className="font-mono font-bold">{PROMO.cupom}</span>
-              {" "}· depois {PLAN.price}
+              {" "}· a partir do 4º mês {PLAN.price}
               {PLAN.period}
             </p>
             <p className="mt-1 text-[11px] text-neutral-600">
