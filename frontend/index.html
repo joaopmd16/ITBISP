@@ -191,6 +191,8 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .calc-slot input::-webkit-outer-spin-button,.calc-slot input::-webkit-inner-spin-button{-webkit-appearance:none}
 .calc-slot input:focus{border-color:#ff8c42;box-shadow:0 0 0 3px #ff8c4218}
 .calc-slot input.modified{border-color:#ff8c42;background:#ff8c420d}
+.acc-input{width:100%;padding:10px 14px;margin-bottom:8px;border-radius:var(--r-input);border:1.5px solid var(--line);background:var(--surface-2);color:var(--fg);font-size:13.5px;font-family:inherit;outline:none;transition:border-color .15s}
+.acc-input:focus{border-color:var(--primary)}
 .calc-op{display:flex;align-items:center;justify-content:center;padding:0 4px;font-size:26px;font-weight:200;color:var(--muted);align-self:center;user-select:none;flex-shrink:0}
 .calc-result-slot{flex:1.3;padding:20px 24px;display:flex;flex-direction:column;gap:6px;background:linear-gradient(135deg,#ff8c4210 0%,transparent 60%);border-left:1px solid var(--line)}
 .calc-result-slot label{font-size:10.5px;font-weight:700;color:#ff8c42;text-transform:uppercase;letter-spacing:.06em}
@@ -1185,6 +1187,28 @@ async function toggleConta(){
     }
     body.innerHTML=`
       <div class="settings-section">
+        <div class="settings-label">Meus dados</div>
+        <input class="acc-input" id="accNome" placeholder="Nome" value="${(r.nome||'').replace(/"/g,'&quot;')}">
+        <input class="acc-input" id="accSobrenome" placeholder="Sobrenome" value="${(r.sobrenome||'').replace(/"/g,'&quot;')}">
+        <input class="acc-input" id="accTelefone" placeholder="Telefone" value="${(r.telefone||'').replace(/"/g,'&quot;')}">
+        <button class="sopt" style="width:100%" onclick="salvarPerfil()">Salvar dados</button>
+        <div class="settings-info" id="accPerfilMsg"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Alterar e-mail</div>
+        <div class="settings-info" id="accEmailPendenteInfo">${r.email_pendente?`Confirmação pendente para ${r.email_pendente}`:''}</div>
+        <input class="acc-input" id="accNovoEmail" type="email" placeholder="Novo e-mail">
+        <button class="sopt" style="width:100%" onclick="trocarEmail()">Enviar confirmação</button>
+        <div class="settings-info" id="accEmailMsg"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Alterar senha</div>
+        <input class="acc-input" id="accSenhaAtual" type="password" placeholder="Senha atual">
+        <input class="acc-input" id="accSenhaNova" type="password" placeholder="Nova senha">
+        <button class="sopt" style="width:100%" onclick="trocarSenha()">Alterar senha</button>
+        <div class="settings-info" id="accSenhaMsg"></div>
+      </div>
+      <div class="settings-section">
         <div class="settings-label">Assinatura</div>
         <div class="settings-info">
           Status: ${ASSINATURA_LABEL[a.status]||a.status||'—'}<br>
@@ -1206,6 +1230,38 @@ async function toggleConta(){
   }catch(e){
     body.innerHTML='<div class="settings-info">Erro ao carregar dados da conta.</div>';
   }
+}
+
+async function salvarPerfil(){
+  const msg=document.getElementById('accPerfilMsg'); msg.textContent='';
+  try{
+    const res=await fetch(`${API}/api/usuario/perfil`,{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({nome:accNome.value.trim(),sobrenome:accSobrenome.value.trim(),telefone:accTelefone.value.trim()})});
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.detail||'Erro ao salvar');
+    msg.textContent='Dados atualizados.'; await carregarMeuUsuario();
+  }catch(e){ msg.textContent=e.message; }
+}
+async function trocarEmail(){
+  const msg=document.getElementById('accEmailMsg'); msg.textContent='';
+  try{
+    const res=await fetch(`${API}/api/usuario/trocar-email`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({novo_email:accNovoEmail.value.trim()})});
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.detail||'Erro ao solicitar troca');
+    msg.textContent='Enviamos um link de confirmação para o novo e-mail.';
+    document.getElementById('accEmailPendenteInfo').textContent=`Confirmação pendente para ${d.email_pendente}`;
+  }catch(e){ msg.textContent=e.message; }
+}
+async function trocarSenha(){
+  const msg=document.getElementById('accSenhaMsg'); msg.textContent='';
+  try{
+    const res=await fetch(`${API}/api/usuario/trocar-senha`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({senha_atual:accSenhaAtual.value,nova_senha:accSenhaNova.value})});
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.detail||'Erro ao trocar senha');
+    msg.textContent='Senha alterada com sucesso.'; accSenhaAtual.value=''; accSenhaNova.value='';
+  }catch(e){ msg.textContent=e.message; }
 }
 
 let CH={},PG=1,SC='ano_referencia',SD='desc',allAnos=[],acT={},natFilter='all';

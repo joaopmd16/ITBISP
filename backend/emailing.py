@@ -48,6 +48,23 @@ def enviar_redefinicao_senha(email: str, nome: str, token: str) -> None:
     _enviar(email, "Redefinir senha — ITBI Smart", html)
 
 
+def enviar_confirmacao_troca_email(email: str, nome: str, token: str) -> None:
+    link = f"{API_BASE}/api/auth/confirmar-troca-email?token={token}"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
+      <h2 style="color:#e08560">Confirme seu novo e-mail</h2>
+      <p>Olá{f', {nome}' if nome else ''}! Confirme para trocar o e-mail da sua conta no ITBI Smart para este endereço.</p>
+      <p>
+        <a href="{link}" style="background:#e08560;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">
+          Confirmar novo e-mail
+        </a>
+      </p>
+      <p style="color:#888;font-size:13px">Se você não pediu essa troca, ignore este e-mail. Este link expira em 24 horas.</p>
+    </div>
+    """
+    _enviar(email, "Confirme seu novo e-mail — ITBI Smart", html)
+
+
 def _enviar(destinatario: str, assunto: str, html: str) -> None:
     if not RESEND_API_KEY:
         raise RuntimeError("RESEND_API_KEY não configurado")

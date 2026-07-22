@@ -445,6 +445,7 @@ const LOG_LABEL = {
   'criar-usuario': 'Usuário criado pelo admin',
   'desativar': 'Desativou usuário',
   'reativar': 'Reativou usuário',
+  'editar-perfil': 'Editou dados do usuário',
 };
 
 async function abrirDetalhes(id){
@@ -471,6 +472,7 @@ async function abrirDetalhes(id){
         <div><div class="l">Acesso até</div><div class="v">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : '—'}</div></div>
         <div><div class="l">Cadastro</div><div class="v">${fmtData(u.criado_em)}</div></div>
         <div><div class="l">Último acesso</div><div class="v">${fmtData(u.ultimo_acesso)}</div></div>
+        ${u.email_pendente ? `<div style="grid-column:1/-1"><div class="l">E-mail pendente</div><div class="v">${u.email_pendente} <span class="warn-email">aguardando confirmação do usuário</span></div></div>` : ''}
       </div>
       <div class="sec-title">Ações rápidas</div>
       <div class="actions">
@@ -482,12 +484,47 @@ async function abrirDetalhes(id){
           ? `<button class="act danger" onclick='desativarUsuario(${u.id})'>Desativar</button>`
           : `<button class="act ok" onclick='reativarUsuario(${u.id})'>Reativar</button>`}
       </div>
+      <div class="sec-title">Editar dados</div>
+      <form onsubmit="return salvarPerfilAdmin(event, ${u.id})">
+        <div class="field-row">
+          <div class="field"><label>Nome</label><input id="epNome" type="text" value="${(u.nome||'').replace(/"/g,'&quot;')}"></div>
+          <div class="field"><label>Sobrenome</label><input id="epSobrenome" type="text" value="${(u.sobrenome||'').replace(/"/g,'&quot;')}"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>E-mail</label><input id="epEmail" type="email" value="${u.email}"></div>
+          <div class="field"><label>Telefone</label><input id="epTelefone" type="text" value="${(u.telefone||'').replace(/"/g,'&quot;')}"></div>
+        </div>
+        <button class="btn-primary" type="submit">Salvar alterações</button>
+        <div id="epMsg"></div>
+      </form>
       <div class="sec-title">Logs de ações do admin</div>
       ${logsHtml}
     `;
   }catch(e){
     document.getElementById('dConteudo').innerHTML = `<div class="msg err">${e.message}</div>`;
   }
+}
+
+async function salvarPerfilAdmin(ev, id){
+  ev.preventDefault();
+  const msg = document.getElementById('epMsg');
+  msg.innerHTML = '';
+  try{
+    await api(`/api/admin/usuarios/${id}/perfil`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        nome: document.getElementById('epNome').value.trim(),
+        sobrenome: document.getElementById('epSobrenome').value.trim(),
+        telefone: document.getElementById('epTelefone').value.trim(),
+        email: document.getElementById('epEmail').value.trim(),
+      })
+    });
+    msg.innerHTML = `<div class="msg ok">Dados atualizados.</div>`;
+    setTimeout(()=>{ abrirDetalhes(id); carregar(); }, 700);
+  }catch(e){
+    msg.innerHTML = `<div class="msg err">${e.message}</div>`;
+  }
+  return false;
 }
 
 async function revogarDetalhe(id){

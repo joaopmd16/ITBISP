@@ -258,6 +258,7 @@ def startup():
             "token_reset_senha_exp TEXT",
             "ultimo_acesso TEXT",
             "ativo INTEGER DEFAULT 1",
+            "email_pendente TEXT",
         ):
             try:
                 conn.execute(f"ALTER TABLE usuarios ADD COLUMN {coluna}")
@@ -1015,6 +1016,28 @@ def verificar_email(token: str):
     return RedirectResponse(url="/dashboard/login.html?verificado=1")
 
 
+@app.get("/api/auth/confirmar-troca-email")
+def confirmar_troca_email(token: str):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, email_pendente, token_verificacao_exp FROM usuarios WHERE token_verificacao = ?",
+            (token,),
+        ).fetchone()
+        if not row or not row["email_pendente"]:
+            raise HTTPException(400, "Link de confirmação inválido")
+        if row["token_verificacao_exp"] and datetime.fromisoformat(row["token_verificacao_exp"]) < datetime.utcnow():
+            raise HTTPException(400, "Link expirado. Solicite a troca novamente.")
+        try:
+            conn.execute(
+                "UPDATE usuarios SET email = ?, email_pendente = NULL, token_verificacao = NULL, token_verificacao_exp = NULL WHERE id = ?",
+                (row["email_pendente"], row["id"]),
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            raise HTTPException(409, "Esse e-mail foi usado por outra conta enquanto a confirmação estava pendente.")
+    return RedirectResponse(url="/dashboard/login.html?email_alterado=1")
+
+
 class ReenviarIn(BaseModel):
     email: str
 
@@ -1176,7 +1199,7 @@ def abrir_portal(usuario: dict = Depends(auth.get_usuario_atual)):
 def minha_conta(usuario: dict = Depends(auth.get_usuario_atual)):
     with get_db() as conn:
         u = conn.execute(
-            "SELECT nome, sobrenome, email, criado_em, ultimo_acesso FROM usuarios WHERE id = ?",
+            "SELECT nome, sobrenome, email, telefone, email_pendente, criado_em, ultimo_acesso FROM usuarios WHERE id = ?",
             (usuario["id"],),
         ).fetchone()
         a = conn.execute(
@@ -1210,12 +1233,92 @@ def minha_conta(usuario: dict = Depends(auth.get_usuario_atual)):
         "nome": u["nome"] if u else "",
         "sobrenome": u["sobrenome"] if u else "",
         "email": u["email"] if u else usuario["email"],
+        "telefone": u["telefone"] if u else "",
+        "email_pendente": u["email_pendente"] if u else None,
         "criado_em": u["criado_em"] if u else None,
         "ultimo_acesso": u["ultimo_acesso"] if u else None,
         "is_admin": usuario["email"] == ADMIN_EMAIL,
         "assinatura": assinatura,
         "faturas": faturas,
     }
+
+
+# ──────────────────────────────────────────────
+# USUÁRIO — autoatendimento (editar dados, trocar e-mail/senha)
+# ──────────────────────────────────────────────
+
+class AtualizarPerfilIn(BaseModel):
+    nome: str
+    sobrenome: str
+    telefone: str
+
+
+@app.put("/api/usuario/perfil")
+def atualizar_perfil(dados: AtualizarPerfilIn, usuario: dict = Depends(auth.get_usuario_atual)):
+    nome, sobrenome, telefone = dados.nome.strip(), dados.sobrenome.strip(), dados.telefone.strip()
+    if not nome or not sobrenome:
+        raise HTTPException(400, "Informe nome e sobrenome")
+    if not telefone:
+        raise HTTPException(400, "Informe o telefone")
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE usuarios SET nome = ?, sobrenome = ?, telefone = ? WHERE id = ?",
+            (nome, sobrenome, telefone, usuario["id"]),
+        )
+        conn.commit()
+    return {"status": "ok"}
+
+
+class TrocarEmailIn(BaseModel):
+    novo_email: str
+
+
+@app.post("/api/usuario/trocar-email")
+def trocar_email(dados: TrocarEmailIn, usuario: dict = Depends(auth.get_usuario_atual)):
+    novo = dados.novo_email.strip().lower()
+    if not novo or "@" not in novo:
+        raise HTTPException(400, "E-mail inválido")
+    if novo == usuario["email"]:
+        raise HTTPException(400, "Esse já é o seu e-mail atual")
+    with get_db() as conn:
+        existe = conn.execute(
+            "SELECT 1 FROM usuarios WHERE email = ? AND id != ?", (novo, usuario["id"])
+        ).fetchone()
+        if existe:
+            raise HTTPException(409, "E-mail já está em uso por outra conta")
+        token = secrets.token_urlsafe(32)
+        expira_em = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+        conn.execute(
+            "UPDATE usuarios SET email_pendente = ?, token_verificacao = ?, token_verificacao_exp = ? WHERE id = ?",
+            (novo, token, expira_em, usuario["id"]),
+        )
+        conn.commit()
+        nome_row = conn.execute("SELECT nome FROM usuarios WHERE id = ?", (usuario["id"],)).fetchone()
+    try:
+        emailing.enviar_confirmacao_troca_email(novo, nome_row["nome"] or "", token)
+    except Exception:
+        raise HTTPException(500, "Não foi possível enviar o e-mail de confirmação. Tente novamente.")
+    return {"status": "confirmacao_enviada", "email_pendente": novo}
+
+
+class TrocarSenhaIn(BaseModel):
+    senha_atual: str
+    nova_senha: str
+
+
+@app.post("/api/usuario/trocar-senha")
+def trocar_senha(dados: TrocarSenhaIn, usuario: dict = Depends(auth.get_usuario_atual)):
+    if len(dados.nova_senha) < 6:
+        raise HTTPException(400, "Senha muito curta (mín. 6 caracteres)")
+    with get_db() as conn:
+        row = conn.execute("SELECT senha_hash FROM usuarios WHERE id = ?", (usuario["id"],)).fetchone()
+        if not row or not auth.verificar_senha(dados.senha_atual, row["senha_hash"]):
+            raise HTTPException(401, "Senha atual incorreta")
+        if _senha_ja_usada(conn, usuario["id"], dados.nova_senha, row["senha_hash"]):
+            raise HTTPException(400, "Você já usou essa senha antes. Escolha uma senha diferente.")
+        _trocar_senha(conn, usuario["id"], auth.hash_senha(dados.nova_senha))
+        conn.commit()
+    return {"status": "ok"}
 
 
 @app.post("/api/webhook/stripe")
@@ -1271,7 +1374,7 @@ def exigir_admin(usuario: dict = Depends(auth.get_usuario_atual)) -> dict:
 def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         rows = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo,
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
                    a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
@@ -1314,7 +1417,7 @@ def admin_criar_usuario(dados: CriarUsuarioAdminIn, admin: dict = Depends(exigir
 def admin_detalhes_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         usuario = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo,
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
                    a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
@@ -1385,6 +1488,36 @@ def admin_reativar(usuario_id: int, admin: dict = Depends(exigir_admin)):
         _log_admin(conn, usuario_id, "reativar")
         conn.commit()
     return {"status": "reativado"}
+
+
+class EditarPerfilAdminIn(BaseModel):
+    nome: str
+    sobrenome: str
+    telefone: str
+    email: str
+
+
+@app.put("/api/admin/usuarios/{usuario_id}/perfil")
+def admin_editar_perfil(usuario_id: int, dados: EditarPerfilAdminIn, admin: dict = Depends(exigir_admin)):
+    email = dados.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(400, "E-mail inválido")
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        duplicado = conn.execute(
+            "SELECT 1 FROM usuarios WHERE email = ? AND id != ?", (email, usuario_id)
+        ).fetchone()
+        if duplicado:
+            raise HTTPException(409, "E-mail já está em uso por outra conta")
+        conn.execute(
+            "UPDATE usuarios SET nome = ?, sobrenome = ?, telefone = ?, email = ? WHERE id = ?",
+            (dados.nome.strip(), dados.sobrenome.strip(), dados.telefone.strip(), email, usuario_id),
+        )
+        _log_admin(conn, usuario_id, "editar-perfil")
+        conn.commit()
+    return {"status": "ok"}
 
 
 class LiberarAcessoIn(BaseModel):
