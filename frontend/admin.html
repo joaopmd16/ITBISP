@@ -421,7 +421,7 @@ function renderTabela(usuarios){
       <td>${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</td>
       <td class="muted">${u.telefone || '—'}</td>
       <td>${badge(u.status)}</td>
-      <td class="muted">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : '—'}</td>
+      <td class="muted">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : (u.status==='dev' ? 'Vitalício' : '—')}</td>
       <td class="muted">${fmtData(u.criado_em)}</td>
       <td onclick="event.stopPropagation()">
         <div class="actions">
@@ -469,7 +469,7 @@ async function abrirDetalhes(id){
         <div><div class="l">E-mail</div><div class="v">${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</div></div>
         <div><div class="l">Telefone</div><div class="v">${u.telefone || '—'}</div></div>
         <div><div class="l">Status</div><div class="v">${badge(u.status)}</div></div>
-        <div><div class="l">Acesso até</div><div class="v">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : '—'}</div></div>
+        <div><div class="l">Acesso até</div><div class="v">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : (u.status==='dev' ? 'Vitalício' : '—')}</div></div>
         <div><div class="l">Cadastro</div><div class="v">${fmtData(u.criado_em)}</div></div>
         <div><div class="l">Último acesso</div><div class="v">${fmtData(u.ultimo_acesso)}</div></div>
         ${u.email_pendente ? `<div style="grid-column:1/-1"><div class="l">E-mail pendente</div><div class="v">${u.email_pendente} <span class="warn-email">aguardando confirmação do usuário</span></div></div>` : ''}
