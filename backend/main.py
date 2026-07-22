@@ -271,6 +271,10 @@ def startup():
             conn.execute("ALTER TABLE assinaturas ADD COLUMN acesso_expira_em TEXT")
         except sqlite3.OperationalError:
             pass  # coluna já existe
+        try:
+            conn.execute("ALTER TABLE assinaturas ADD COLUMN periodo_fim INTEGER")
+        except sqlite3.OperationalError:
+            pass  # coluna já existe
         conn.commit()
 
     # 2. Cache de geocodificação (mapa)
@@ -1337,17 +1341,26 @@ async def webhook_stripe(request: Request):
         if tipo == "checkout.session.completed":
             usuario_id = int(obj.get("client_reference_id") or obj.get("metadata", {}).get("usuario_id", 0))
             if usuario_id:
+                periodo_fim = None
+                subscription_id = obj.get("subscription")
+                if subscription_id:
+                    try:
+                        detalhes = billing.detalhes_assinatura(subscription_id)
+                        periodo_fim = detalhes["periodo_fim"] if detalhes else None
+                    except Exception:
+                        pass
                 conn.execute(
                     """UPDATE assinaturas SET stripe_customer_id = ?, stripe_subscription_id = ?,
-                       status = 'active', atualizado_em = datetime('now') WHERE usuario_id = ?""",
-                    (obj.get("customer"), obj.get("subscription"), usuario_id),
+                       status = 'active', periodo_fim = ?, atualizado_em = datetime('now') WHERE usuario_id = ?""",
+                    (obj.get("customer"), subscription_id, periodo_fim, usuario_id),
                 )
         elif tipo in ("customer.subscription.updated", "customer.subscription.deleted"):
             status = obj.get("status", "inativa")
+            periodo_fim = obj.get("current_period_end")
             conn.execute(
-                """UPDATE assinaturas SET status = ?, atualizado_em = datetime('now')
+                """UPDATE assinaturas SET status = ?, periodo_fim = ?, atualizado_em = datetime('now')
                    WHERE stripe_subscription_id = ?""",
-                (status, obj.get("id")),
+                (status, periodo_fim, obj.get("id")),
             )
         elif tipo == "invoice.payment_failed":
             conn.execute(
@@ -1375,12 +1388,28 @@ def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         rows = conn.execute("""
             SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
-                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
+                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.periodo_fim, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
             ORDER BY u.criado_em DESC
         """).fetchall()
-    return {"usuarios": rows_to_list(rows)}
+        usuarios = rows_to_list(rows)
+        # Backfill pontual: assinaturas criadas antes da coluna periodo_fim existir não têm
+        # esse dado até o próximo evento da Stripe — busca uma vez e grava localmente.
+        for u in usuarios:
+            if u["stripe_subscription_id"] and not u["periodo_fim"] and u["status"] in ("active", "past_due", "unpaid"):
+                try:
+                    detalhes = billing.detalhes_assinatura(u["stripe_subscription_id"])
+                    if detalhes and detalhes.get("periodo_fim"):
+                        conn.execute(
+                            "UPDATE assinaturas SET periodo_fim = ? WHERE usuario_id = ?",
+                            (detalhes["periodo_fim"], u["id"]),
+                        )
+                        u["periodo_fim"] = detalhes["periodo_fim"]
+                except Exception:
+                    pass
+        conn.commit()
+    return {"usuarios": usuarios}
 
 
 class CriarUsuarioAdminIn(BaseModel):
@@ -1418,7 +1447,7 @@ def admin_detalhes_usuario(usuario_id: int, admin: dict = Depends(exigir_admin))
     with get_db() as conn:
         usuario = conn.execute("""
             SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
-                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
+                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.periodo_fim, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
             WHERE u.id = ?

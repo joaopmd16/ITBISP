@@ -50,7 +50,8 @@
   .b-active{background:rgba(95,191,122,.15);color:var(--ok)}
   .b-trialing{background:rgba(224,185,95,.15);color:var(--warn)}
   .b-dev{background:rgba(95,127,224,.15);color:#7f9bee}
-  .b-inativa,.b-none{background:rgba(224,95,95,.15);color:var(--err)}
+  .b-inativa,.b-none,.b-canceled,.b-incomplete_expired{background:rgba(224,95,95,.15);color:var(--err)}
+  .b-past_due,.b-unpaid,.b-incomplete{background:rgba(224,185,95,.15);color:var(--warn)}
   .actions{display:flex;gap:6px;flex-wrap:wrap}
   button.act{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:12px;white-space:nowrap}
   button.act:hover{border-color:var(--primary);color:var(--primary)}
@@ -350,10 +351,25 @@ async function api(path, opts={}){
   return res.json();
 }
 
+const STATUS_LABEL = {
+  active:'ativo', trialing:'trial', dev:'vitalício', inativa:'inativo', none:'sem assinatura',
+  past_due:'falta pagamento', unpaid:'falta pagamento',
+  canceled:'renovação pendente', incomplete:'pagamento incompleto', incomplete_expired:'assinatura expirada',
+};
 function badge(status){
   const s = status || 'none';
-  const label = {active:'ativo', trialing:'trial', dev:'vitalício', inativa:'inativo', none:'sem assinatura'}[s] || s;
+  const label = STATUS_LABEL[s] || s;
   return `<span class="badge b-${s}">${label}</span>`;
+}
+function fmtDataUnix(ts){
+  if(!ts) return '—';
+  try{ return new Date(ts*1000).toLocaleDateString('pt-BR'); }catch(e){ return '—'; }
+}
+function acessoAte(u){
+  if(u.status==='trialing') return fmtData(u.acesso_expira_em);
+  if(u.status==='dev') return 'Vitalício';
+  if(['active','past_due','unpaid','canceled'].includes(u.status) && u.periodo_fim) return fmtDataUnix(u.periodo_fim);
+  return '—';
 }
 
 function fmtData(iso){
@@ -421,7 +437,7 @@ function renderTabela(usuarios){
       <td>${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</td>
       <td class="muted">${u.telefone || '—'}</td>
       <td>${badge(u.status)}</td>
-      <td class="muted">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : (u.status==='dev' ? 'Vitalício' : '—')}</td>
+      <td class="muted">${acessoAte(u)}</td>
       <td class="muted">${fmtData(u.criado_em)}</td>
       <td onclick="event.stopPropagation()">
         <div class="actions">
@@ -469,7 +485,7 @@ async function abrirDetalhes(id){
         <div><div class="l">E-mail</div><div class="v">${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</div></div>
         <div><div class="l">Telefone</div><div class="v">${u.telefone || '—'}</div></div>
         <div><div class="l">Status</div><div class="v">${badge(u.status)}</div></div>
-        <div><div class="l">Acesso até</div><div class="v">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : (u.status==='dev' ? 'Vitalício' : '—')}</div></div>
+        <div><div class="l">Acesso até</div><div class="v">${acessoAte(u)}</div></div>
         <div><div class="l">Cadastro</div><div class="v">${fmtData(u.criado_em)}</div></div>
         <div><div class="l">Último acesso</div><div class="v">${fmtData(u.ultimo_acesso)}</div></div>
         ${u.email_pendente ? `<div style="grid-column:1/-1"><div class="l">E-mail pendente</div><div class="v">${u.email_pendente} <span class="warn-email">aguardando confirmação do usuário</span></div></div>` : ''}
