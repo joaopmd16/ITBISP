@@ -354,7 +354,8 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .map-toggle.active{background:var(--primary);color:#fff}
 #mapa{height:440px;display:none}
 .map-filtbar{display:flex;align-items:center;gap:8px;padding:12px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.map-ffield{min-width:150px;flex:1}
+.map-ffield{min-width:150px;flex:1;display:flex;flex-direction:column;gap:6px}
+.map-ffield label{font-size:11px;font-weight:600;color:var(--ink-2);letter-spacing:0}
 .map-ffield .tag-input-inner{min-height:36px}
 .map-filtbar-hint{font-size:11px;color:var(--mu);font-family:'JetBrains Mono';margin-left:auto}
 .map-legend{display:flex;align-items:center;gap:18px;padding:12px 22px;border-top:1px solid var(--line);flex-wrap:wrap;font-size:12px}
@@ -1042,18 +1043,22 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         </div>
         <div class="map-filtbar" id="map-filtbar">
           <div class="map-ffield" style="position:relative">
+            <label>Logradouro</label>
             <div class="tag-input-inner" id="map-rua-wrap" onclick="document.getElementById('map-rua').focus()"></div>
             <div class="acl" id="map-ac-rua" style="display:none"></div>
           </div>
           <div class="map-ffield" style="position:relative">
+            <label>Bairro</label>
             <div class="tag-input-inner" id="map-bairro-wrap" onclick="document.getElementById('map-bairro').focus()"></div>
             <div class="acl" id="map-ac-bairro" style="display:none"></div>
           </div>
           <div class="map-ffield" style="position:relative">
+            <label>CEP</label>
             <div class="tag-input-inner" id="map-cep-wrap" onclick="document.getElementById('map-cep').focus()"></div>
             <div class="acl" id="map-ac-cep" style="display:none"></div>
           </div>
           <div class="map-ffield" style="position:relative">
+            <label>Número</label>
             <div class="tag-input-inner" id="map-numero-wrap" onclick="document.getElementById('map-numero').focus()"></div>
             <div class="acl" id="map-ac-numero" style="display:none"></div>
           </div>
