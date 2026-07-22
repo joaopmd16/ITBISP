@@ -52,7 +52,7 @@
   .b-dev{background:rgba(95,127,224,.15);color:#7f9bee}
   .b-inativa,.b-none,.b-canceled,.b-incomplete_expired{background:rgba(224,95,95,.15);color:var(--err)}
   .b-past_due,.b-unpaid,.b-incomplete{background:rgba(224,185,95,.15);color:var(--warn)}
-  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
   button.act{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:12px;white-space:nowrap}
   button.act:hover{border-color:var(--primary);color:var(--primary)}
   button.act.danger:hover{border-color:var(--err);color:var(--err)}
@@ -255,6 +255,18 @@
   </div>
 </div>
 
+<div class="overlay" id="modalExcluir">
+  <div class="modal">
+    <span class="close" onclick="fecharModais()">&times;</span>
+    <h3>Excluir permanentemente — <span id="xNome"></span></h3>
+    <p class="muted" style="font-size:13px">Isso apaga o usuário e todo o histórico (assinatura, senhas, logs) do banco de dados <b>para sempre</b>. Não tem como desfazer — isso é diferente de "Desativar".</p>
+    <p class="muted" style="font-size:13px;margin-top:8px">Para confirmar, digite o e-mail <b id="xEmailAlvo"></b> abaixo:</p>
+    <div class="field" style="margin-top:10px"><input id="xConfirmEmail" type="text" oninput="document.getElementById('xBtn').disabled = this.value.trim().toLowerCase() !== xEmailAtual"></div>
+    <button class="act danger" id="xBtn" disabled style="width:100%;padding:12px" onclick="excluirUsuario()">Excluir permanentemente</button>
+    <div id="xMsg"></div>
+  </div>
+</div>
+
 <div class="overlay" id="modalPagamentos">
   <div class="modal">
     <span class="close" onclick="fecharModais()">&times;</span>
@@ -448,6 +460,7 @@ function renderTabela(usuarios){
           ${u.ativo
             ? `<button class="act danger" onclick='desativarUsuario(${u.id})'>Desativar</button>`
             : `<button class="act ok" onclick='reativarUsuario(${u.id})'>Reativar</button>`}
+          <button class="act danger" onclick='abrirExcluir(${JSON.stringify(u)})'>Excluir</button>
         </div>
       </td>
     </tr>
@@ -499,6 +512,7 @@ async function abrirDetalhes(id){
         ${u.ativo
           ? `<button class="act danger" onclick='desativarUsuario(${u.id})'>Desativar</button>`
           : `<button class="act ok" onclick='reativarUsuario(${u.id})'>Reativar</button>`}
+        <button class="act danger" onclick='abrirExcluir(${JSON.stringify(u)})'>Excluir</button>
       </div>
       <div class="sec-title">Editar dados</div>
       <form onsubmit="return salvarPerfilAdmin(event, ${u.id})">
@@ -651,6 +665,30 @@ async function abrirPagamentos(id, nome){
     document.getElementById('pConteudo').innerHTML = html;
   }catch(e){
     document.getElementById('pConteudo').innerHTML = `<div class="msg err">${e.message}</div>`;
+  }
+}
+
+let xEmailAtual = '';
+function abrirExcluir(u){
+  document.getElementById('modalDetalhes').classList.remove('open');
+  xEmailAtual = u.email.trim().toLowerCase();
+  usuarioAtual = u;
+  document.getElementById('xNome').textContent = u.nome || u.email;
+  document.getElementById('xEmailAlvo').textContent = u.email;
+  document.getElementById('xConfirmEmail').value = '';
+  document.getElementById('xBtn').disabled = true;
+  document.getElementById('xMsg').innerHTML = '';
+  document.getElementById('modalExcluir').classList.add('open');
+}
+async function excluirUsuario(){
+  const msg = document.getElementById('xMsg');
+  msg.innerHTML = '';
+  try{
+    await api(`/api/admin/usuarios/${usuarioAtual.id}`, { method: 'DELETE' });
+    msg.innerHTML = `<div class="msg ok">Usuário excluído.</div>`;
+    setTimeout(()=>{ fecharModais(); carregar(); }, 700);
+  }catch(e){
+    msg.innerHTML = `<div class="msg err">${e.message}</div>`;
   }
 }
 

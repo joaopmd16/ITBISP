@@ -1519,6 +1519,29 @@ def admin_reativar(usuario_id: int, admin: dict = Depends(exigir_admin)):
     return {"status": "reativado"}
 
 
+@app.delete("/api/admin/usuarios/{usuario_id}")
+def admin_excluir_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    """Exclui o usuário e todos os dados relacionados PERMANENTEMENTE. Irreversível."""
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        row = conn.execute(
+            "SELECT stripe_subscription_id FROM assinaturas WHERE usuario_id = ?", (usuario_id,)
+        ).fetchone()
+        if row and row["stripe_subscription_id"]:
+            try:
+                billing.cancelar_assinatura(row["stripe_subscription_id"])
+            except Exception:
+                pass
+        conn.execute("DELETE FROM senhas_antigas WHERE usuario_id = ?", (usuario_id,))
+        conn.execute("DELETE FROM admin_logs WHERE usuario_id = ?", (usuario_id,))
+        conn.execute("DELETE FROM assinaturas WHERE usuario_id = ?", (usuario_id,))
+        conn.execute("DELETE FROM usuarios WHERE id = ?", (usuario_id,))
+        conn.commit()
+    return {"status": "excluido"}
+
+
 class EditarPerfilAdminIn(BaseModel):
     nome: str
     sobrenome: str
