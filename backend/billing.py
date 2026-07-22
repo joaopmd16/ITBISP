@@ -105,3 +105,45 @@ def cancelar_assinatura(stripe_subscription_id: str) -> None:
     de um usuário pagante — sem isso o Stripe continuaria cobrando e o próximo webhook
     reativaria o acesso local)."""
     stripe.Subscription.cancel(stripe_subscription_id)
+
+
+def criar_cupom(percent_off, amount_off_centavos, duration, duration_in_months, codigo, redeem_by_ts):
+    """Cria um Coupon + PromotionCode na Stripe. Cupons são imutáveis — "editar" um cupom
+    existente significa desativar o PromotionCode antigo e criar um novo com este helper."""
+    kwargs = {"duration": duration, "currency": "brl"}
+    if percent_off is not None:
+        kwargs["percent_off"] = percent_off
+    elif amount_off_centavos is not None:
+        kwargs["amount_off"] = amount_off_centavos
+    else:
+        raise ValueError("Informe percent_off ou amount_off")
+    if duration == "repeating":
+        if not duration_in_months or duration_in_months < 1:
+            raise ValueError("duration_in_months obrigatorio quando duration=repeating")
+        kwargs["duration_in_months"] = duration_in_months
+    coupon = stripe.Coupon.create(**kwargs)
+    promo_kwargs = {"coupon": coupon.id, "code": codigo}
+    if redeem_by_ts:
+        promo_kwargs["expires_at"] = redeem_by_ts
+    promo = stripe.PromotionCode.create(**promo_kwargs)
+    return {"coupon_id": coupon.id, "promotion_code_id": promo.id, "codigo": promo.code}
+
+
+def listar_cupons(limite: int = 100) -> list[dict]:
+    promos = stripe.PromotionCode.list(limit=limite, expand=["data.coupon"])
+    out = []
+    for p in promos.data:
+        c = p.coupon
+        out.append({
+            "id": p.id, "codigo": p.code, "ativo": p.active, "coupon_id": c.id,
+            "percent_off": c.percent_off,
+            "amount_off": (c.amount_off / 100) if c.amount_off else None,
+            "duration": c.duration, "duration_in_months": c.duration_in_months,
+            "expires_at": p.expires_at, "times_redeemed": p.times_redeemed,
+            "criado_em": p.created,
+        })
+    return out
+
+
+def desativar_promo_code(promotion_code_id: str) -> None:
+    stripe.PromotionCode.modify(promotion_code_id, active=False)

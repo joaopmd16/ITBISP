@@ -89,6 +89,14 @@
   .warn-email{display:inline-block;margin-left:6px;color:var(--warn);font-size:11px;font-weight:600;white-space:nowrap}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
+  .nav-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:9px 16px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}
+  .nav-btn:hover{color:var(--text);border-color:var(--primary)}
+  .nav-btn.active{background:var(--primary);color:#000;border-color:var(--primary)}
+  .tabs-nav{display:flex;gap:8px;flex-wrap:wrap}
+  .log-box{white-space:pre-wrap;font-family:monospace;font-size:12px;max-height:320px;overflow:auto;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:14px}
+  .radio-row{display:flex;gap:18px;align-items:center;font-size:13.5px;margin-bottom:14px}
+  .radio-row label{display:flex;align-items:center;gap:6px;cursor:pointer}
+
   #loginScreen{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center}
   .login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;max-width:380px;width:100%}
   .login-card h2{font-size:19px;font-weight:800;margin-bottom:6px}
@@ -132,25 +140,94 @@
     <header>
       <h1>Painel <span>Admin</span></h1>
       <div style="display:flex;gap:10px">
-        <button class="btn-novo" onclick="abrirCriar()">+ Criar usuário</button>
         <button id="logout" onclick="logout()">Sair</button>
       </div>
     </header>
 
-    <div class="stats" id="stats"></div>
-
-    <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Acesso até</th><th>Cadastro</th><th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="7" class="loading">Carregando...</td></tr>
-        </tbody>
-      </table>
+    <div class="tabs-nav" style="margin-bottom:24px">
+      <button class="nav-btn active" data-view="usuarios" onclick="mostrarView('usuarios')">Usuários</button>
+      <button class="nav-btn" data-view="cupons" onclick="mostrarView('cupons')">Cupons</button>
+      <button class="nav-btn" data-view="sync" onclick="mostrarView('sync')">Atualizar dados</button>
     </div>
+
+    <section id="view-usuarios" class="view">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+        <button class="btn-novo" onclick="abrirCriar()">+ Criar usuário</button>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="tabs-nav" id="statusTabs" style="margin-bottom:14px">
+        <button class="nav-btn active" data-status="todos" onclick="filtrarStatus('todos')">Todos</button>
+        <button class="nav-btn" data-status="pagantes" onclick="filtrarStatus('pagantes')">Pagantes</button>
+        <button class="nav-btn" data-status="trial" onclick="filtrarStatus('trial')">Trial ou Liberado</button>
+        <button class="nav-btn" data-status="sem_acesso" onclick="filtrarStatus('sem_acesso')">Sem acesso</button>
+        <button class="nav-btn" data-status="desativados" onclick="filtrarStatus('desativados')">Desativados</button>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Acesso até</th><th>Cadastro</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="7" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-cupons" class="view" style="display:none">
+      <div class="card" style="padding:22px;margin-bottom:20px">
+        <h3 style="font-size:16px;margin-bottom:16px">Criar cupom</h3>
+        <form id="formCupom" onsubmit="return criarCupom(event)">
+          <div class="field"><label>Código</label><input id="cupCodigo" type="text" required style="text-transform:uppercase"></div>
+          <div class="radio-row">
+            <label><input type="radio" name="cupTipo" value="percent" checked onchange="alternarTipoCupom()"> Percentual (%)</label>
+            <label><input type="radio" name="cupTipo" value="valor" onchange="alternarTipoCupom()"> Valor fixo (R$)</label>
+          </div>
+          <div class="field-row">
+            <div class="field" id="cupPercentField"><label>Percentual (%)</label><input id="cupPercent" type="number" step="0.01" min="0" max="100"></div>
+            <div class="field" id="cupValorField" style="display:none"><label>Valor (R$)</label><input id="cupValor" type="number" step="0.01" min="0"></div>
+            <div class="field"><label>Duração</label>
+              <select id="cupDuration" onchange="document.getElementById('cupMesesField').style.display = this.value==='repeating' ? 'block' : 'none'" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:12px;font-family:inherit;font-size:14px">
+                <option value="once">Uma vez</option>
+                <option value="repeating">Recorrente (N meses)</option>
+                <option value="forever">Para sempre</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field" id="cupMesesField" style="display:none"><label>Nº de meses</label><input id="cupMeses" type="number" min="1" step="1"></div>
+            <div class="field"><label>Válido até (opcional)</label><input id="cupRedeemBy" type="date"></div>
+          </div>
+          <button class="btn-primary" id="cupBtn" type="submit">Criar cupom</button>
+          <div id="cupMsg"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Código</th><th>Desconto</th><th>Duração</th><th>Válido até</th><th>Status</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="cuponsBody">
+            <tr><td colspan="6" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-sync" class="view" style="display:none">
+      <div class="card" style="padding:22px">
+        <h3 style="font-size:16px;margin-bottom:6px">Atualização da base de dados</h3>
+        <p class="muted" style="font-size:13px;margin-bottom:16px">Dispara o scraper para os anos padrão (2024–2026), re-baixando os arquivos oficiais e atualizando o banco.</p>
+        <button class="btn-novo" id="syncBtn" onclick="dispararSincronizacao()">Sincronizar agora</button>
+        <span id="syncStatusLabel" class="muted" style="margin-left:14px;font-size:13px"></span>
+        <div id="syncMsg"></div>
+        <div class="log-box" id="syncLog"></div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -288,11 +365,35 @@ function fecharModais(){
   document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));
 }
 
+function mostrarView(nome){
+  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+  document.getElementById('view-'+nome).style.display='block';
+  document.querySelectorAll('.wrap > .tabs-nav .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===nome));
+  if(nome==='cupons' && !window._cuponsCarregados){ carregarCupons(); }
+  if(nome==='sync'){ atualizarStatusSync(); }
+}
+
+let _usuarios = [];
+let _filtroAtual = 'todos';
+const FILTROS_STATUS = {
+  todos: u => true,
+  pagantes: u => u.status === 'active',
+  trial: u => ['trialing','dev'].includes(u.status),
+  sem_acesso: u => !!u.ativo && ['inativa', null, undefined, 'none'].includes(u.status),
+  desativados: u => !u.ativo,
+};
+function filtrarStatus(nome){
+  _filtroAtual = nome;
+  document.querySelectorAll('#statusTabs .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.status===nome));
+  renderTabela(_usuarios.filter(FILTROS_STATUS[nome]));
+}
+
 async function carregar(){
   try{
     const data = await api('/api/admin/usuarios');
+    _usuarios = data.usuarios;
     renderStats(data.usuarios);
-    renderTabela(data.usuarios);
+    filtrarStatus(_filtroAtual);
   }catch(e){
     document.getElementById('tbody').innerHTML = `<tr><td colspan="7" class="loading">Erro ao carregar: ${e.message}</td></tr>`;
   }
@@ -328,6 +429,9 @@ function renderTabela(usuarios){
           <button class="act danger" onclick='revogar(${u.id})'>Revogar</button>
           <button class="act" onclick='abrirSenha(${JSON.stringify(u)})'>Resetar senha</button>
           <button class="act" onclick='abrirPagamentos(${u.id}, ${JSON.stringify(u.nome||u.email)})'>Pagamentos</button>
+          ${u.ativo
+            ? `<button class="act danger" onclick='desativarUsuario(${u.id})'>Desativar</button>`
+            : `<button class="act ok" onclick='reativarUsuario(${u.id})'>Reativar</button>`}
         </div>
       </td>
     </tr>
@@ -339,6 +443,8 @@ const LOG_LABEL = {
   'revogar': 'Revogou acesso',
   'resetar-senha': 'Resetou senha',
   'criar-usuario': 'Usuário criado pelo admin',
+  'desativar': 'Desativou usuário',
+  'reativar': 'Reativou usuário',
 };
 
 async function abrirDetalhes(id){
@@ -372,6 +478,9 @@ async function abrirDetalhes(id){
         <button class="act danger" onclick='revogarDetalhe(${u.id})'>Revogar</button>
         <button class="act" onclick='abrirSenha(${JSON.stringify(u)})'>Resetar senha</button>
         <button class="act" onclick='abrirPagamentos(${u.id}, ${JSON.stringify(u.nome||u.email)})'>Pagamentos</button>
+        ${u.ativo
+          ? `<button class="act danger" onclick='desativarUsuario(${u.id})'>Desativar</button>`
+          : `<button class="act ok" onclick='reativarUsuario(${u.id})'>Reativar</button>`}
       </div>
       <div class="sec-title">Logs de ações do admin</div>
       ${logsHtml}
@@ -490,6 +599,117 @@ async function abrirPagamentos(id, nome){
   }catch(e){
     document.getElementById('pConteudo').innerHTML = `<div class="msg err">${e.message}</div>`;
   }
+}
+
+async function desativarUsuario(id){
+  if(!confirm('Desativar este usuário? Ele não conseguirá mais fazer login (mesmo com sessão já aberta) e a assinatura Stripe, se houver, será cancelada.')) return;
+  try{ await api(`/api/admin/usuarios/${id}/desativar`, {method:'POST'}); carregar(); }
+  catch(e){ alert('Erro: ' + e.message); }
+}
+
+async function reativarUsuario(id){
+  try{ await api(`/api/admin/usuarios/${id}/reativar`, {method:'POST'}); carregar(); }
+  catch(e){ alert('Erro: ' + e.message); }
+}
+
+function alternarTipoCupom(){
+  const tipo = document.querySelector('input[name=cupTipo]:checked').value;
+  document.getElementById('cupPercentField').style.display = tipo === 'percent' ? 'block' : 'none';
+  document.getElementById('cupValorField').style.display = tipo === 'valor' ? 'block' : 'none';
+}
+
+async function criarCupom(ev){
+  ev.preventDefault();
+  const btn = document.getElementById('cupBtn');
+  const msg = document.getElementById('cupMsg');
+  btn.disabled = true;
+  msg.innerHTML = '';
+  try{
+    const tipo = document.querySelector('input[name=cupTipo]:checked').value;
+    const body = {
+      codigo: document.getElementById('cupCodigo').value.trim(),
+      duration: document.getElementById('cupDuration').value,
+    };
+    if(tipo === 'percent') body.percent_off = parseFloat(document.getElementById('cupPercent').value);
+    else body.valor_off = parseFloat(document.getElementById('cupValor').value);
+    if(body.duration === 'repeating') body.duration_in_months = parseInt(document.getElementById('cupMeses').value, 10);
+    const redeemBy = document.getElementById('cupRedeemBy').value;
+    if(redeemBy) body.redeem_by = redeemBy;
+    await api('/api/admin/cupons', { method:'POST', body: JSON.stringify(body) });
+    msg.innerHTML = `<div class="msg ok">Cupom criado com sucesso.</div>`;
+    document.getElementById('formCupom').reset();
+    alternarTipoCupom();
+    carregarCupons();
+  }catch(e){
+    msg.innerHTML = `<div class="msg err">${e.message}</div>`;
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+async function carregarCupons(){
+  window._cuponsCarregados = true;
+  const tbody = document.getElementById('cuponsBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="loading">Carregando...</td></tr>`;
+  try{
+    const data = await api('/api/admin/cupons');
+    if(!data.cupons.length){
+      tbody.innerHTML = `<tr><td colspan="6" class="loading">Nenhum cupom criado.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.cupons.map(c => `
+      <tr>
+        <td>${c.codigo}</td>
+        <td>${c.percent_off ? c.percent_off + '%' : 'R$ ' + Number(c.amount_off).toFixed(2)}</td>
+        <td>${c.duration}${c.duration_in_months ? ' (' + c.duration_in_months + 'm)' : ''}</td>
+        <td class="muted">${c.expires_at ? new Date(c.expires_at*1000).toLocaleDateString('pt-BR') : '—'}</td>
+        <td>${c.ativo ? '<span class="badge b-active">ativo</span>' : '<span class="badge b-inativa">inativo</span>'}</td>
+        <td>${c.ativo ? `<button class="act danger" onclick="desativarCupom('${c.id}')">Desativar</button>` : '—'}</td>
+      </tr>
+    `).join('');
+  }catch(e){
+    tbody.innerHTML = `<tr><td colspan="6" class="loading">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+async function desativarCupom(id){
+  if(!confirm('Desativar este código promocional? Ele deixa de poder ser resgatado (quem já usou mantém o desconto).')) return;
+  try{ await api(`/api/admin/cupons/${id}/desativar`, {method:'POST'}); carregarCupons(); }
+  catch(e){ alert('Erro: ' + e.message); }
+}
+
+let _syncPollTimer = null;
+
+async function dispararSincronizacao(){
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  document.getElementById('syncMsg').innerHTML = '';
+  try{
+    await api('/api/admin/sincronizar', { method:'POST' });
+    atualizarStatusSync();
+  }catch(e){
+    document.getElementById('syncMsg').innerHTML = `<div class="msg err">${e.message}</div>`;
+    btn.disabled = false;
+  }
+}
+
+async function atualizarStatusSync(){
+  try{
+    const data = await fetch(`${API}/api/sincronizar/status`).then(r=>r.json());
+    document.getElementById('syncStatusLabel').textContent = data.rodando ? 'Rodando...' : 'Parado';
+    document.getElementById('syncLog').textContent = (data.log || []).join('\n');
+    document.getElementById('syncBtn').disabled = data.rodando;
+    if(data.rodando){ iniciarPollSync(); } else { pararPollSync(); }
+  }catch(e){ /* silencioso — status é best-effort */ }
+}
+
+function iniciarPollSync(){
+  if(_syncPollTimer) return;
+  _syncPollTimer = setInterval(atualizarStatusSync, 3000);
+}
+function pararPollSync(){
+  clearInterval(_syncPollTimer);
+  _syncPollTimer = null;
 }
 
 if(token){ mostrarApp(); } else { mostrarLogin(); }

@@ -79,6 +79,11 @@ async def exigir_assinatura_ativa(request: Request, call_next):
         return JSONResponse({"detail": e.detail}, status_code=e.status_code)
 
     with get_db() as conn:
+        usuario_row = conn.execute(
+            "SELECT ativo FROM usuarios WHERE id = ?", (int(payload["sub"]),)
+        ).fetchone()
+        if usuario_row and not usuario_row["ativo"]:
+            return JSONResponse({"detail": "Conta desativada"}, status_code=403)
         row = conn.execute(
             "SELECT status, acesso_expira_em FROM assinaturas WHERE usuario_id = ?", (int(payload["sub"]),)
         ).fetchone()
@@ -249,6 +254,7 @@ def startup():
             "token_reset_senha TEXT",
             "token_reset_senha_exp TEXT",
             "ultimo_acesso TEXT",
+            "ativo INTEGER DEFAULT 1",
         ):
             try:
                 conn.execute(f"ALTER TABLE usuarios ADD COLUMN {coluna}")
@@ -884,21 +890,15 @@ def sincronizar_status():
         "inicio": _sync_inicio,
     }
 
-@app.post("/api/sincronizar")
-def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None), senha: Optional[str] = Query(None)):
-    """Dispara a sincronização em background."""
-    import os as _os
-    if senha != _os.environ.get("SYNC_SECRET", ""):
-        return JSONResponse({"detail": "Senha incorreta"}, status_code=401)
+def _disparar_sincronizacao(background_tasks: BackgroundTasks, anos_list):
+    """Núcleo compartilhado entre o endpoint legado (SYNC_SECRET) e o endpoint admin (JWT)."""
     global sincronizando, _sync_log, _sync_inicio
     if sincronizando:
-        return JSONResponse({"status": "já rodando"}, status_code=409)
-
-    anos_list = [int(a) for a in anos.split(",") if a.strip().isdigit()] if anos else None
+        raise HTTPException(409, "Sincronização já em andamento")
 
     def _run():
         global sincronizando, _sync_log, _sync_inicio
-        import time, sys, io, contextlib
+        import time, contextlib
         sincronizando = True
         _sync_inicio = time.time()
         _sync_log.clear()
@@ -926,6 +926,19 @@ def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(N
 
     background_tasks.add_task(_run)
     return {"status": "iniciado", "anos": anos_list or "todos"}
+
+
+@app.post("/api/sincronizar")
+def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None), senha: Optional[str] = Query(None)):
+    """Endpoint legado — gated por SYNC_SECRET (script/cron externo)."""
+    import os as _os
+    if senha != _os.environ.get("SYNC_SECRET", ""):
+        return JSONResponse({"detail": "Senha incorreta"}, status_code=401)
+    anos_list = [int(a) for a in anos.split(",") if a.strip().isdigit()] if anos else None
+    try:
+        return _disparar_sincronizacao(background_tasks, anos_list)
+    except HTTPException as e:
+        return JSONResponse({"status": "já rodando"}, status_code=e.status_code)
 
 
 # ──────────────────────────────────────────────
@@ -1031,12 +1044,14 @@ def login(dados: CredenciaisIn):
     email = dados.email.strip().lower()
     with get_db() as conn:
         row = conn.execute(
-            "SELECT id, senha_hash, email_verificado FROM usuarios WHERE email = ?", (email,)
+            "SELECT id, senha_hash, email_verificado, ativo FROM usuarios WHERE email = ?", (email,)
         ).fetchone()
     if not row or not auth.verificar_senha(dados.senha, row["senha_hash"]):
         raise HTTPException(401, "E-mail ou senha incorretos")
     if not row["email_verificado"]:
         raise HTTPException(403, "E-mail ainda não verificado. Confira sua caixa de entrada.")
+    if not row["ativo"]:
+        raise HTTPException(403, "Conta desativada. Entre em contato com o suporte.")
     with get_db() as conn:
         conn.execute("UPDATE usuarios SET ultimo_acesso = datetime('now') WHERE id = ?", (row["id"],))
         conn.commit()
@@ -1253,7 +1268,7 @@ def exigir_admin(usuario: dict = Depends(auth.get_usuario_atual)) -> dict:
 def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         rows = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso,
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo,
                    a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
@@ -1296,7 +1311,7 @@ def admin_criar_usuario(dados: CriarUsuarioAdminIn, admin: dict = Depends(exigir
 def admin_detalhes_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         usuario = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso,
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo,
                    a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
@@ -1331,6 +1346,42 @@ def admin_revogar(usuario_id: int, admin: dict = Depends(exigir_admin)):
         _log_admin(conn, usuario_id, "revogar")
         conn.commit()
     return {"status": "revogado"}
+
+
+@app.post("/api/admin/usuarios/{usuario_id}/desativar")
+def admin_desativar(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        row = conn.execute(
+            "SELECT stripe_subscription_id FROM assinaturas WHERE usuario_id = ?", (usuario_id,)
+        ).fetchone()
+        if row and row["stripe_subscription_id"]:
+            try:
+                billing.cancelar_assinatura(row["stripe_subscription_id"])
+            except Exception:
+                pass
+        conn.execute("UPDATE usuarios SET ativo = 0 WHERE id = ?", (usuario_id,))
+        conn.execute(
+            "UPDATE assinaturas SET status = 'inativa', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
+            (usuario_id,),
+        )
+        _log_admin(conn, usuario_id, "desativar")
+        conn.commit()
+    return {"status": "desativado"}
+
+
+@app.post("/api/admin/usuarios/{usuario_id}/reativar")
+def admin_reativar(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        conn.execute("UPDATE usuarios SET ativo = 1 WHERE id = ?", (usuario_id,))
+        _log_admin(conn, usuario_id, "reativar")
+        conn.commit()
+    return {"status": "reativado"}
 
 
 class LiberarAcessoIn(BaseModel):
@@ -1395,6 +1446,59 @@ def admin_resetar_senha(usuario_id: int, admin: dict = Depends(exigir_admin)):
         _log_admin(conn, usuario_id, "resetar-senha")
         conn.commit()
     return {"senha_temporaria": nova_senha}
+
+
+class CriarCupomIn(BaseModel):
+    codigo: str
+    percent_off: Optional[float] = None
+    valor_off: Optional[float] = None      # em reais; convertido para centavos aqui
+    duration: str                          # 'once' | 'repeating' | 'forever'
+    duration_in_months: Optional[int] = None
+    redeem_by: Optional[str] = None        # ISO date (yyyy-mm-dd), opcional
+
+
+@app.get("/api/admin/cupons")
+def admin_listar_cupons(admin: dict = Depends(exigir_admin)):
+    try:
+        return {"cupons": billing.listar_cupons()}
+    except Exception as e:
+        raise HTTPException(502, f"Erro ao consultar Stripe: {e}")
+
+
+@app.post("/api/admin/cupons")
+def admin_criar_cupom(dados: CriarCupomIn, admin: dict = Depends(exigir_admin)):
+    if not dados.codigo.strip():
+        raise HTTPException(400, "Informe um código")
+    if (dados.percent_off is None) == (dados.valor_off is None):
+        raise HTTPException(400, "Informe percent_off OU valor_off (não os dois, nem nenhum)")
+    if dados.duration not in ("once", "repeating", "forever"):
+        raise HTTPException(400, "duration inválida")
+    amount_off_centavos = int(round(dados.valor_off * 100)) if dados.valor_off is not None else None
+    redeem_by_ts = int(datetime.fromisoformat(dados.redeem_by).timestamp()) if dados.redeem_by else None
+    try:
+        resultado = billing.criar_cupom(
+            percent_off=dados.percent_off, amount_off_centavos=amount_off_centavos,
+            duration=dados.duration, duration_in_months=dados.duration_in_months,
+            codigo=dados.codigo.strip().upper(), redeem_by_ts=redeem_by_ts,
+        )
+    except Exception as e:
+        raise HTTPException(400, f"Erro ao criar cupom no Stripe: {e}")
+    return {"status": "criado", **resultado}
+
+
+@app.post("/api/admin/cupons/{promotion_code_id}/desativar")
+def admin_desativar_cupom(promotion_code_id: str, admin: dict = Depends(exigir_admin)):
+    try:
+        billing.desativar_promo_code(promotion_code_id)
+    except Exception as e:
+        raise HTTPException(400, f"Erro ao desativar no Stripe: {e}")
+    return {"status": "desativado"}
+
+
+@app.post("/api/admin/sincronizar")
+def admin_sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None), admin: dict = Depends(exigir_admin)):
+    anos_list = [int(a) for a in anos.split(",") if a.strip().isdigit()] if anos else None
+    return _disparar_sincronizacao(background_tasks, anos_list)
 
 
 # Serve o frontend estático (deve ficar no final para não sobrescrever as rotas da API)
