@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 const PLAN = {
   name: "Básico",
-  price: "R$ 30",
+  price: "R$ 49,90",
   period: "/mês",
   desc: "Para quem precisa consultar transações pontualmente.",
   features: [
@@ -13,6 +13,13 @@ const PLAN = {
     "Exportação Excel/PDF (limitada)",
     "1 usuário",
   ],
+};
+
+const PROMO = {
+  price: "R$ 30",
+  meses: 3,
+  cupom: "ITBIREMAX30",
+  validoAte: "12/08/2026",
 };
 
 export default function Pricing() {
@@ -45,12 +52,25 @@ export default function Pricing() {
           >
             <h3 className="text-lg font-semibold text-white">{PLAN.name}</h3>
             <p className="mt-1 text-sm text-neutral-400">{PLAN.desc}</p>
-            <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-4xl font-bold text-white">
+
+            <div className="mt-6 flex items-baseline gap-2">
+              <span className="text-lg text-neutral-500 line-through">
                 {PLAN.price}
+              </span>
+              <span className="text-4xl font-bold text-white">
+                {PROMO.price}
               </span>
               <span className="text-sm text-neutral-500">{PLAN.period}</span>
             </div>
+            <p className="mt-2 text-xs font-medium text-accent">
+              nos {PROMO.meses} primeiros meses com o cupom{" "}
+              <span className="font-mono font-bold">{PROMO.cupom}</span>
+              {" "}· depois {PLAN.price}
+              {PLAN.period}
+            </p>
+            <p className="mt-1 text-[11px] text-neutral-600">
+              Cupom válido até {PROMO.validoAte}
+            </p>
 
             <ul className="mt-6 flex-1 space-y-3">
               {PLAN.features.map((f) => (
@@ -74,7 +94,7 @@ export default function Pricing() {
         </div>
 
         <p className="mt-8 text-center text-xs text-neutral-600">
-          * Valores de exemplo, sujeitos a ajuste.
+          Cancele quando quiser. Sem fidelidade.
         </p>
       </div>
     </section>
