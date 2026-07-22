@@ -38,6 +38,7 @@ def criar_checkout_session(email: str, usuario_id: int, stripe_customer_id: str 
         cancel_url=f"{FRONTEND_URL}/login.html?checkout=cancelado",
         client_reference_id=str(usuario_id),
         metadata={"usuario_id": str(usuario_id)},
+        allow_promotion_codes=True,
     )
     if stripe_customer_id:
         params["customer"] = stripe_customer_id
