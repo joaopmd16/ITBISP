@@ -17,9 +17,9 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
-from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -30,6 +30,8 @@ import geo
 
 DB_PATH = Path(__file__).parent / "itbi.db"
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+UPLOADS_DIR = Path(__file__).parent / "uploads"
+TAMANHO_MAX_ANEXO = 15 * 1024 * 1024  # 15 MB
 
 app = FastAPI(title="Dashboard ITBI-SP", version="1.0")
 
@@ -55,8 +57,10 @@ ROTAS_PROTEGIDAS_PREFIXO = "/api/"
 ROTAS_PUBLICAS = ("/api/auth/", "/api/webhook/")
 # Exige login (token válido) mas não assinatura ativa — é a própria rota que leva o
 # usuário inativo até o Stripe, então exigir assinatura ativa aqui é um paradoxo
-# que travava todo usuário novo antes de conseguir pagar.
-ROTAS_SEM_EXIGENCIA_ASSINATURA = ("/api/billing/checkout",)
+# que travava todo usuário novo antes de conseguir pagar. /api/tickets também entra
+# aqui: um usuário com assinatura vencida precisa conseguir abrir um chamado de
+# suporte (ex: sobre a própria cobrança), não pode ficar bloqueado pelo paywall.
+ROTAS_SEM_EXIGENCIA_ASSINATURA_PREFIXO = ("/api/billing/checkout", "/api/tickets")
 
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@itbismart.com.br")
 
@@ -65,7 +69,7 @@ ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@itbismart.com.br")
 async def exigir_assinatura_ativa(request: Request, call_next):
     path = request.url.path
     if (not path.startswith(ROTAS_PROTEGIDAS_PREFIXO) or path.startswith(ROTAS_PUBLICAS)
-            or path in ROTAS_SEM_EXIGENCIA_ASSINATURA):
+            or path.startswith(ROTAS_SEM_EXIGENCIA_ASSINATURA_PREFIXO)):
         return await call_next(request)
     if request.client and request.client.host in ("127.0.0.1", "::1"):
         return await call_next(request)
@@ -170,6 +174,20 @@ def _log_admin(conn, usuario_id: int, acao: str, detalhe: str | None = None) -> 
     )
 
 
+async def _salvar_anexo(anexo: UploadFile, ticket_id: int) -> tuple[str, str, str]:
+    conteudo = await anexo.read()
+    if len(conteudo) > TAMANHO_MAX_ANEXO:
+        raise HTTPException(413, "Arquivo muito grande (máx. 15MB)")
+    tipo = "imagem" if (anexo.content_type or "").startswith("image/") \
+        else "audio" if (anexo.content_type or "").startswith("audio/") \
+        else "arquivo"
+    pasta = UPLOADS_DIR / "tickets" / str(ticket_id)
+    pasta.mkdir(parents=True, exist_ok=True)
+    nome_seguro = f"{secrets.token_hex(8)}_{anexo.filename or 'arquivo'}"
+    (pasta / nome_seguro).write_bytes(conteudo)
+    return f"{ticket_id}/{nome_seguro}", tipo, (anexo.filename or nome_seguro)
+
+
 def rows_to_list(rows) -> list[dict]:
     return [dict(r) for r in rows]
 
@@ -245,6 +263,27 @@ def startup():
                 detalhe     TEXT,
                 criado_em   TEXT DEFAULT (datetime('now'))
             );
+            CREATE TABLE IF NOT EXISTS tickets (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
+                assunto       TEXT NOT NULL,
+                status        TEXT NOT NULL DEFAULT 'aberto',
+                encerrado_por TEXT,
+                criado_em     TEXT DEFAULT (datetime('now')),
+                atualizado_em TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS ticket_mensagens (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket_id   INTEGER NOT NULL REFERENCES tickets(id),
+                autor       TEXT NOT NULL,
+                texto       TEXT,
+                anexo_path  TEXT,
+                anexo_tipo  TEXT,
+                anexo_nome  TEXT,
+                lida        INTEGER NOT NULL DEFAULT 0,
+                criado_em   TEXT DEFAULT (datetime('now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_ticket_msgs_ticket ON ticket_mensagens(ticket_id);
         """)
         # Migração: colunas de perfil no cadastro (SQLite não tem ADD COLUMN IF NOT EXISTS)
         # email_verificado usa DEFAULT 1 para não travar contas já existentes; o cadastro
@@ -279,6 +318,9 @@ def startup():
 
     # 2. Cache de geocodificação (mapa)
     geo.init_geo_cache()
+
+    # 2b. Pasta de anexos de tickets de suporte
+    (UPLOADS_DIR / "tickets").mkdir(parents=True, exist_ok=True)
 
     # 3. Pré-aquece o cache do resumo para o range padrão do frontend (últimos 3 anos)
     import threading
@@ -1325,6 +1367,118 @@ def trocar_senha(dados: TrocarSenhaIn, usuario: dict = Depends(auth.get_usuario_
     return {"status": "ok"}
 
 
+# ──────────────────────────────────────────────
+# SUPORTE — tickets (usuário)
+# ──────────────────────────────────────────────
+
+@app.post("/api/tickets")
+async def criar_ticket(assunto: str = Form(...), mensagem: str = Form(""),
+                        anexo: Optional[UploadFile] = File(None),
+                        usuario: dict = Depends(auth.get_usuario_atual)):
+    assunto = assunto.strip()
+    if not assunto:
+        raise HTTPException(400, "Informe o assunto")
+    if not mensagem.strip() and not anexo:
+        raise HTTPException(400, "Escreva uma mensagem ou anexe algo")
+    with get_db() as conn:
+        cur = conn.execute("INSERT INTO tickets (usuario_id, assunto) VALUES (?, ?)", (usuario["id"], assunto))
+        ticket_id = cur.lastrowid
+        anexo_path = anexo_tipo = anexo_nome = None
+        if anexo:
+            anexo_path, anexo_tipo, anexo_nome = await _salvar_anexo(anexo, ticket_id)
+        conn.execute(
+            "INSERT INTO ticket_mensagens (ticket_id, autor, texto, anexo_path, anexo_tipo, anexo_nome) VALUES (?, 'usuario', ?, ?, ?, ?)",
+            (ticket_id, mensagem.strip() or None, anexo_path, anexo_tipo, anexo_nome),
+        )
+        conn.commit()
+    try:
+        emailing.enviar_notificacao_ticket(assunto, ticket_id, usuario["email"])
+    except Exception:
+        pass
+    return {"status": "criado", "ticket_id": ticket_id}
+
+
+@app.get("/api/tickets")
+def listar_meus_tickets(usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT t.id, t.assunto, t.status, t.criado_em, t.atualizado_em,
+                   (SELECT COUNT(*) FROM ticket_mensagens m WHERE m.ticket_id=t.id AND m.autor='admin' AND m.lida=0) AS nao_lidas
+            FROM tickets t WHERE t.usuario_id = ? ORDER BY t.atualizado_em DESC
+        """, (usuario["id"],)).fetchall()
+    return {"tickets": rows_to_list(rows)}
+
+
+@app.get("/api/tickets/{ticket_id}/mensagens")
+def listar_mensagens_meu_ticket(ticket_id: int, usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        t = conn.execute("SELECT status FROM tickets WHERE id = ? AND usuario_id = ?", (ticket_id, usuario["id"])).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        conn.execute("UPDATE ticket_mensagens SET lida = 1 WHERE ticket_id = ? AND autor = 'admin' AND lida = 0", (ticket_id,))
+        conn.commit()
+        msgs = conn.execute(
+            "SELECT id, autor, texto, anexo_path, anexo_tipo, anexo_nome, criado_em FROM ticket_mensagens WHERE ticket_id = ? ORDER BY criado_em ASC",
+            (ticket_id,),
+        ).fetchall()
+    return {"status": t["status"], "mensagens": rows_to_list(msgs)}
+
+
+@app.post("/api/tickets/{ticket_id}/mensagens")
+async def enviar_mensagem_ticket(ticket_id: int, texto: str = Form(""),
+                                  anexo: Optional[UploadFile] = File(None),
+                                  usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        t = conn.execute("SELECT status FROM tickets WHERE id = ? AND usuario_id = ?", (ticket_id, usuario["id"])).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        if t["status"] != "aberto":
+            raise HTTPException(403, "Ticket encerrado")
+        if not texto.strip() and not anexo:
+            raise HTTPException(400, "Mensagem vazia")
+        anexo_path = anexo_tipo = anexo_nome = None
+        if anexo:
+            anexo_path, anexo_tipo, anexo_nome = await _salvar_anexo(anexo, ticket_id)
+        conn.execute(
+            "INSERT INTO ticket_mensagens (ticket_id, autor, texto, anexo_path, anexo_tipo, anexo_nome) VALUES (?, 'usuario', ?, ?, ?, ?)",
+            (ticket_id, texto.strip() or None, anexo_path, anexo_tipo, anexo_nome),
+        )
+        conn.execute("UPDATE tickets SET atualizado_em = datetime('now') WHERE id = ?", (ticket_id,))
+        conn.commit()
+        assunto = conn.execute("SELECT assunto FROM tickets WHERE id = ?", (ticket_id,)).fetchone()["assunto"]
+    try:
+        emailing.enviar_notificacao_ticket(assunto, ticket_id, usuario["email"])
+    except Exception:
+        pass
+    return {"status": "ok"}
+
+
+@app.post("/api/tickets/{ticket_id}/encerrar")
+def encerrar_ticket_usuario(ticket_id: int, usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        t = conn.execute("SELECT id FROM tickets WHERE id = ? AND usuario_id = ?", (ticket_id, usuario["id"])).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        conn.execute("UPDATE tickets SET status = 'encerrado', encerrado_por = 'usuario', atualizado_em = datetime('now') WHERE id = ?", (ticket_id,))
+        conn.commit()
+    return {"status": "encerrado"}
+
+
+@app.get("/api/tickets/anexos/{caminho:path}")
+def obter_anexo_ticket(caminho: str, usuario: dict = Depends(auth.get_usuario_atual)):
+    ticket_id = int(caminho.split("/")[0])
+    with get_db() as conn:
+        t = conn.execute("SELECT usuario_id FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+    if not t:
+        raise HTTPException(404, "Não encontrado")
+    if usuario["id"] != t["usuario_id"] and usuario["email"] != ADMIN_EMAIL:
+        raise HTTPException(403, "Sem acesso")
+    caminho_completo = UPLOADS_DIR / "tickets" / caminho
+    if not caminho_completo.is_file():
+        raise HTTPException(404, "Não encontrado")
+    return FileResponse(caminho_completo)
+
+
 @app.post("/api/webhook/stripe")
 async def webhook_stripe(request: Request):
     payload = await request.body()
@@ -1570,6 +1724,76 @@ def admin_editar_perfil(usuario_id: int, dados: EditarPerfilAdminIn, admin: dict
         _log_admin(conn, usuario_id, "editar-perfil")
         conn.commit()
     return {"status": "ok"}
+
+
+# ──────────────────────────────────────────────
+# SUPORTE — tickets (admin)
+# ──────────────────────────────────────────────
+
+@app.get("/api/admin/tickets")
+def admin_listar_tickets(admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT t.id, t.assunto, t.status, t.criado_em, t.atualizado_em,
+                   u.nome, u.sobrenome, u.email,
+                   (SELECT COUNT(*) FROM ticket_mensagens m WHERE m.ticket_id=t.id AND m.autor='usuario' AND m.lida=0) AS nao_lidas
+            FROM tickets t JOIN usuarios u ON u.id = t.usuario_id
+            ORDER BY t.atualizado_em DESC
+        """).fetchall()
+    return {"tickets": rows_to_list(rows)}
+
+
+@app.get("/api/admin/tickets/{ticket_id}/mensagens")
+def admin_mensagens_ticket(ticket_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        t = conn.execute("""
+            SELECT t.id, t.status, t.assunto, u.nome, u.sobrenome, u.email
+            FROM tickets t JOIN usuarios u ON u.id = t.usuario_id WHERE t.id = ?
+        """, (ticket_id,)).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        conn.execute("UPDATE ticket_mensagens SET lida = 1 WHERE ticket_id = ? AND autor = 'usuario' AND lida = 0", (ticket_id,))
+        conn.commit()
+        msgs = conn.execute(
+            "SELECT id, autor, texto, anexo_path, anexo_tipo, anexo_nome, criado_em FROM ticket_mensagens WHERE ticket_id = ? ORDER BY criado_em ASC",
+            (ticket_id,),
+        ).fetchall()
+    return {"ticket": dict(t), "mensagens": rows_to_list(msgs)}
+
+
+@app.post("/api/admin/tickets/{ticket_id}/mensagens")
+async def admin_enviar_mensagem(ticket_id: int, texto: str = Form(""),
+                                 anexo: Optional[UploadFile] = File(None),
+                                 admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        t = conn.execute("SELECT status FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        if t["status"] != "aberto":
+            raise HTTPException(403, "Ticket encerrado")
+        if not texto.strip() and not anexo:
+            raise HTTPException(400, "Mensagem vazia")
+        anexo_path = anexo_tipo = anexo_nome = None
+        if anexo:
+            anexo_path, anexo_tipo, anexo_nome = await _salvar_anexo(anexo, ticket_id)
+        conn.execute(
+            "INSERT INTO ticket_mensagens (ticket_id, autor, texto, anexo_path, anexo_tipo, anexo_nome) VALUES (?, 'admin', ?, ?, ?, ?)",
+            (ticket_id, texto.strip() or None, anexo_path, anexo_tipo, anexo_nome),
+        )
+        conn.execute("UPDATE tickets SET atualizado_em = datetime('now') WHERE id = ?", (ticket_id,))
+        conn.commit()
+    return {"status": "ok"}
+
+
+@app.post("/api/admin/tickets/{ticket_id}/encerrar")
+def admin_encerrar_ticket(ticket_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        t = conn.execute("SELECT id FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        conn.execute("UPDATE tickets SET status = 'encerrado', encerrado_por = 'admin', atualizado_em = datetime('now') WHERE id = ?", (ticket_id,))
+        conn.commit()
+    return {"status": "encerrado"}
 
 
 class LiberarAcessoIn(BaseModel):
