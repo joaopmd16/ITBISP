@@ -193,6 +193,21 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .calc-slot input.modified{border-color:#ff8c42;background:#ff8c420d}
 .acc-input{width:100%;padding:10px 14px;margin-bottom:8px;border-radius:var(--r-input);border:1.5px solid var(--line);background:var(--surface-2);color:var(--fg);font-size:13.5px;font-family:inherit;outline:none;transition:border-color .15s}
 .acc-input:focus{border-color:var(--primary)}
+.acc-row{display:flex;gap:10px}
+.acc-row .acc-input{flex:1}
+.acc-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:499;display:none}
+.acc-backdrop.open{display:block}
+.acc-modal{position:fixed;top:50%;left:50%;right:auto;transform:translate(-50%,-50%);width:min(680px,92vw);max-height:85vh;z-index:501}
+.acc-modal-body{overflow-y:auto;max-height:calc(85vh - 110px)}
+.acc-modal .settings-section{max-width:100%}
+@media (min-width:760px){
+  .acc-modal-body{display:grid;grid-template-columns:1fr 1fr;column-gap:0;align-content:start}
+  .acc-modal-body .settings-section{grid-column:span 1}
+  .acc-modal-body .settings-section.acc-full{grid-column:1/-1}
+}
+@media (max-width:520px){
+  .acc-modal{width:calc(100vw - 24px)}
+}
 .calc-op{display:flex;align-items:center;justify-content:center;padding:0 4px;font-size:26px;font-weight:200;color:var(--muted);align-self:center;user-select:none;flex-shrink:0}
 .calc-result-slot{flex:1.3;padding:20px 24px;display:flex;flex-direction:column;gap:6px;background:linear-gradient(135deg,#ff8c4210 0%,transparent 60%);border-left:1px solid var(--line)}
 .calc-result-slot label{font-size:10.5px;font-weight:700;color:#ff8c42;text-transform:uppercase;letter-spacing:.06em}
@@ -618,8 +633,9 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         </div>
       </div>
 
-      <!-- Painel de minha conta -->
-      <div class="settings-panel" id="contaPanel">
+      <!-- Painel de minha conta (modal central) -->
+      <div class="acc-backdrop" id="contaBackdrop" onclick="toggleConta()"></div>
+      <div class="settings-panel acc-modal" id="contaPanel">
         <div class="settings-header">
           <span class="settings-title" id="contaGreeting">Minha conta</span>
           <button class="settings-close" onclick="toggleConta()">✕</button>
@@ -627,7 +643,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="settings-section">
           <div class="settings-info" id="contaEmail"></div>
         </div>
-        <div id="contaBody"></div>
+        <div id="contaBody" class="acc-modal-body"></div>
       </div>
 
     <!-- page -->
@@ -1165,8 +1181,10 @@ function fmtDataHora(v){
 const ASSINATURA_LABEL={active:'Ativa',trialing:'Período de teste',dev:'Acesso liberado',past_due:'Pagamento atrasado',canceled:'Cancelada',inativa:'Inativa'};
 async function toggleConta(){
   const p=document.getElementById('contaPanel');
+  const bd=document.getElementById('contaBackdrop');
   const abrindo=!p.classList.contains('open');
   p.classList.toggle('open');
+  bd.classList.toggle('open');
   if(!abrindo)return;
   document.getElementById('contaGreeting').textContent=saudacao(MEU_USUARIO?.nome);
   document.getElementById('contaEmail').textContent=MEU_USUARIO?.email||'';
@@ -1188,8 +1206,10 @@ async function toggleConta(){
     body.innerHTML=`
       <div class="settings-section">
         <div class="settings-label">Meus dados</div>
-        <input class="acc-input" id="accNome" placeholder="Nome" value="${(r.nome||'').replace(/"/g,'&quot;')}">
-        <input class="acc-input" id="accSobrenome" placeholder="Sobrenome" value="${(r.sobrenome||'').replace(/"/g,'&quot;')}">
+        <div class="acc-row">
+          <input class="acc-input" id="accNome" placeholder="Nome" value="${(r.nome||'').replace(/"/g,'&quot;')}">
+          <input class="acc-input" id="accSobrenome" placeholder="Sobrenome" value="${(r.sobrenome||'').replace(/"/g,'&quot;')}">
+        </div>
         <input class="acc-input" id="accTelefone" placeholder="Telefone" value="${(r.telefone||'').replace(/"/g,'&quot;')}">
         <button class="sopt" style="width:100%" onclick="salvarPerfil()">Salvar dados</button>
         <div class="settings-info" id="accPerfilMsg"></div>
@@ -1216,11 +1236,11 @@ async function toggleConta(){
           Próxima renovação: ${fmtDataHora(a.periodo_fim)}${a.cancela_no_fim?' (cancela ao fim)':''}
         </div>
       </div>
-      <div class="settings-section">
+      <div class="settings-section acc-full">
         <div class="settings-label">Faturas</div>
         <div class="settings-shortcuts">${faturasHtml}</div>
       </div>
-      <div class="settings-section">
+      <div class="settings-section acc-full">
         <div class="settings-label">Conta</div>
         <div class="settings-options" style="flex-direction:column;gap:8px">
           <button class="sopt" style="width:100%" onclick="abrirPortalAssinatura()">Gerenciar assinatura</button>
