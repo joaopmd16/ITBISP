@@ -214,8 +214,9 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .ticket-bubble{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--primary);color:#fff;border:none;cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-lg);z-index:900}
 .ticket-bubble:hover{filter:brightness(1.08)}
 .ticket-badge{position:absolute;top:-4px;right:-4px;background:#e05f5f;color:#fff;font-size:11px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-.ticket-widget{position:fixed;bottom:92px;right:24px;width:360px;height:520px;max-height:calc(100vh - 120px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow-lg);z-index:901;display:none;flex-direction:column;overflow:hidden}
+.ticket-widget{position:fixed;bottom:92px;right:24px;width:360px;height:520px;max-height:calc(100vh - 120px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow-lg);z-index:901;display:none;flex-direction:column;overflow:hidden;transition:width .18s,height .18s}
 .ticket-widget.open{display:flex}
+.ticket-widget.expandido{width:min(720px,94vw);height:min(680px,88vh)}
 .ticket-widget-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
 .ticket-widget-head button{background:none;border:none;color:var(--ink-2);cursor:pointer;font-size:16px;padding:2px 4px}
 .ticket-widget-head button:hover{color:var(--fg)}
@@ -242,6 +243,10 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 #ticket-composer button{background:none;border:none;color:var(--ink-2);cursor:pointer;font-size:17px;padding:4px 6px;border-radius:8px}
 #ticket-composer button:hover{background:var(--surface-2);color:var(--fg)}
 #ticket-composer button.gravando{color:#e05f5f}
+.ticket-gravando-indicator{display:none;align-items:center;gap:7px;padding:6px 16px;font-size:12px;color:#e05f5f;font-weight:600}
+.ticket-gravando-indicator.on{display:flex}
+.ticket-gravando-dot{width:8px;height:8px;border-radius:50%;background:#e05f5f;animation:ticketPulse 1s infinite}
+@keyframes ticketPulse{0%,100%{opacity:1}50%{opacity:.25}}
 #ticket-texto-input{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:8px 12px;color:var(--fg);font-size:13px;font-family:inherit;outline:none}
 #ticket-texto-input:focus{border-color:var(--primary)}
 #ticket-encerrar-btn{margin:0 12px 10px;padding:7px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--ink-2);cursor:pointer;font-size:12px}
@@ -697,6 +702,7 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div class="ticket-widget-head">
           <button id="ticket-voltar" onclick="mostrarListaTickets()" style="display:none">←</button>
           <span id="ticket-widget-titulo">Suporte</span>
+          <button id="ticket-expandir-btn" onclick="toggleExpandirTicketWidget()" title="Expandir">⤢</button>
           <button onclick="toggleTicketWidget()">✕</button>
         </div>
 
@@ -714,6 +720,10 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 
         <div id="ticket-view-thread">
           <div id="ticket-msgs"></div>
+          <div class="ticket-gravando-indicator" id="ticket-gravando-indicator">
+            <span class="ticket-gravando-dot"></span>
+            <span>Gravando... <span id="ticket-gravando-tempo">0:00</span></span>
+          </div>
           <div id="ticket-composer">
             <input type="file" id="ticket-anexo-input" style="display:none" onchange="anexarArquivoTicket(this.files[0])">
             <button onclick="document.getElementById('ticket-anexo-input').click()" title="Anexar arquivo">📎</button>
@@ -1387,7 +1397,10 @@ async function toggleTicketWidget(){
   const abrindo=!w.classList.contains('open');
   w.classList.toggle('open');
   if(abrindo){ mostrarListaTickets(); }
-  else{ _pararPollTicket(); }
+  else{
+    _pararPollTicket();
+    if(_ticketGravador && _ticketGravador.state==='recording'){ _ticketGravador.stop(); }
+  }
 }
 
 function mostrarListaTickets(){
@@ -1418,7 +1431,7 @@ async function carregarMeusTickets(){
     el.innerHTML=tickets.map(t=>`
       <div class="ticket-item" onclick="abrirTicketThread(${t.id},${JSON.stringify(t.assunto)})">
         <div class="assunto">
-          <span>${t.assunto}</span>
+          <span>Protocolo #${t.id} — ${t.assunto}</span>
           ${t.nao_lidas>0?`<span class="nlidas">${t.nao_lidas}</span>`:''}
         </div>
         <div class="meta">
@@ -1456,7 +1469,7 @@ function _renderMensagensTicket(mensagens){
 async function abrirTicketThread(id, assunto){
   _ticketAtual=id;
   _mostrarTicketView('thread');
-  document.getElementById('ticket-widget-titulo').textContent=assunto||'Ticket';
+  document.getElementById('ticket-widget-titulo').textContent=`Protocolo #${id}` + (assunto?` — ${assunto}`:'');
   document.getElementById('ticket-msgs').innerHTML='<div class="settings-info">Carregando...</div>';
   await _atualizarThreadTicket();
   _iniciarPollTicket();
@@ -1529,28 +1542,87 @@ function anexarArquivoTicket(file){
   document.getElementById('ticket-anexo-input').value='';
 }
 
+function _escolherMimeTypeAudio(){
+  const candidatos=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg'];
+  for(const tipo of candidatos){
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(tipo)) return tipo;
+  }
+  return '';
+}
+
+let _ticketGravInicio=0, _ticketGravTimer=null;
+
+function _fmtDuracao(seg){
+  const m=Math.floor(seg/60), s=Math.floor(seg%60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function _atualizarTimerGravacao(){
+  const seg=(Date.now()-_ticketGravInicio)/1000;
+  document.getElementById('ticket-gravando-tempo').textContent=_fmtDuracao(seg);
+}
+
 async function toggleGravarAudio(){
   const btn=document.getElementById('ticket-mic-btn');
+  const indicador=document.getElementById('ticket-gravando-indicator');
   if(_ticketGravador && _ticketGravador.state==='recording'){
     _ticketGravador.stop();
     return;
   }
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    _ticketAudioChunks=[];
-    _ticketGravador=new MediaRecorder(stream);
-    _ticketGravador.ondataavailable=e=>{ if(e.data.size>0) _ticketAudioChunks.push(e.data); };
-    _ticketGravador.onstop=()=>{
-      stream.getTracks().forEach(t=>t.stop());
-      btn.classList.remove('gravando');
-      const blob=new Blob(_ticketAudioChunks,{type:'audio/webm'});
-      _enviarMensagemComAnexo('', blob, 'audio.webm');
-    };
-    _ticketGravador.start();
-    btn.classList.add('gravando');
-  }catch(e){
-    alert('Não foi possível acessar o microfone: '+e.message);
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert('Seu navegador não suporta gravação de áudio (requer HTTPS e um navegador atualizado).');
+    return;
   }
+  if(!window.MediaRecorder){
+    alert('Seu navegador não suporta gravação de áudio.');
+    return;
+  }
+  let stream;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){
+    if(e.name==='NotAllowedError') alert('Permissão de microfone negada. Habilite o acesso ao microfone nas configurações do navegador.');
+    else if(e.name==='NotFoundError') alert('Nenhum microfone encontrado.');
+    else alert('Não foi possível acessar o microfone: '+e.message);
+    return;
+  }
+  const mimeType=_escolherMimeTypeAudio();
+  try{
+    _ticketAudioChunks=[];
+    _ticketGravador = mimeType ? new MediaRecorder(stream,{mimeType}) : new MediaRecorder(stream);
+  }catch(e){
+    stream.getTracks().forEach(t=>t.stop());
+    alert('Seu navegador não suporta gravação de áudio: '+e.message);
+    return;
+  }
+  _ticketGravador.ondataavailable=e=>{ if(e.data.size>0) _ticketAudioChunks.push(e.data); };
+  _ticketGravador.onstop=()=>{
+    stream.getTracks().forEach(t=>t.stop());
+    btn.classList.remove('gravando');
+    indicador.classList.remove('on');
+    clearInterval(_ticketGravTimer);
+    const duracaoSeg=(Date.now()-_ticketGravInicio)/1000;
+    if(duracaoSeg<1 || !_ticketAudioChunks.length){
+      alert('Gravação muito curta ou vazia. Segure o botão por mais tempo antes de parar.');
+      return;
+    }
+    const blob=new Blob(_ticketAudioChunks,{type:mimeType||'audio/webm'});
+    _enviarMensagemComAnexo(`🎤 Mensagem de voz (${_fmtDuracao(duracaoSeg)})`, blob, 'audio.'+(mimeType.includes('mp4')?'mp4':mimeType.includes('ogg')?'ogg':'webm'));
+  };
+  _ticketGravador.start();
+  _ticketGravInicio=Date.now();
+  btn.classList.add('gravando');
+  indicador.classList.add('on');
+  document.getElementById('ticket-gravando-tempo').textContent='0:00';
+  _ticketGravTimer=setInterval(_atualizarTimerGravacao, 250);
+}
+
+function toggleExpandirTicketWidget(){
+  const w=document.getElementById('ticket-widget');
+  w.classList.toggle('expandido');
+  const btn=document.getElementById('ticket-expandir-btn');
+  btn.textContent = w.classList.contains('expandido') ? '⤡' : '⤢';
+  btn.title = w.classList.contains('expandido') ? 'Recolher' : 'Expandir';
 }
 
 function capturarTela(){

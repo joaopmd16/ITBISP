@@ -109,6 +109,10 @@
   #tk-composer input[type=text]{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none}
   #tk-composer input[type=text]:focus{border-color:var(--primary)}
   .act.gravando{border-color:var(--err);color:var(--err)}
+  .tk-gravando-indicator{display:none;align-items:center;gap:7px;padding:4px 2px 10px;font-size:12px;color:var(--err);font-weight:600}
+  .tk-gravando-indicator.on{display:flex}
+  .tk-gravando-dot{width:8px;height:8px;border-radius:50%;background:var(--err);animation:tkPulseDot 1s infinite}
+  @keyframes tkPulseDot{0%,100%{opacity:1}50%{opacity:.25}}
   .radio-row{display:flex;gap:18px;align-items:center;font-size:13.5px;margin-bottom:14px}
   .radio-row label{display:flex;align-items:center;gap:6px;cursor:pointer}
 
@@ -249,10 +253,10 @@
       <div class="card">
         <table>
           <thead>
-            <tr><th>Cliente</th><th>Assunto</th><th>Status</th><th>Última atualização</th><th>Não lidas</th><th>Ações</th></tr>
+            <tr><th>Protocolo</th><th>Cliente</th><th>Assunto</th><th>Status</th><th>Última atualização</th><th>Não lidas</th><th>Ações</th></tr>
           </thead>
           <tbody id="ticketsBody">
-            <tr><td colspan="6" class="loading">Carregando...</td></tr>
+            <tr><td colspan="7" class="loading">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -317,6 +321,10 @@
     <h3 id="tkTitulo"></h3>
     <p class="muted" style="font-size:12.5px;margin-bottom:10px" id="tkCliente"></p>
     <div id="tk-msgs"></div>
+    <div class="tk-gravando-indicator" id="tk-gravando-indicator">
+      <span class="tk-gravando-dot"></span>
+      <span>Gravando... <span id="tk-gravando-tempo">0:00</span></span>
+    </div>
     <div id="tk-composer">
       <input type="file" id="tk-anexo-input" style="display:none" onchange="tkAnexarArquivo(this.files[0])">
       <button type="button" class="act" onclick="document.getElementById('tk-anexo-input').click()" title="Anexar arquivo">📎</button>
@@ -884,11 +892,12 @@ async function carregarTickets(){
     if(naoLidas > 0){ badge.textContent = naoLidas; badge.style.display = 'inline-block'; }
     else{ badge.style.display = 'none'; }
     if(!tickets.length){
-      document.getElementById('ticketsBody').innerHTML = `<tr><td colspan="6" class="loading">Nenhum ticket ainda.</td></tr>`;
+      document.getElementById('ticketsBody').innerHTML = `<tr><td colspan="7" class="loading">Nenhum ticket ainda.</td></tr>`;
       return;
     }
     document.getElementById('ticketsBody').innerHTML = tickets.map(t => `
       <tr class="clicavel" onclick='tkAbrir(${t.id}, ${JSON.stringify(t.assunto)}, ${JSON.stringify((t.nome||'')+' '+(t.sobrenome||'')+' — '+t.email)})'>
+        <td style="font-family:monospace">#${t.id}</td>
         <td>${(t.nome||'')} ${(t.sobrenome||'')}<br><span class="muted" style="font-size:11.5px">${t.email}</span></td>
         <td>${t.assunto}</td>
         <td><span class="badge ${t.status==='aberto'?'b-active':'b-inativa'}">${TK_STATUS_LABEL[t.status]||t.status}</span></td>
@@ -898,7 +907,7 @@ async function carregarTickets(){
       </tr>
     `).join('');
   }catch(e){
-    document.getElementById('ticketsBody').innerHTML = `<tr><td colspan="6" class="loading">Erro: ${e.message}</td></tr>`;
+    document.getElementById('ticketsBody').innerHTML = `<tr><td colspan="7" class="loading">Erro: ${e.message}</td></tr>`;
   }
 }
 
@@ -925,7 +934,7 @@ function tkRenderMensagens(mensagens){
 
 async function tkAbrir(id, assunto, cliente){
   _tkAtual = id;
-  document.getElementById('tkTitulo').textContent = assunto;
+  document.getElementById('tkTitulo').textContent = `Protocolo #${id} — ${assunto}`;
   document.getElementById('tkCliente').textContent = cliente;
   document.getElementById('tk-msgs').innerHTML = `<div class="loading">Carregando...</div>`;
   document.getElementById('modalTicket').classList.add('open');
@@ -947,6 +956,7 @@ async function tkAtualizarThread(){
 
 function fecharModalTicket(){
   if(_tkPollTimer){ clearInterval(_tkPollTimer); _tkPollTimer = null; }
+  if(_tkGravador && _tkGravador.state === 'recording'){ _tkGravador.stop(); }
   _tkAtual = null;
   document.getElementById('modalTicket').classList.remove('open');
 }
@@ -979,25 +989,75 @@ function tkAnexarArquivo(file){
   document.getElementById('tk-anexo-input').value = '';
 }
 
+function _tkEscolherMimeTypeAudio(){
+  const candidatos = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg'];
+  for(const tipo of candidatos){
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(tipo)) return tipo;
+  }
+  return '';
+}
+
+let _tkGravInicio = 0, _tkGravTimer = null;
+
+function _tkFmtDuracao(seg){
+  const m = Math.floor(seg/60), s = Math.floor(seg%60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function _tkAtualizarTimerGravacao(){
+  document.getElementById('tk-gravando-tempo').textContent = _tkFmtDuracao((Date.now()-_tkGravInicio)/1000);
+}
+
 async function tkToggleGravarAudio(){
   const btn = document.getElementById('tk-mic-btn');
+  const indicador = document.getElementById('tk-gravando-indicator');
   if(_tkGravador && _tkGravador.state === 'recording'){ _tkGravador.stop(); return; }
-  try{
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    _tkAudioChunks = [];
-    _tkGravador = new MediaRecorder(stream);
-    _tkGravador.ondataavailable = e => { if(e.data.size > 0) _tkAudioChunks.push(e.data); };
-    _tkGravador.onstop = () => {
-      stream.getTracks().forEach(t => t.stop());
-      btn.classList.remove('gravando');
-      const blob = new Blob(_tkAudioChunks, { type: 'audio/webm' });
-      tkEnviarMensagemComAnexo('', blob, 'audio.webm');
-    };
-    _tkGravador.start();
-    btn.classList.add('gravando');
-  }catch(e){
-    alert('Não foi possível acessar o microfone: ' + e.message);
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert('Este navegador não suporta gravação de áudio (requer HTTPS e um navegador atualizado).');
+    return;
   }
+  if(!window.MediaRecorder){
+    alert('Este navegador não suporta gravação de áudio.');
+    return;
+  }
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  }catch(e){
+    if(e.name === 'NotAllowedError') alert('Permissão de microfone negada. Habilite o acesso ao microfone nas configurações do navegador.');
+    else if(e.name === 'NotFoundError') alert('Nenhum microfone encontrado.');
+    else alert('Não foi possível acessar o microfone: ' + e.message);
+    return;
+  }
+  const mimeType = _tkEscolherMimeTypeAudio();
+  try{
+    _tkAudioChunks = [];
+    _tkGravador = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+  }catch(e){
+    stream.getTracks().forEach(t => t.stop());
+    alert('Este navegador não suporta gravação de áudio: ' + e.message);
+    return;
+  }
+  _tkGravador.ondataavailable = e => { if(e.data.size > 0) _tkAudioChunks.push(e.data); };
+  _tkGravador.onstop = () => {
+    stream.getTracks().forEach(t => t.stop());
+    btn.classList.remove('gravando');
+    indicador.classList.remove('on');
+    clearInterval(_tkGravTimer);
+    const duracaoSeg = (Date.now()-_tkGravInicio)/1000;
+    if(duracaoSeg < 1 || !_tkAudioChunks.length){
+      alert('Gravação muito curta ou vazia. Segure por mais tempo antes de parar.');
+      return;
+    }
+    const blob = new Blob(_tkAudioChunks, { type: mimeType || 'audio/webm' });
+    tkEnviarMensagemComAnexo(`🎤 Mensagem de voz (${_tkFmtDuracao(duracaoSeg)})`, blob, 'audio.'+(mimeType.includes('mp4')?'mp4':mimeType.includes('ogg')?'ogg':'webm'));
+  };
+  _tkGravador.start();
+  _tkGravInicio = Date.now();
+  btn.classList.add('gravando');
+  indicador.classList.add('on');
+  document.getElementById('tk-gravando-tempo').textContent = '0:00';
+  _tkGravTimer = setInterval(_tkAtualizarTimerGravacao, 250);
 }
 
 function tkCapturarTela(){
