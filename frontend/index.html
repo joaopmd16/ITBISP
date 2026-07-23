@@ -215,7 +215,7 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .ticket-bubble:hover{filter:brightness(1.08)}
 .ticket-bubble:active{transform:scale(.9)}
 .ticket-badge{position:absolute;top:-4px;right:-4px;background:#e05f5f;color:#fff;font-size:11px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-.ticket-widget{position:fixed;bottom:92px;right:24px;width:360px;height:520px;max-height:calc(100vh - 120px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow-lg);z-index:901;display:flex;flex-direction:column;overflow:hidden;
+.ticket-widget{position:fixed;bottom:92px;right:24px;width:400px;height:580px;max-height:calc(100vh - 120px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow-lg);z-index:901;display:flex;flex-direction:column;overflow:hidden;
   transition:width .18s,height .18s,opacity .22s ease,transform .22s cubic-bezier(.34,1.56,.64,1),visibility .22s;
   opacity:0;transform:translateY(18px) scale(.94);visibility:hidden;pointer-events:none;transform-origin:bottom right}
 .ticket-widget.open{opacity:1;transform:translateY(0) scale(1);visibility:visible;pointer-events:auto}
@@ -231,6 +231,10 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .ticket-widget-head button:hover{color:var(--fg)}
 .ticket-widget-head span{flex:1}
 #ticket-view-lista,#ticket-view-novo{padding:14px 16px;overflow-y:auto;flex:1}
+.ticket-tabs{display:flex;gap:6px;margin-bottom:12px}
+.ticket-tab{background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:100px;transition:all .15s}
+.ticket-tab:hover{border-color:var(--primary);color:var(--fg)}
+.ticket-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}
 .ticket-item{padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;font-size:13px}
 .ticket-item:hover{border-color:var(--primary)}
 .ticket-item{transition:border-color .15s,transform .1s}
@@ -725,6 +729,11 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
 
         <div id="ticket-view-lista">
           <button class="sopt" style="width:100%;margin-bottom:12px" onclick="abrirNovoTicketForm()">+ Novo ticket</button>
+          <div class="ticket-tabs" id="ticket-status-tabs">
+            <button class="ticket-tab active" data-status="todos" onclick="_filtrarTicketsStatus('todos')">Todos</button>
+            <button class="ticket-tab" data-status="aberto" onclick="_filtrarTicketsStatus('aberto')">Abertos</button>
+            <button class="ticket-tab" data-status="encerrado" onclick="_filtrarTicketsStatus('encerrado')">Encerrados</button>
+          </div>
           <div id="ticket-lista-conteudo"><div class="settings-info">Carregando...</div></div>
         </div>
 
@@ -1460,28 +1469,48 @@ function abrirNovoTicketForm(){
 
 const TICKET_STATUS_LABEL={aberto:'aberto',encerrado:'encerrado'};
 
+let _ticketsCarregados=[];
+let _ticketFiltroStatus='todos';
+
+function _renderListaTickets(){
+  const el=document.getElementById('ticket-lista-conteudo');
+  const tickets=_ticketFiltroStatus==='todos' ? _ticketsCarregados : _ticketsCarregados.filter(t=>t.status===_ticketFiltroStatus);
+  if(!tickets.length){
+    el.innerHTML = _ticketFiltroStatus==='todos'
+      ? '<div class="settings-info">Nenhum ticket ainda. Clique em "+ Novo ticket" para abrir um.</div>'
+      : '<div class="settings-info">Nenhum ticket nessa aba.</div>';
+    return;
+  }
+  el.innerHTML=tickets.map(t=>`
+    <div class="ticket-item" onclick='abrirTicketThread(${t.id}, ${JSON.stringify(t.assunto)})'>
+      <div class="assunto">
+        <span>Protocolo #${t.id} — ${t.assunto}</span>
+        ${t.nao_lidas>0?`<span class="nlidas">${t.nao_lidas}</span>`:''}
+      </div>
+      <div class="meta">
+        <span class="status-badge ${t.status}">${TICKET_STATUS_LABEL[t.status]||t.status}</span>
+        · ${fmtDataHora(t.atualizado_em)}
+      </div>
+    </div>
+  `).join('');
+}
+
+function _filtrarTicketsStatus(status){
+  _ticketFiltroStatus=status;
+  document.querySelectorAll('#ticket-status-tabs .ticket-tab').forEach(b=>b.classList.toggle('active', b.dataset.status===status));
+  _renderListaTickets();
+}
+
 async function carregarMeusTickets(){
   const el=document.getElementById('ticket-lista-conteudo');
   try{
     const r=await fetch(`${API}/api/tickets`).then(x=>x.json());
-    const tickets=r.tickets||[];
-    const naoLidas=tickets.reduce((s,t)=>s+(t.nao_lidas||0),0);
+    _ticketsCarregados=r.tickets||[];
+    const naoLidas=_ticketsCarregados.reduce((s,t)=>s+(t.nao_lidas||0),0);
     const badge=document.getElementById('ticket-badge');
     if(naoLidas>0){ badge.textContent=naoLidas; badge.style.display='flex'; }
     else{ badge.style.display='none'; }
-    if(!tickets.length){ el.innerHTML='<div class="settings-info">Nenhum ticket ainda. Clique em "+ Novo ticket" para abrir um.</div>'; return; }
-    el.innerHTML=tickets.map(t=>`
-      <div class="ticket-item" onclick='abrirTicketThread(${t.id}, ${JSON.stringify(t.assunto)})'>
-        <div class="assunto">
-          <span>Protocolo #${t.id} — ${t.assunto}</span>
-          ${t.nao_lidas>0?`<span class="nlidas">${t.nao_lidas}</span>`:''}
-        </div>
-        <div class="meta">
-          <span class="status-badge ${t.status}">${TICKET_STATUS_LABEL[t.status]||t.status}</span>
-          · ${fmtDataHora(t.atualizado_em)}
-        </div>
-      </div>
-    `).join('');
+    _renderListaTickets();
   }catch(e){
     el.innerHTML='<div class="settings-info">Erro ao carregar tickets.</div>';
   }
