@@ -1304,6 +1304,10 @@ function saudacao(nome){
   const periodo=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
   return nome?`${periodo}, ${nome}`:periodo;
 }
+function _esc(s){
+  if(s===null||s===undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function fmtDataHora(v){
   if(!v)return'—';
   const d=typeof v==='number'?new Date(v*1000):new Date(v.replace(' ','T')+(v.includes('Z')?'':'Z'));
@@ -1339,16 +1343,16 @@ async function toggleConta(){
       <div class="settings-section">
         <div class="settings-label">Meus dados</div>
         <div class="acc-row">
-          <input class="acc-input" id="accNome" placeholder="Nome" value="${(r.nome||'').replace(/"/g,'&quot;')}">
-          <input class="acc-input" id="accSobrenome" placeholder="Sobrenome" value="${(r.sobrenome||'').replace(/"/g,'&quot;')}">
+          <input class="acc-input" id="accNome" placeholder="Nome" value="${_esc(r.nome||'')}">
+          <input class="acc-input" id="accSobrenome" placeholder="Sobrenome" value="${_esc(r.sobrenome||'')}">
         </div>
-        <input class="acc-input" id="accTelefone" placeholder="Telefone" value="${(r.telefone||'').replace(/"/g,'&quot;')}">
+        <input class="acc-input" id="accTelefone" placeholder="Telefone" value="${_esc(r.telefone||'')}">
         <button class="sopt" style="width:100%" onclick="salvarPerfil()">Salvar dados</button>
         <div class="settings-info" id="accPerfilMsg"></div>
       </div>
       <div class="settings-section">
         <div class="settings-label">Alterar e-mail</div>
-        <div class="settings-info" id="accEmailPendenteInfo">${r.email_pendente?`Confirmação pendente para ${r.email_pendente}`:''}</div>
+        <div class="settings-info" id="accEmailPendenteInfo">${r.email_pendente?`Confirmação pendente para ${_esc(r.email_pendente)}`:''}</div>
         <input class="acc-input" id="accNovoEmail" type="email" placeholder="Novo e-mail">
         <button class="sopt" style="width:100%" onclick="trocarEmail()">Enviar confirmação</button>
         <div class="settings-info" id="accEmailMsg"></div>
@@ -1484,7 +1488,7 @@ function _renderListaTickets(){
   el.innerHTML=tickets.map(t=>`
     <div class="ticket-item" onclick='abrirTicketThread(${t.id}, ${JSON.stringify(t.assunto)})'>
       <div class="assunto">
-        <span>Protocolo #${t.id} — ${t.assunto}</span>
+        <span>Protocolo #${t.id} — ${_esc(t.assunto)}</span>
         ${t.nao_lidas>0?`<span class="nlidas">${t.nao_lidas}</span>`:''}
       </div>
       <div class="meta">
@@ -1518,10 +1522,10 @@ async function carregarMeusTickets(){
 
 function _bolhaAnexo(m){
   if(!m.anexo_path) return '';
-  const url=`${API}/api/tickets/anexos/${m.anexo_path}?token=${encodeURIComponent(TOKEN)}`;
+  const url=_esc(`${API}/api/tickets/anexos/${encodeURI(m.anexo_path)}?token=${encodeURIComponent(TOKEN)}`);
   if(m.anexo_tipo==='imagem') return `<img src="${url}" alt="anexo">`;
   if(m.anexo_tipo==='audio') return `<audio controls src="${url}"></audio>`;
-  return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${m.anexo_nome||'arquivo'}</a>`;
+  return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${_esc(m.anexo_nome||'arquivo')}</a>`;
 }
 
 let _ticketUltimoRenderFingerprint=null;
@@ -1536,7 +1540,7 @@ function _renderMensagensTicket(mensagens){
   const pertoDoFim = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
   el.innerHTML=mensagens.map(m=>`
     <div class="ticket-msg ${m.autor}">
-      ${m.texto?`<div>${m.texto.replace(/</g,'&lt;')}</div>`:''}
+      ${m.texto?`<div>${_esc(m.texto)}</div>`:''}
       ${_bolhaAnexo(m)}
       <div class="quando">${fmtDataHora(m.criado_em)}</div>
     </div>
@@ -1580,7 +1584,7 @@ let _ticketNovoAnexo=null;
 function _mostrarPreviewAnexoNovo(nome){
   const el=document.getElementById('ticket-novo-anexo-preview');
   el.style.display='flex';
-  el.innerHTML=`<span>📎 ${nome}</span><button type="button" onclick="_limparAnexoNovo()">✕</button>`;
+  el.innerHTML=`<span>📎 ${_esc(nome)}</span><button type="button" onclick="_limparAnexoNovo()">✕</button>`;
 }
 function _limparAnexoNovo(){
   _ticketNovoAnexo=null;

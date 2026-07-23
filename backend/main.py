@@ -6,6 +6,7 @@ Docs:         http://localhost:8000/docs
 """
 
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -180,6 +181,36 @@ def _log_admin(conn, usuario_id: int, acao: str, detalhe: str | None = None) -> 
     )
 
 
+_rate_limit_buckets: dict = {}
+
+
+def _rate_limit(request: Request, chave: str, max_tentativas: int, janela_seg: int) -> None:
+    """Limitador simples em memória (processo único — sem múltiplos workers uvicorn,
+    então não precisa de Redis/estado compartilhado) por IP+rota, janela deslizante.
+    Levanta 429 se o IP excedeu max_tentativas dentro de janela_seg."""
+    ip = request.client.host if request.client else "desconhecido"
+    agora = time.time()
+    bucket_chave = f"{chave}:{ip}"
+    fila = _rate_limit_buckets.setdefault(bucket_chave, [])
+    fila[:] = [t for t in fila if agora - t < janela_seg]
+    if len(fila) >= max_tentativas:
+        raise HTTPException(429, "Muitas tentativas. Tente novamente em alguns minutos.")
+    fila.append(agora)
+
+
+_NOME_ARQUIVO_SEGURO = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _sanitizar_nome_arquivo(nome: str) -> str:
+    """Remove path separators e qualquer caractere fora de um alfabeto seguro do nome
+    original do anexo — impede path traversal (../../) e quebra de atributo HTML (aspas,
+    < >) quando o nome é usado depois pra montar a URL do anexo no frontend."""
+    nome = os.path.basename(nome or "arquivo").strip()
+    nome = _NOME_ARQUIVO_SEGURO.sub("_", nome)
+    nome = nome.lstrip(".") or "arquivo"
+    return nome[:120]
+
+
 async def _salvar_anexo(anexo: UploadFile, ticket_id: int) -> tuple[str, str, str]:
     conteudo = await anexo.read()
     if len(conteudo) > TAMANHO_MAX_ANEXO:
@@ -189,9 +220,10 @@ async def _salvar_anexo(anexo: UploadFile, ticket_id: int) -> tuple[str, str, st
         else "arquivo"
     pasta = UPLOADS_DIR / "tickets" / str(ticket_id)
     pasta.mkdir(parents=True, exist_ok=True)
-    nome_seguro = f"{secrets.token_hex(8)}_{anexo.filename or 'arquivo'}"
+    nome_original_seguro = _sanitizar_nome_arquivo(anexo.filename)
+    nome_seguro = f"{secrets.token_hex(8)}_{nome_original_seguro}"
     (pasta / nome_seguro).write_bytes(conteudo)
-    return f"{ticket_id}/{nome_seguro}", tipo, (anexo.filename or nome_seguro)
+    return f"{ticket_id}/{nome_seguro}", tipo, nome_original_seguro
 
 
 def rows_to_list(rows) -> list[dict]:
@@ -1015,7 +1047,8 @@ class CadastroIn(BaseModel):
 
 
 @app.post("/api/auth/registrar")
-def registrar(dados: CadastroIn):
+def registrar(dados: CadastroIn, request: Request):
+    _rate_limit(request, "registrar", max_tentativas=5, janela_seg=3600)
     email = dados.email.strip().lower()
     nome = dados.nome.strip()
     sobrenome = dados.sobrenome.strip()
@@ -1095,7 +1128,8 @@ class ReenviarIn(BaseModel):
 
 
 @app.post("/api/auth/reenviar-verificacao")
-def reenviar_verificacao(dados: ReenviarIn):
+def reenviar_verificacao(dados: ReenviarIn, request: Request):
+    _rate_limit(request, "reenviar-verificacao", max_tentativas=5, janela_seg=3600)
     email = dados.email.strip().lower()
     with get_db() as conn:
         row = conn.execute(
@@ -1118,7 +1152,8 @@ def reenviar_verificacao(dados: ReenviarIn):
 
 
 @app.post("/api/auth/login")
-def login(dados: CredenciaisIn):
+def login(dados: CredenciaisIn, request: Request):
+    _rate_limit(request, "login", max_tentativas=10, janela_seg=300)
     email = dados.email.strip().lower()
     with get_db() as conn:
         row = conn.execute(
@@ -1142,7 +1177,8 @@ class EsqueciSenhaIn(BaseModel):
 
 
 @app.post("/api/auth/esqueci-senha")
-def esqueci_senha(dados: EsqueciSenhaIn):
+def esqueci_senha(dados: EsqueciSenhaIn, request: Request):
+    _rate_limit(request, "esqueci-senha", max_tentativas=5, janela_seg=3600)
     email = dados.email.strip().lower()
     with get_db() as conn:
         row = conn.execute("SELECT id, nome FROM usuarios WHERE email = ?", (email,)).fetchone()
@@ -1168,7 +1204,8 @@ class RedefinirSenhaIn(BaseModel):
 
 
 @app.post("/api/auth/redefinir-senha")
-def redefinir_senha(dados: RedefinirSenhaIn):
+def redefinir_senha(dados: RedefinirSenhaIn, request: Request):
+    _rate_limit(request, "redefinir-senha", max_tentativas=10, janela_seg=3600)
     if len(dados.nova_senha) < 6:
         raise HTTPException(400, "Senha muito curta (mín. 6 caracteres)")
     with get_db() as conn:
@@ -1359,7 +1396,8 @@ class TrocarSenhaIn(BaseModel):
 
 
 @app.post("/api/usuario/trocar-senha")
-def trocar_senha(dados: TrocarSenhaIn, usuario: dict = Depends(auth.get_usuario_atual)):
+def trocar_senha(dados: TrocarSenhaIn, request: Request, usuario: dict = Depends(auth.get_usuario_atual)):
+    _rate_limit(request, "trocar-senha", max_tentativas=10, janela_seg=300)
     if len(dados.nova_senha) < 6:
         raise HTTPException(400, "Senha muito curta (mín. 6 caracteres)")
     with get_db() as conn:
@@ -1485,14 +1523,22 @@ def obter_anexo_ticket(caminho: str, token: Optional[str] = Query(None), authori
     usuario_id = int(payload["sub"])
     usuario_email = payload["email"]
 
-    ticket_id = int(caminho.split("/")[0])
+    try:
+        ticket_id = int(caminho.split("/")[0])
+    except (ValueError, IndexError):
+        raise HTTPException(404, "Não encontrado")
     with get_db() as conn:
         t = conn.execute("SELECT usuario_id FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
     if not t:
         raise HTTPException(404, "Não encontrado")
     if usuario_id != t["usuario_id"] and usuario_email != ADMIN_EMAIL:
         raise HTTPException(403, "Sem acesso")
-    caminho_completo = UPLOADS_DIR / "tickets" / caminho
+    base = (UPLOADS_DIR / "tickets").resolve()
+    caminho_completo = (UPLOADS_DIR / "tickets" / caminho).resolve()
+    # Garante que o caminho resolvido continua dentro da pasta de uploads — bloqueia
+    # qualquer "../" no parâmetro de URL tentando sair da pasta (path traversal).
+    if base not in caminho_completo.parents and caminho_completo != base:
+        raise HTTPException(404, "Não encontrado")
     if not caminho_completo.is_file():
         raise HTTPException(404, "Não encontrado")
     # Lê o arquivo inteiro e responde de uma vez (em vez de streaming via FileResponse) —

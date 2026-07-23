@@ -444,6 +444,11 @@ function acessoAte(u){
   return '—';
 }
 
+function _esc(s){
+  if(s===null||s===undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function fmtData(iso){
   if(!iso) return '—';
   try{ return new Date(iso).toLocaleString('pt-BR'); }catch(e){ return iso; }
@@ -506,9 +511,9 @@ function renderTabela(usuarios){
   }
   document.getElementById('tbody').innerHTML = usuarios.map(u => `
     <tr class="clicavel" onclick='abrirDetalhes(${u.id})'>
-      <td>${(u.nome||'')} ${(u.sobrenome||'')}</td>
-      <td>${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</td>
-      <td class="muted">${u.telefone || '—'}</td>
+      <td>${_esc(u.nome||'')} ${_esc(u.sobrenome||'')}</td>
+      <td>${_esc(u.email)}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</td>
+      <td class="muted">${_esc(u.telefone) || '—'}</td>
       <td>${badge(u.status)}</td>
       <td class="muted">${acessoAte(u)}</td>
       <td class="muted">${fmtData(u.criado_em)}</td>
@@ -556,13 +561,13 @@ async function abrirDetalhes(id){
       : `<p class="muted" style="font-size:13px">Nenhuma ação registrada ainda.</p>`;
     document.getElementById('dConteudo').innerHTML = `
       <div class="info-grid">
-        <div><div class="l">E-mail</div><div class="v">${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</div></div>
-        <div><div class="l">Telefone</div><div class="v">${u.telefone || '—'}</div></div>
+        <div><div class="l">E-mail</div><div class="v">${_esc(u.email)}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</div></div>
+        <div><div class="l">Telefone</div><div class="v">${_esc(u.telefone) || '—'}</div></div>
         <div><div class="l">Status</div><div class="v">${badge(u.status)}</div></div>
         <div><div class="l">Acesso até</div><div class="v">${acessoAte(u)}</div></div>
         <div><div class="l">Cadastro</div><div class="v">${fmtData(u.criado_em)}</div></div>
         <div><div class="l">Último acesso</div><div class="v">${fmtData(u.ultimo_acesso)}</div></div>
-        ${u.email_pendente ? `<div style="grid-column:1/-1"><div class="l">E-mail pendente</div><div class="v">${u.email_pendente} <span class="warn-email">aguardando confirmação do usuário</span></div></div>` : ''}
+        ${u.email_pendente ? `<div style="grid-column:1/-1"><div class="l">E-mail pendente</div><div class="v">${_esc(u.email_pendente)} <span class="warn-email">aguardando confirmação do usuário</span></div></div>` : ''}
       </div>
       <div class="sec-title">Ações rápidas</div>
       <div class="actions">
@@ -578,12 +583,12 @@ async function abrirDetalhes(id){
       <div class="sec-title">Editar dados</div>
       <form onsubmit="return salvarPerfilAdmin(event, ${u.id})">
         <div class="field-row">
-          <div class="field"><label>Nome</label><input id="epNome" type="text" value="${(u.nome||'').replace(/"/g,'&quot;')}"></div>
-          <div class="field"><label>Sobrenome</label><input id="epSobrenome" type="text" value="${(u.sobrenome||'').replace(/"/g,'&quot;')}"></div>
+          <div class="field"><label>Nome</label><input id="epNome" type="text" value="${_esc(u.nome||'')}"></div>
+          <div class="field"><label>Sobrenome</label><input id="epSobrenome" type="text" value="${_esc(u.sobrenome||'')}"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>E-mail</label><input id="epEmail" type="email" value="${u.email}"></div>
-          <div class="field"><label>Telefone</label><input id="epTelefone" type="text" value="${(u.telefone||'').replace(/"/g,'&quot;')}"></div>
+          <div class="field"><label>E-mail</label><input id="epEmail" type="email" value="${_esc(u.email)}"></div>
+          <div class="field"><label>Telefone</label><input id="epTelefone" type="text" value="${_esc(u.telefone||'')}"></div>
         </div>
         <button class="btn-primary" type="submit">Salvar alterações</button>
         <div id="epMsg"></div>
@@ -811,7 +816,7 @@ async function carregarCupons(){
     }
     tbody.innerHTML = data.cupons.map(c => `
       <tr>
-        <td>${c.codigo}</td>
+        <td>${_esc(c.codigo)}</td>
         <td>${c.percent_off ? c.percent_off + '%' : 'R$ ' + Number(c.amount_off).toFixed(2)}</td>
         <td>${c.duration}${c.duration_in_months ? ' (' + c.duration_in_months + 'm)' : ''}</td>
         <td class="muted">${c.expires_at ? new Date(c.expires_at*1000).toLocaleDateString('pt-BR') : '—'}</td>
@@ -901,8 +906,8 @@ async function carregarTickets(){
     document.getElementById('ticketsBody').innerHTML = tickets.map(t => `
       <tr class="clicavel" onclick='tkAbrir(${t.id}, ${JSON.stringify(t.assunto)}, ${JSON.stringify((t.nome||'')+' '+(t.sobrenome||'')+' — '+t.email)})'>
         <td style="font-family:monospace">#${t.id}</td>
-        <td>${(t.nome||'')} ${(t.sobrenome||'')}<br><span class="muted" style="font-size:11.5px">${t.email}</span></td>
-        <td>${t.assunto}</td>
+        <td>${_esc(t.nome||'')} ${_esc(t.sobrenome||'')}<br><span class="muted" style="font-size:11.5px">${_esc(t.email)}</span></td>
+        <td>${_esc(t.assunto)}</td>
         <td><span class="badge ${t.status==='aberto'?'b-active':'b-inativa'}">${TK_STATUS_LABEL[t.status]||t.status}</span></td>
         <td class="muted">${fmtData(t.atualizado_em)}</td>
         <td>${t.nao_lidas>0?`<span class="badge b-trialing">${t.nao_lidas}</span>`:'—'}</td>
@@ -916,10 +921,10 @@ async function carregarTickets(){
 
 function tkAnexoHtml(m){
   if(!m.anexo_path) return '';
-  const url = `${API}/api/tickets/anexos/${m.anexo_path}?token=${encodeURIComponent(token)}`;
+  const url = _esc(`${API}/api/tickets/anexos/${encodeURI(m.anexo_path)}?token=${encodeURIComponent(token)}`);
   if(m.anexo_tipo === 'imagem') return `<img src="${url}" alt="anexo">`;
   if(m.anexo_tipo === 'audio') return `<audio controls src="${url}"></audio>`;
-  return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${m.anexo_nome||'arquivo'}</a>`;
+  return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${_esc(m.anexo_nome||'arquivo')}</a>`;
 }
 
 let _tkUltimoRenderFingerprint = null;
@@ -934,7 +939,7 @@ function tkRenderMensagens(mensagens){
   const pertoDoFim = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
   el.innerHTML = mensagens.map(m => `
     <div class="tk-msg ${m.autor}">
-      ${m.texto ? `<div>${m.texto.replace(/</g,'&lt;')}</div>` : ''}
+      ${m.texto ? `<div>${_esc(m.texto)}</div>` : ''}
       ${tkAnexoHtml(m)}
       <div class="quando">${fmtData(m.criado_em)}</div>
     </div>
