@@ -59,9 +59,12 @@
   button.act.danger:hover{border-color:var(--err);color:var(--err)}
   button.act.ok:hover{border-color:var(--ok);color:var(--ok)}
 
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
-  .overlay.open{display:flex}
-  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;max-width:480px;width:100%;max-height:85vh;overflow:auto}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;transition:background .18s ease}
+  .overlay.open{display:flex;background:rgba(0,0,0,.65)}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;max-width:480px;width:100%;max-height:85vh;overflow:auto;transform:scale(.94) translateY(10px);opacity:0;transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
+  .overlay.open .modal{transform:scale(1) translateY(0);opacity:1}
+  @keyframes tkFlashEncerrado{0%{background:rgba(224,95,95,0)}30%{background:rgba(224,95,95,.15)}100%{background:rgba(224,95,95,0)}}
+  .tk-flash-encerrado{animation:tkFlashEncerrado .7s ease}
   .modal h3{font-size:17px;margin-bottom:16px}
   .modal .close{float:right;cursor:pointer;color:var(--muted);font-size:20px;line-height:1}
   .opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
@@ -1152,6 +1155,10 @@ async function tkEncerrarTicket(){
     await api(`/api/admin/tickets/${_tkAtual}/encerrar`, { method: 'POST' });
     await tkAtualizarThread();
     carregarTickets();
+    const modal=document.querySelector('#modalTicket .modal');
+    modal.classList.remove('tk-flash-encerrado');
+    void modal.offsetWidth;
+    modal.classList.add('tk-flash-encerrado');
   }catch(e){ alert('Erro ao encerrar: ' + e.message); }
 }
 
