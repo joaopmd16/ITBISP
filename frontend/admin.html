@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
 <style>
   :root{
     --bg:#000; --surface:#0d0d0d; --surface2:#151515; --border:#232323;
@@ -109,10 +109,10 @@
   #tk-composer input[type=text]{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none}
   #tk-composer input[type=text]:focus{border-color:var(--primary)}
   .act.gravando{border-color:var(--err);color:var(--err)}
-  .tk-gravando-indicator{display:none;align-items:center;gap:7px;padding:4px 2px 10px;font-size:12px;color:var(--err);font-weight:600}
+  .tk-gravando-indicator{display:none;align-items:center;gap:8px;padding:4px 2px 10px;font-size:12px;color:var(--err);font-weight:600}
   .tk-gravando-indicator.on{display:flex}
-  .tk-gravando-dot{width:8px;height:8px;border-radius:50%;background:var(--err);animation:tkPulseDot 1s infinite}
-  @keyframes tkPulseDot{0%,100%{opacity:1}50%{opacity:.25}}
+  .tk-onda{display:flex;align-items:center;gap:2px;height:20px}
+  .tk-onda span{width:3px;min-height:3px;background:var(--err);border-radius:2px;transition:height .08s ease-out}
   .radio-row{display:flex;gap:18px;align-items:center;font-size:13.5px;margin-bottom:14px}
   .radio-row label{display:flex;align-items:center;gap:6px;cursor:pointer}
 
@@ -322,8 +322,8 @@
     <p class="muted" style="font-size:12.5px;margin-bottom:10px" id="tkCliente"></p>
     <div id="tk-msgs"></div>
     <div class="tk-gravando-indicator" id="tk-gravando-indicator">
-      <span class="tk-gravando-dot"></span>
-      <span>Gravando... <span id="tk-gravando-tempo">0:00</span></span>
+      <div class="tk-onda" id="tk-onda"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <span id="tk-gravando-tempo">0:00</span>
     </div>
     <div id="tk-composer">
       <input type="file" id="tk-anexo-input" style="display:none" onchange="tkAnexarArquivo(this.files[0])">
@@ -973,6 +973,7 @@ async function tkEnviarMensagemComAnexo(texto, blob, filename){
 }
 
 function tkEnviarMensagem(){
+  if(_tkGravador && _tkGravador.state === 'recording'){ _tkGravador.stop(); return; }
   const input = document.getElementById('tk-texto-input');
   const texto = input.value.trim();
   if(!texto) return;
@@ -998,14 +999,72 @@ function _tkEscolherMimeTypeAudio(){
 }
 
 let _tkGravInicio = 0, _tkGravTimer = null;
+let _tkOndaAudioCtx = null, _tkOndaAnalyser = null, _tkOndaRAF = null;
 
 function _tkFmtDuracao(seg){
   const m = Math.floor(seg/60), s = Math.floor(seg%60);
   return `${m}:${String(s).padStart(2,'0')}`;
 }
 
-function _tkAtualizarTimerGravacao(){
-  document.getElementById('tk-gravando-tempo').textContent = _tkFmtDuracao((Date.now()-_tkGravInicio)/1000);
+function _tkIniciarOnda(stream){
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if(!AudioCtx) return;
+  try{
+    _tkOndaAudioCtx = new AudioCtx();
+    const source = _tkOndaAudioCtx.createMediaStreamSource(stream);
+    _tkOndaAnalyser = _tkOndaAudioCtx.createAnalyser();
+    _tkOndaAnalyser.fftSize = 64;
+    source.connect(_tkOndaAnalyser);
+    const data = new Uint8Array(_tkOndaAnalyser.frequencyBinCount);
+    const barras = document.querySelectorAll('#tk-onda span');
+    const loop = () => {
+      _tkOndaAnalyser.getByteFrequencyData(data);
+      barras.forEach((b,i) => { const v=data[i+2]||0; b.style.height=Math.max(3,(v/255)*18)+'px'; });
+      _tkOndaRAF = requestAnimationFrame(loop);
+    };
+    loop();
+  }catch(e){}
+}
+function _tkPararOnda(){
+  if(_tkOndaRAF){ cancelAnimationFrame(_tkOndaRAF); _tkOndaRAF = null; }
+  if(_tkOndaAudioCtx){ _tkOndaAudioCtx.close().catch(()=>{}); _tkOndaAudioCtx = null; }
+  _tkOndaAnalyser = null;
+}
+
+function _tkAudioBufferToWavBlob(buffer){
+  const numChannels=buffer.numberOfChannels, sampleRate=buffer.sampleRate, bitDepth=16;
+  const bytesPerSample=bitDepth/8, blockAlign=numChannels*bytesPerSample;
+  const dataLength=buffer.length*blockAlign;
+  const arrBuf=new ArrayBuffer(44+dataLength);
+  const view=new DataView(arrBuf);
+  const ws=(offset,str)=>{ for(let i=0;i<str.length;i++) view.setUint8(offset+i, str.charCodeAt(i)); };
+  ws(0,'RIFF'); view.setUint32(4,36+dataLength,true); ws(8,'WAVE');
+  ws(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,numChannels,true); view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*blockAlign,true); view.setUint16(32,blockAlign,true);
+  view.setUint16(34,bitDepth,true); ws(36,'data'); view.setUint32(40,dataLength,true);
+  let offset=44;
+  const channels=[]; for(let i=0;i<numChannels;i++) channels.push(buffer.getChannelData(i));
+  for(let s=0;s<buffer.length;s++){
+    for(let c=0;c<numChannels;c++){
+      let v=Math.max(-1,Math.min(1,channels[c][s]));
+      v = v<0 ? v*0x8000 : v*0x7FFF;
+      view.setInt16(offset, v, true); offset+=2;
+    }
+  }
+  return new Blob([arrBuf],{type:'audio/wav'});
+}
+
+async function _tkBlobParaWav(blob){
+  try{
+    const arrayBuffer=await blob.arrayBuffer();
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    const ctx=new AudioCtx();
+    const audioBuffer=await ctx.decodeAudioData(arrayBuffer);
+    const wav=_tkAudioBufferToWavBlob(audioBuffer);
+    ctx.close();
+    return wav;
+  }catch(e){ return null; }
 }
 
 async function tkToggleGravarAudio(){
@@ -1039,25 +1098,30 @@ async function tkToggleGravarAudio(){
     return;
   }
   _tkGravador.ondataavailable = e => { if(e.data.size > 0) _tkAudioChunks.push(e.data); };
-  _tkGravador.onstop = () => {
+  _tkGravador.onstop = async () => {
     stream.getTracks().forEach(t => t.stop());
     btn.classList.remove('gravando');
     indicador.classList.remove('on');
     clearInterval(_tkGravTimer);
+    _tkPararOnda();
     const duracaoSeg = (Date.now()-_tkGravInicio)/1000;
     if(duracaoSeg < 1 || !_tkAudioChunks.length){
       alert('Gravação muito curta ou vazia. Segure por mais tempo antes de parar.');
       return;
     }
-    const blob = new Blob(_tkAudioChunks, { type: mimeType || 'audio/webm' });
-    tkEnviarMensagemComAnexo(`🎤 Mensagem de voz (${_tkFmtDuracao(duracaoSeg)})`, blob, 'audio.'+(mimeType.includes('mp4')?'mp4':mimeType.includes('ogg')?'ogg':'webm'));
+    const blobOriginal = new Blob(_tkAudioChunks, { type: mimeType || 'audio/webm' });
+    const wav = await _tkBlobParaWav(blobOriginal);
+    tkEnviarMensagemComAnexo(`🎤 Mensagem de voz (${_tkFmtDuracao(duracaoSeg)})`, wav||blobOriginal, 'audio.wav');
   };
   _tkGravador.start();
   _tkGravInicio = Date.now();
   btn.classList.add('gravando');
   indicador.classList.add('on');
   document.getElementById('tk-gravando-tempo').textContent = '0:00';
-  _tkGravTimer = setInterval(_tkAtualizarTimerGravacao, 250);
+  _tkGravTimer = setInterval(()=>{
+    document.getElementById('tk-gravando-tempo').textContent = _tkFmtDuracao((Date.now()-_tkGravInicio)/1000);
+  }, 250);
+  _tkIniciarOnda(stream);
 }
 
 function tkCapturarTela(){

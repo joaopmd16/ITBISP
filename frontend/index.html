@@ -11,7 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
 <style>
 :root[data-theme="light"]{
   --bg:#f3f5fb;
@@ -243,10 +243,16 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 #ticket-composer button{background:none;border:none;color:var(--ink-2);cursor:pointer;font-size:17px;padding:4px 6px;border-radius:8px}
 #ticket-composer button:hover{background:var(--surface-2);color:var(--fg)}
 #ticket-composer button.gravando{color:#e05f5f}
-.ticket-gravando-indicator{display:none;align-items:center;gap:7px;padding:6px 16px;font-size:12px;color:#e05f5f;font-weight:600}
+.ticket-gravando-indicator{display:none;align-items:center;gap:8px;padding:6px 16px;font-size:12px;color:#e05f5f;font-weight:600}
 .ticket-gravando-indicator.on{display:flex}
-.ticket-gravando-dot{width:8px;height:8px;border-radius:50%;background:#e05f5f;animation:ticketPulse 1s infinite}
-@keyframes ticketPulse{0%,100%{opacity:1}50%{opacity:.25}}
+.ticket-onda{display:flex;align-items:center;gap:2px;height:20px}
+.ticket-onda span{width:3px;min-height:3px;background:#e05f5f;border-radius:2px;transition:height .08s ease-out}
+.ticket-anexo-preview{display:none;align-items:center;justify-content:space-between;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:8px;font-size:12.5px}
+.ticket-anexo-preview button{background:none;border:none;color:var(--ink-2);cursor:pointer;font-size:14px}
+.ticket-novo-acoes{display:flex;gap:4px;margin-bottom:10px}
+.ticket-novo-acoes button{background:none;border:1px solid var(--line);color:var(--ink-2);cursor:pointer;font-size:16px;padding:5px 10px;border-radius:8px}
+.ticket-novo-acoes button:hover{background:var(--surface-2);color:var(--fg)}
+.ticket-novo-acoes button.gravando{color:#e05f5f;border-color:#e05f5f}
 #ticket-texto-input{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-input);padding:8px 12px;color:var(--fg);font-size:13px;font-family:inherit;outline:none}
 #ticket-texto-input:focus{border-color:var(--primary)}
 #ticket-encerrar-btn{margin:0 12px 10px;padding:7px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--ink-2);cursor:pointer;font-size:12px}
@@ -714,6 +720,17 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div id="ticket-view-novo" style="display:none">
           <input class="acc-input" id="ticket-novo-assunto" placeholder="Assunto">
           <textarea class="acc-input" id="ticket-novo-mensagem" rows="5" placeholder="Descreva o problema..." style="resize:vertical;font-family:inherit"></textarea>
+          <div class="ticket-anexo-preview" id="ticket-novo-anexo-preview" style="display:none"></div>
+          <div class="ticket-gravando-indicator" id="ticket-novo-gravando-indicator">
+            <div class="ticket-onda" id="ticket-novo-onda"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <span id="ticket-novo-gravando-tempo">0:00</span>
+          </div>
+          <div class="ticket-novo-acoes">
+            <input type="file" id="ticket-novo-anexo-input" style="display:none" onchange="ticketNovoAnexarArquivo(this.files[0])">
+            <button type="button" onclick="document.getElementById('ticket-novo-anexo-input').click()" title="Anexar arquivo">📎</button>
+            <button type="button" id="ticket-novo-mic-btn" onclick="ticketNovoToggleGravarAudio()" title="Gravar áudio">🎤</button>
+            <button type="button" onclick="ticketNovoCapturarTela()" title="Capturar tela">🖥️</button>
+          </div>
           <button class="sopt" style="width:100%" onclick="enviarNovoTicket()">Abrir ticket</button>
           <div class="settings-info" id="ticket-novo-msg"></div>
         </div>
@@ -721,8 +738,8 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
         <div id="ticket-view-thread">
           <div id="ticket-msgs"></div>
           <div class="ticket-gravando-indicator" id="ticket-gravando-indicator">
-            <span class="ticket-gravando-dot"></span>
-            <span>Gravando... <span id="ticket-gravando-tempo">0:00</span></span>
+            <div class="ticket-onda" id="ticket-onda"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <span id="ticket-gravando-tempo">0:00</span>
           </div>
           <div id="ticket-composer">
             <input type="file" id="ticket-anexo-input" style="display:none" onchange="anexarArquivoTicket(this.files[0])">
@@ -1413,6 +1430,7 @@ function abrirNovoTicketForm(){
   document.getElementById('ticket-novo-assunto').value='';
   document.getElementById('ticket-novo-mensagem').value='';
   document.getElementById('ticket-novo-msg').textContent='';
+  _limparAnexoNovo();
   _mostrarTicketView('novo');
 }
 
@@ -1496,6 +1514,26 @@ function _pararPollTicket(){
   if(_ticketPollTimer){ clearInterval(_ticketPollTimer); _ticketPollTimer=null; }
 }
 
+let _ticketNovoAnexo=null;
+
+function _mostrarPreviewAnexoNovo(nome){
+  const el=document.getElementById('ticket-novo-anexo-preview');
+  el.style.display='flex';
+  el.innerHTML=`<span>📎 ${nome}</span><button type="button" onclick="_limparAnexoNovo()">✕</button>`;
+}
+function _limparAnexoNovo(){
+  _ticketNovoAnexo=null;
+  const el=document.getElementById('ticket-novo-anexo-preview');
+  if(el){ el.style.display='none'; el.innerHTML=''; }
+  const input=document.getElementById('ticket-novo-anexo-input');
+  if(input) input.value='';
+}
+function ticketNovoAnexarArquivo(file){
+  if(!file) return;
+  _ticketNovoAnexo={blob:file, filename:file.name};
+  _mostrarPreviewAnexoNovo(file.name);
+}
+
 async function enviarNovoTicket(){
   const msg=document.getElementById('ticket-novo-msg');
   const assunto=document.getElementById('ticket-novo-assunto').value.trim();
@@ -1505,9 +1543,11 @@ async function enviarNovoTicket(){
   try{
     const fd=new FormData();
     fd.append('assunto',assunto); fd.append('mensagem',mensagem);
+    if(_ticketNovoAnexo) fd.append('anexo', _ticketNovoAnexo.blob, _ticketNovoAnexo.filename);
     const res=await fetch(`${API}/api/tickets`,{method:'POST',body:fd});
-    const d=await res.json();
-    if(!res.ok) throw new Error(d.detail||'Erro ao criar ticket');
+    const d=await res.json().catch(()=>null);
+    if(!res.ok) throw new Error(d&&d.detail || `Erro ao criar ticket (HTTP ${res.status})`);
+    _limparAnexoNovo();
     await abrirTicketThread(d.ticket_id, assunto);
   }catch(e){ msg.textContent=e.message; }
 }
@@ -1526,6 +1566,10 @@ async function _enviarMensagemComAnexo(texto, blob, filename){
 }
 
 function enviarMensagemTicket(){
+  if(_ticketGravador && _ticketGravador.state==='recording'){
+    _ticketGravador.stop();
+    return;
+  }
   const input=document.getElementById('ticket-texto-input');
   const texto=input.value.trim();
   if(!texto) return;
@@ -1551,24 +1595,79 @@ function _escolherMimeTypeAudio(){
 }
 
 let _ticketGravInicio=0, _ticketGravTimer=null;
+let _ondaAudioCtx=null, _ondaAnalyser=null, _ondaRAF=null;
 
 function _fmtDuracao(seg){
   const m=Math.floor(seg/60), s=Math.floor(seg%60);
   return `${m}:${String(s).padStart(2,'0')}`;
 }
 
-function _atualizarTimerGravacao(){
-  const seg=(Date.now()-_ticketGravInicio)/1000;
-  document.getElementById('ticket-gravando-tempo').textContent=_fmtDuracao(seg);
+function _iniciarOnda(stream, containerId){
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  if(!AudioCtx) return;
+  try{
+    _ondaAudioCtx=new AudioCtx();
+    const source=_ondaAudioCtx.createMediaStreamSource(stream);
+    _ondaAnalyser=_ondaAudioCtx.createAnalyser();
+    _ondaAnalyser.fftSize=64;
+    source.connect(_ondaAnalyser);
+    const data=new Uint8Array(_ondaAnalyser.frequencyBinCount);
+    const barras=document.querySelectorAll(`#${containerId} span`);
+    const loop=()=>{
+      _ondaAnalyser.getByteFrequencyData(data);
+      barras.forEach((b,i)=>{
+        const v=data[i+2]||0;
+        b.style.height=Math.max(3,(v/255)*18)+'px';
+      });
+      _ondaRAF=requestAnimationFrame(loop);
+    };
+    loop();
+  }catch(e){}
+}
+function _pararOnda(){
+  if(_ondaRAF){ cancelAnimationFrame(_ondaRAF); _ondaRAF=null; }
+  if(_ondaAudioCtx){ _ondaAudioCtx.close().catch(()=>{}); _ondaAudioCtx=null; }
+  _ondaAnalyser=null;
 }
 
-async function toggleGravarAudio(){
-  const btn=document.getElementById('ticket-mic-btn');
-  const indicador=document.getElementById('ticket-gravando-indicator');
-  if(_ticketGravador && _ticketGravador.state==='recording'){
-    _ticketGravador.stop();
-    return;
+function _audioBufferToWavBlob(buffer){
+  const numChannels=buffer.numberOfChannels, sampleRate=buffer.sampleRate, bitDepth=16;
+  const bytesPerSample=bitDepth/8, blockAlign=numChannels*bytesPerSample;
+  const dataLength=buffer.length*blockAlign;
+  const arrBuf=new ArrayBuffer(44+dataLength);
+  const view=new DataView(arrBuf);
+  const ws=(offset,str)=>{ for(let i=0;i<str.length;i++) view.setUint8(offset+i, str.charCodeAt(i)); };
+  ws(0,'RIFF'); view.setUint32(4,36+dataLength,true); ws(8,'WAVE');
+  ws(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,numChannels,true); view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*blockAlign,true); view.setUint16(32,blockAlign,true);
+  view.setUint16(34,bitDepth,true); ws(36,'data'); view.setUint32(40,dataLength,true);
+  let offset=44;
+  const channels=[]; for(let i=0;i<numChannels;i++) channels.push(buffer.getChannelData(i));
+  for(let s=0;s<buffer.length;s++){
+    for(let c=0;c<numChannels;c++){
+      let v=Math.max(-1,Math.min(1,channels[c][s]));
+      v = v<0 ? v*0x8000 : v*0x7FFF;
+      view.setInt16(offset, v, true); offset+=2;
+    }
   }
+  return new Blob([arrBuf],{type:'audio/wav'});
+}
+
+async function _blobParaWav(blob){
+  try{
+    const arrayBuffer=await blob.arrayBuffer();
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    const ctx=new AudioCtx();
+    const audioBuffer=await ctx.decodeAudioData(arrayBuffer);
+    const wav=_audioBufferToWavBlob(audioBuffer);
+    ctx.close();
+    return wav;
+  }catch(e){ return null; }
+}
+
+async function _iniciarGravacaoGenerica(opts){
+  const {btn, indicador, ondaId, tempoId, aoFinalizar} = opts;
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     alert('Seu navegador não suporta gravação de áudio (requer HTTPS e um navegador atualizado).');
     return;
@@ -1596,25 +1695,79 @@ async function toggleGravarAudio(){
     return;
   }
   _ticketGravador.ondataavailable=e=>{ if(e.data.size>0) _ticketAudioChunks.push(e.data); };
-  _ticketGravador.onstop=()=>{
+  _ticketGravador.onstop=async ()=>{
     stream.getTracks().forEach(t=>t.stop());
     btn.classList.remove('gravando');
     indicador.classList.remove('on');
     clearInterval(_ticketGravTimer);
+    _pararOnda();
     const duracaoSeg=(Date.now()-_ticketGravInicio)/1000;
     if(duracaoSeg<1 || !_ticketAudioChunks.length){
       alert('Gravação muito curta ou vazia. Segure o botão por mais tempo antes de parar.');
       return;
     }
-    const blob=new Blob(_ticketAudioChunks,{type:mimeType||'audio/webm'});
-    _enviarMensagemComAnexo(`🎤 Mensagem de voz (${_fmtDuracao(duracaoSeg)})`, blob, 'audio.'+(mimeType.includes('mp4')?'mp4':mimeType.includes('ogg')?'ogg':'webm'));
+    const blobOriginal=new Blob(_ticketAudioChunks,{type:mimeType||'audio/webm'});
+    const wav=await _blobParaWav(blobOriginal);
+    aoFinalizar(wav||blobOriginal, duracaoSeg);
   };
   _ticketGravador.start();
   _ticketGravInicio=Date.now();
   btn.classList.add('gravando');
   indicador.classList.add('on');
-  document.getElementById('ticket-gravando-tempo').textContent='0:00';
-  _ticketGravTimer=setInterval(_atualizarTimerGravacao, 250);
+  document.getElementById(tempoId).textContent='0:00';
+  _ticketGravTimer=setInterval(()=>{
+    document.getElementById(tempoId).textContent=_fmtDuracao((Date.now()-_ticketGravInicio)/1000);
+  }, 250);
+  _iniciarOnda(stream, ondaId);
+}
+
+async function toggleGravarAudio(){
+  if(_ticketGravador && _ticketGravador.state==='recording'){
+    _ticketGravador.stop();
+    return;
+  }
+  await _iniciarGravacaoGenerica({
+    btn: document.getElementById('ticket-mic-btn'),
+    indicador: document.getElementById('ticket-gravando-indicator'),
+    ondaId: 'ticket-onda',
+    tempoId: 'ticket-gravando-tempo',
+    aoFinalizar: (blob, duracaoSeg) => {
+      _enviarMensagemComAnexo(`🎤 Mensagem de voz (${_fmtDuracao(duracaoSeg)})`, blob, 'audio.wav');
+    }
+  });
+}
+
+async function ticketNovoToggleGravarAudio(){
+  if(_ticketGravador && _ticketGravador.state==='recording'){
+    _ticketGravador.stop();
+    return;
+  }
+  await _iniciarGravacaoGenerica({
+    btn: document.getElementById('ticket-novo-mic-btn'),
+    indicador: document.getElementById('ticket-novo-gravando-indicator'),
+    ondaId: 'ticket-novo-onda',
+    tempoId: 'ticket-novo-gravando-tempo',
+    aoFinalizar: (blob, duracaoSeg) => {
+      _ticketNovoAnexo={blob, filename:'audio.wav'};
+      _mostrarPreviewAnexoNovo(`🎤 Áudio (${_fmtDuracao(duracaoSeg)})`);
+    }
+  });
+}
+
+function ticketNovoCapturarTela(){
+  if(typeof html2canvas==='undefined'){ alert('Não foi possível carregar a ferramenta de captura de tela.'); return; }
+  const widget=document.getElementById('ticket-widget');
+  widget.style.display='none';
+  html2canvas(document.body, {
+    useCORS: true,
+    ignoreElements: el => el.id==='map' || (el.classList && el.classList.contains('leaflet-container'))
+  }).then(canvas=>{
+    widget.style.display='';
+    canvas.toBlob(blob=>{
+      if(blob){ _ticketNovoAnexo={blob, filename:'print.png'}; _mostrarPreviewAnexoNovo('🖥️ Print da tela'); }
+      else alert('Não foi possível capturar a tela.');
+    }, 'image/png');
+  }).catch(e=>{ widget.style.display=''; alert('Não foi possível capturar a tela: '+e.message); });
 }
 
 function toggleExpandirTicketWidget(){
