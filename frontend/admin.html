@@ -868,8 +868,8 @@ let _tkGravador = null, _tkAudioChunks = [];
 async function tkFetchMultipart(url, formData){
   const res = await fetch(`${API}${url}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
   if(res.status === 401 || res.status === 403){ mostrarLogin('Sessão expirada ou sem acesso. Entre novamente.'); throw new Error('sem acesso'); }
-  const d = await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(d.detail || 'erro');
+  const d = await res.json().catch(()=>null);
+  if(!res.ok) throw new Error(d&&d.detail || `erro (HTTP ${res.status})`);
   return d;
 }
 
@@ -913,7 +913,7 @@ async function carregarTickets(){
 
 function tkAnexoHtml(m){
   if(!m.anexo_path) return '';
-  const url = `${API}/api/tickets/anexos/${m.anexo_path}`;
+  const url = `${API}/api/tickets/anexos/${m.anexo_path}?token=${encodeURIComponent(token)}`;
   if(m.anexo_tipo === 'imagem') return `<img src="${url}" alt="anexo">`;
   if(m.anexo_tipo === 'audio') return `<audio controls src="${url}"></audio>`;
   return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${m.anexo_nome||'arquivo'}</a>`;
@@ -1061,12 +1061,16 @@ async function tkToggleGravarAudio(){
 }
 
 function tkCapturarTela(){
+  if(typeof html2canvas==='undefined'){ alert('Não foi possível carregar a ferramenta de captura de tela.'); return; }
   const modal = document.getElementById('modalTicket');
   modal.style.display = 'none';
-  html2canvas(document.body).then(canvas => {
+  html2canvas(document.body, { useCORS: true }).then(canvas => {
     modal.style.display = '';
-    canvas.toBlob(blob => { if(blob) tkEnviarMensagemComAnexo('', blob, 'print.png'); }, 'image/png');
-  }).catch(() => { modal.style.display = ''; alert('Não foi possível capturar a tela.'); });
+    canvas.toBlob(blob => {
+      if(blob) tkEnviarMensagemComAnexo('', blob, 'print.png');
+      else alert('Não foi possível capturar a tela.');
+    }, 'image/png');
+  }).catch(e => { modal.style.display = ''; alert('Não foi possível capturar a tela: '+e.message); });
 }
 
 async function tkEncerrarTicket(){

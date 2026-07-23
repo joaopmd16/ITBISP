@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
-from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request, Form, File, UploadFile
+from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request, Form, File, UploadFile, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -54,7 +54,12 @@ async def no_cache_html(request: Request, call_next):
 
 
 ROTAS_PROTEGIDAS_PREFIXO = "/api/"
-ROTAS_PUBLICAS = ("/api/auth/", "/api/webhook/")
+# /api/tickets/anexos/ também é pública para o middleware: tags <img>/<audio src=...>
+# nunca enviam o header Authorization (o navegador não anexa headers customizados em
+# carregamentos de mídia), então a exigência de Bearer token bloquearia toda visualização
+# de anexo. A autenticação dessa rota específica é feita manualmente dentro do endpoint,
+# aceitando o token tanto no header quanto via query string (?token=...).
+ROTAS_PUBLICAS = ("/api/auth/", "/api/webhook/", "/api/tickets/anexos/")
 # Exige login (token válido) mas não assinatura ativa — é a própria rota que leva o
 # usuário inativo até o Stripe, então exigir assinatura ativa aqui é um paradoxo
 # que travava todo usuário novo antes de conseguir pagar. /api/tickets também entra
@@ -1465,13 +1470,26 @@ def encerrar_ticket_usuario(ticket_id: int, usuario: dict = Depends(auth.get_usu
 
 
 @app.get("/api/tickets/anexos/{caminho:path}")
-def obter_anexo_ticket(caminho: str, usuario: dict = Depends(auth.get_usuario_atual)):
+def obter_anexo_ticket(caminho: str, token: Optional[str] = Query(None), authorization: Optional[str] = Header(None)):
+    # <img>/<audio src=...> não enviam o header Authorization, então aceita o token
+    # também via query string — usado só por essa rota, que precisa ser carregável
+    # diretamente pelo navegador em tags de mídia.
+    if authorization and authorization.startswith("Bearer "):
+        tok = authorization.removeprefix("Bearer ").strip()
+    elif token:
+        tok = token
+    else:
+        raise HTTPException(401, "Não autenticado")
+    payload = auth.decodificar_token(tok)
+    usuario_id = int(payload["sub"])
+    usuario_email = payload["email"]
+
     ticket_id = int(caminho.split("/")[0])
     with get_db() as conn:
         t = conn.execute("SELECT usuario_id FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
     if not t:
         raise HTTPException(404, "Não encontrado")
-    if usuario["id"] != t["usuario_id"] and usuario["email"] != ADMIN_EMAIL:
+    if usuario_id != t["usuario_id"] and usuario_email != ADMIN_EMAIL:
         raise HTTPException(403, "Sem acesso")
     caminho_completo = UPLOADS_DIR / "tickets" / caminho
     if not caminho_completo.is_file():

@@ -1447,7 +1447,7 @@ async function carregarMeusTickets(){
 
 function _bolhaAnexo(m){
   if(!m.anexo_path) return '';
-  const url=`${API}/api/tickets/anexos/${m.anexo_path}`;
+  const url=`${API}/api/tickets/anexos/${m.anexo_path}?token=${encodeURIComponent(TOKEN)}`;
   if(m.anexo_tipo==='imagem') return `<img src="${url}" alt="anexo">`;
   if(m.anexo_tipo==='audio') return `<audio controls src="${url}"></audio>`;
   return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${m.anexo_nome||'arquivo'}</a>`;
@@ -1519,8 +1519,8 @@ async function _enviarMensagemComAnexo(texto, blob, filename){
   if(blob) fd.append('anexo', blob, filename||'anexo');
   try{
     const res=await fetch(`${API}/api/tickets/${_ticketAtual}/mensagens`,{method:'POST',body:fd});
-    const d=await res.json().catch(()=>({}));
-    if(!res.ok) throw new Error(d.detail||'Erro ao enviar mensagem');
+    const d=await res.json().catch(()=>null);
+    if(!res.ok) throw new Error(d&&d.detail || `Erro ao enviar mensagem (HTTP ${res.status})`);
     await _atualizarThreadTicket();
   }catch(e){ alert('Erro: '+e.message); }
 }
@@ -1626,14 +1626,22 @@ function toggleExpandirTicketWidget(){
 }
 
 function capturarTela(){
+  if(typeof html2canvas==='undefined'){ alert('Não foi possível carregar a ferramenta de captura de tela.'); return; }
   const widget=document.getElementById('ticket-widget');
   widget.style.display='none';
-  html2canvas(document.body).then(canvas=>{
+  html2canvas(document.body, {
+    useCORS: true,
+    // O mapa (Leaflet) carrega tiles de outro domínio sem cabeçalho CORS — tenta
+    // capturá-lo "mancha" (taint) o canvas e impede extrair a imagem depois. Ignorá-lo
+    // permite capturar o resto da tela normalmente.
+    ignoreElements: el => el.id==='map' || (el.classList && el.classList.contains('leaflet-container'))
+  }).then(canvas=>{
     widget.style.display='';
     canvas.toBlob(blob=>{
       if(blob) _enviarMensagemComAnexo('', blob, 'print.png');
+      else alert('Não foi possível capturar a tela.');
     }, 'image/png');
-  }).catch(()=>{ widget.style.display=''; alert('Não foi possível capturar a tela.'); });
+  }).catch(e=>{ widget.style.display=''; alert('Não foi possível capturar a tela: '+e.message); });
 }
 
 async function encerrarTicketAtual(){
