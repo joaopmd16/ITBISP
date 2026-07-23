@@ -1429,7 +1429,7 @@ async function carregarMeusTickets(){
     else{ badge.style.display='none'; }
     if(!tickets.length){ el.innerHTML='<div class="settings-info">Nenhum ticket ainda. Clique em "+ Novo ticket" para abrir um.</div>'; return; }
     el.innerHTML=tickets.map(t=>`
-      <div class="ticket-item" onclick="abrirTicketThread(${t.id},${JSON.stringify(t.assunto)})">
+      <div class="ticket-item" onclick='abrirTicketThread(${t.id}, ${JSON.stringify(t.assunto)})'>
         <div class="assunto">
           <span>Protocolo #${t.id} — ${t.assunto}</span>
           ${t.nao_lidas>0?`<span class="nlidas">${t.nao_lidas}</span>`:''}
