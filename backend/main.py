@@ -9,6 +9,7 @@ import os
 import secrets
 import sqlite3
 import time
+import mimetypes
 from pathlib import Path
 from typing import Optional
 from contextlib import contextmanager
@@ -19,7 +20,7 @@ load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request, Form, File, UploadFile, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -1494,7 +1495,12 @@ def obter_anexo_ticket(caminho: str, token: Optional[str] = Query(None), authori
     caminho_completo = UPLOADS_DIR / "tickets" / caminho
     if not caminho_completo.is_file():
         raise HTTPException(404, "Não encontrado")
-    return FileResponse(caminho_completo)
+    # Lê o arquivo inteiro e responde de uma vez (em vez de streaming via FileResponse) —
+    # anexos são pequenos (máx. 15MB) e isso evita cortes de conteúdo observados com
+    # respostas chunked através do proxy nginx.
+    conteudo = caminho_completo.read_bytes()
+    tipo_mime = mimetypes.guess_type(str(caminho_completo))[0] or "application/octet-stream"
+    return Response(content=conteudo, media_type=tipo_mime)
 
 
 @app.post("/api/webhook/stripe")
