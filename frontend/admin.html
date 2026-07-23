@@ -919,7 +919,14 @@ function tkAnexoHtml(m){
   return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${m.anexo_nome||'arquivo'}</a>`;
 }
 
+let _tkUltimoRenderFingerprint = null;
+
 function tkRenderMensagens(mensagens){
+  // O poll roda a cada 4s — se as mensagens nao mudaram, nao recria o HTML: isso
+  // destruiria (e reiniciaria do zero) qualquer <audio>/<img> ja em reproducao/carregada.
+  const fingerprint = mensagens.map(m=>m.id).join(',');
+  if(fingerprint === _tkUltimoRenderFingerprint) return;
+  _tkUltimoRenderFingerprint = fingerprint;
   const el = document.getElementById('tk-msgs');
   const pertoDoFim = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
   el.innerHTML = mensagens.map(m => `
@@ -934,6 +941,7 @@ function tkRenderMensagens(mensagens){
 
 async function tkAbrir(id, assunto, cliente){
   _tkAtual = id;
+  _tkUltimoRenderFingerprint = null;
   document.getElementById('tkTitulo').textContent = `Protocolo #${id} — ${assunto}`;
   document.getElementById('tkCliente').textContent = cliente;
   document.getElementById('tk-msgs').innerHTML = `<div class="loading">Carregando...</div>`;

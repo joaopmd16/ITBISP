@@ -1471,7 +1471,14 @@ function _bolhaAnexo(m){
   return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${m.anexo_nome||'arquivo'}</a>`;
 }
 
+let _ticketUltimoRenderFingerprint=null;
+
 function _renderMensagensTicket(mensagens){
+  // O poll roda a cada 4s — se as mensagens nao mudaram, nao recria o HTML: isso
+  // destruiria (e reiniciaria do zero) qualquer <audio>/<img> ja em reproducao/carregada.
+  const fingerprint=mensagens.map(m=>m.id).join(',');
+  if(fingerprint===_ticketUltimoRenderFingerprint) return;
+  _ticketUltimoRenderFingerprint=fingerprint;
   const el=document.getElementById('ticket-msgs');
   const pertoDoFim = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
   el.innerHTML=mensagens.map(m=>`
@@ -1486,6 +1493,7 @@ function _renderMensagensTicket(mensagens){
 
 async function abrirTicketThread(id, assunto){
   _ticketAtual=id;
+  _ticketUltimoRenderFingerprint=null;
   _mostrarTicketView('thread');
   document.getElementById('ticket-widget-titulo').textContent=`Protocolo #${id}` + (assunto?` — ${assunto}`:'');
   document.getElementById('ticket-msgs').innerHTML='<div class="settings-info">Carregando...</div>';
