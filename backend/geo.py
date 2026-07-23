@@ -2,11 +2,14 @@
 geo.py — Geocodifica CEPs com cache SQLite, não-bloqueante.
 Fontes: BrasilAPI → Nominatim (fallback)
 """
+import logging
 import time
 import sqlite3
 import threading
 import requests
 from pathlib import Path
+
+logger = logging.getLogger("itbi")
 
 DB_PATH = Path(__file__).parent / "itbi.db"
 HEADERS = {"User-Agent": "ITBI-Dashboard/1.0 (contato@itbi-dashboard.local)"}
@@ -60,7 +63,7 @@ def _via_brasilapi(cep: str) -> dict | None:
                 return {"lat": float(lat), "lng": float(lng),
                         "bairro": d.get("neighborhood",""), "fonte": "brasilapi"}
     except Exception:
-        pass
+        logger.debug("Falha ao geocodificar CEP %s via BrasilAPI", cep, exc_info=True)
     return None
 
 
@@ -96,7 +99,7 @@ def _via_nominatim(cep: str) -> dict | None:
                 if _dentro_de_sp(lat, lng):
                     return {"lat": lat, "lng": lng, "bairro": "", "fonte": "nominatim"}
     except Exception:
-        pass
+        logger.debug("Falha ao geocodificar CEP %s via Nominatim", cep, exc_info=True)
     return None
 
 

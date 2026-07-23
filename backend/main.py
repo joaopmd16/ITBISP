@@ -5,6 +5,7 @@ Acesse:       http://localhost:8000
 Docs:         http://localhost:8000/docs
 """
 
+import logging
 import os
 import re
 import secrets
@@ -18,6 +19,8 @@ from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
+
+logger = logging.getLogger("itbi")
 
 from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request, Form, File, UploadFile, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -383,7 +386,7 @@ def startup():
                 )
                 time.sleep(2)  # respira entre queries pesadas
             except Exception:
-                pass
+                logger.exception("Falha ao pré-aquecer cache de resumo")
     threading.Thread(target=_prewarm, daemon=True).start()
     threading.Thread(target=_carregar_ac, daemon=True).start()
 
@@ -398,7 +401,7 @@ def startup():
                 if count == 0:
                     popular_iptu()
             except Exception:
-                pass
+                logger.exception("Falha ao popular tabela iptu em background")
         threading.Thread(target=_popular_iptu_lazy, daemon=True).start()
 
 
@@ -429,7 +432,7 @@ def popular_iptu():
             """)
             conn.commit()
     except Exception:
-        pass
+        logger.exception("Falha ao popular tabela iptu")
 
 
 # Cache simples em memória para /api/resumo
@@ -476,7 +479,7 @@ def _carregar_ac():
                 "ORDER BY sql_terreno"
             ).fetchall()]
     except Exception:
-        pass
+        logger.exception("Falha ao carregar cache de autocomplete")
 
 def _resumo_cache_get(key: str):
     entry = _resumo_cache.get(key)
@@ -1193,7 +1196,7 @@ def esqueci_senha(dados: EsqueciSenhaIn, request: Request):
             try:
                 emailing.enviar_redefinicao_senha(email, row["nome"] or "", token_reset)
             except Exception:
-                pass  # não expõe falha de envio — resposta segue genérica
+                logger.exception("Falha ao enviar e-mail de redefinição de senha")  # não expõe falha de envio — resposta segue genérica
     # Resposta genérica mesmo se o e-mail não existir (evita enumeração de contas)
     return {"status": "ok"}
 
@@ -1311,12 +1314,12 @@ def minha_conta(usuario: dict = Depends(auth.get_usuario_atual)):
             if detalhes:
                 assinatura.update(detalhes)
         except Exception:
-            pass
+            logger.exception("Falha ao consultar detalhes da assinatura no Stripe")
     if a and a["stripe_customer_id"]:
         try:
             faturas = billing.listar_faturas(a["stripe_customer_id"], limite=12)
         except Exception:
-            pass
+            logger.exception("Falha ao listar faturas no Stripe")
 
     return {
         "nome": u["nome"] if u else "",
@@ -1438,7 +1441,7 @@ async def criar_ticket(assunto: str = Form(...), mensagem: str = Form(""),
     try:
         emailing.enviar_notificacao_ticket(assunto, ticket_id, usuario["email"])
     except Exception:
-        pass
+        logger.exception("Falha ao enviar notificação de ticket por e-mail (best-effort)")
     return {"status": "criado", "ticket_id": ticket_id}
 
 
@@ -1493,7 +1496,7 @@ async def enviar_mensagem_ticket(ticket_id: int, texto: str = Form(""),
     try:
         emailing.enviar_notificacao_ticket(assunto, ticket_id, usuario["email"])
     except Exception:
-        pass
+        logger.exception("Falha ao enviar notificação de ticket por e-mail (best-effort)")
     return {"status": "ok"}
 
 
@@ -1572,7 +1575,7 @@ async def webhook_stripe(request: Request):
                         detalhes = billing.detalhes_assinatura(subscription_id)
                         periodo_fim = detalhes["periodo_fim"] if detalhes else None
                     except Exception:
-                        pass
+                        logger.exception("Falha ao buscar periodo_fim no checkout.session.completed")
                 conn.execute(
                     """UPDATE assinaturas SET stripe_customer_id = ?, stripe_subscription_id = ?,
                        status = 'active', periodo_fim = ?, atualizado_em = datetime('now') WHERE usuario_id = ?""",
@@ -1631,7 +1634,7 @@ def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
                         )
                         u["periodo_fim"] = detalhes["periodo_fim"]
                 except Exception:
-                    pass
+                    logger.exception("Falha no backfill de periodo_fim para usuario_id=%s", u["id"])
         conn.commit()
     return {"usuarios": usuarios}
 
@@ -1697,7 +1700,7 @@ def admin_revogar(usuario_id: int, admin: dict = Depends(exigir_admin)):
             try:
                 billing.cancelar_assinatura(row["stripe_subscription_id"])
             except Exception:
-                pass  # pode já estar cancelada no Stripe — segue revogando localmente
+                logger.exception("Falha ao cancelar assinatura no Stripe (pode já estar cancelada) — segue revogando localmente")
         conn.execute(
             "UPDATE assinaturas SET status = 'inativa', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
             (usuario_id,),
@@ -1720,7 +1723,7 @@ def admin_desativar(usuario_id: int, admin: dict = Depends(exigir_admin)):
             try:
                 billing.cancelar_assinatura(row["stripe_subscription_id"])
             except Exception:
-                pass
+                logger.exception("Falha ao cancelar assinatura no Stripe (pode já estar cancelada)")
         conn.execute("UPDATE usuarios SET ativo = 0 WHERE id = ?", (usuario_id,))
         conn.execute(
             "UPDATE assinaturas SET status = 'inativa', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
@@ -1757,7 +1760,7 @@ def admin_excluir_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
             try:
                 billing.cancelar_assinatura(row["stripe_subscription_id"])
             except Exception:
-                pass
+                logger.exception("Falha ao cancelar assinatura no Stripe (pode já estar cancelada)")
         conn.execute("DELETE FROM senhas_antigas WHERE usuario_id = ?", (usuario_id,))
         conn.execute("DELETE FROM admin_logs WHERE usuario_id = ?", (usuario_id,))
         conn.execute("DELETE FROM assinaturas WHERE usuario_id = ?", (usuario_id,))
