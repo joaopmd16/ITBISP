@@ -2,11 +2,14 @@
 geo.py — Geocodifica CEPs com cache SQLite, não-bloqueante.
 Fontes: BrasilAPI → Nominatim (fallback)
 """
+import logging
 import time
 import sqlite3
 import threading
 import requests
 from pathlib import Path
+
+logger = logging.getLogger("itbi")
 
 DB_PATH = Path(__file__).parent / "itbi.db"
 HEADERS = {"User-Agent": "ITBI-Dashboard/1.0 (contato@itbi-dashboard.local)"}
@@ -60,7 +63,7 @@ def _via_brasilapi(cep: str) -> dict | None:
                 return {"lat": float(lat), "lng": float(lng),
                         "bairro": d.get("neighborhood",""), "fonte": "brasilapi"}
     except Exception:
-        pass
+        logger.debug("Falha ao geocodificar CEP %s via BrasilAPI", cep, exc_info=True)
     return None
 
 
@@ -96,7 +99,7 @@ def _via_nominatim(cep: str) -> dict | None:
                 if _dentro_de_sp(lat, lng):
                     return {"lat": lat, "lng": lng, "bairro": "", "fonte": "nominatim"}
     except Exception:
-        pass
+        logger.debug("Falha ao geocodificar CEP %s via Nominatim", cep, exc_info=True)
     return None
 
 
@@ -192,6 +195,14 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
+    def _multi_like(col: str, value: str):
+        """Suporte a múltiplos valores separados por vírgula (chips) -> OR no SQL."""
+        vals = [v.strip() for v in value.split(",") if v.strip()]
+        if not vals:
+            return None, []
+        clauses = [f"UPPER({col}) LIKE UPPER(?)" for _ in vals]
+        return "(" + " OR ".join(clauses) + ")", [f"%{v}%" for v in vals]
+
     # Monta WHERE para a query de transações
     conds, params = [], []
     if ids:
@@ -200,17 +211,21 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
         params.extend(ids)
     else:
         if filtros.get('logradouro'):
-            conds.append("UPPER(t.logradouro) LIKE UPPER(?)")
-            params.append(f"%{filtros['logradouro']}%")
+            cl, pr = _multi_like("t.logradouro", filtros['logradouro'])
+            if cl: conds.append(cl); params.extend(pr)
         if filtros.get('bairro'):
-            conds.append("UPPER(t.bairro) LIKE UPPER(?)")
-            params.append(f"%{filtros['bairro']}%")
+            cl, pr = _multi_like("t.bairro", filtros['bairro'])
+            if cl: conds.append(cl); params.extend(pr)
         if filtros.get('cep'):
-            conds.append("t.cep LIKE ?")
-            params.append(f"{filtros['cep'].replace('-','')}%")
+            ceps = [v.strip().replace('-', '') for v in filtros['cep'].split(",") if v.strip()]
+            if ceps:
+                conds.append("(" + " OR ".join(["t.cep LIKE ?"] * len(ceps)) + ")")
+                params.extend(f"{c}%" for c in ceps)
         if filtros.get('numero'):
-            conds.append("t.numero = ?")
-            params.append(filtros['numero'])
+            numeros = [v.strip() for v in filtros['numero'].split(",") if v.strip()]
+            if numeros:
+                conds.append("(" + " OR ".join(["t.numero = ?"] * len(numeros)) + ")")
+                params.extend(numeros)
         if filtros.get('ano_min'):
             conds.append("t.ano_referencia >= ?")
             params.append(int(filtros['ano_min']))
@@ -231,6 +246,7 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
         SELECT
             REPLACE(t.cep, '-', '') AS cep_clean,
             MAX(t.bairro) AS bairro_db,
+            MAX(t.logradouro) AS logradouro_db,
             COUNT(*) AS total,
             AVG(t.valor_declarado) AS avg_valor,
             MAX(t.valor_declarado) AS max_valor,
@@ -261,7 +277,8 @@ def pontos_mapa(filtros: dict, ids: list = None, max_ceps: int = 60000) -> dict:
                 "cep":       cep,
                 "lat":       r["lat"],
                 "lng":       r["lng"],
-                "bairro":    r["bairro_db"] or r["bairro_geo"] or "",
+                "bairro":     r["bairro_db"] or r["bairro_geo"] or "",
+                "logradouro": r["logradouro_db"] or "",
                 "count":     r["total"],
                 "avg_valor": round(r["avg_valor"] or 0),
                 "max_valor": round(r["max_valor"] or 0),

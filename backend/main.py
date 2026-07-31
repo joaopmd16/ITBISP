@@ -5,10 +5,13 @@ Acesse:       http://localhost:8000
 Docs:         http://localhost:8000/docs
 """
 
+import logging
 import os
+import re
 import secrets
 import sqlite3
 import time
+import mimetypes
 from pathlib import Path
 from typing import Optional
 from contextlib import contextmanager
@@ -17,9 +20,11 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
-from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request
+logger = logging.getLogger("itbi")
+
+from fastapi import FastAPI, Query, BackgroundTasks, Depends, HTTPException, Request, Form, File, UploadFile, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -30,6 +35,8 @@ import geo
 
 DB_PATH = Path(__file__).parent / "itbi.db"
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+UPLOADS_DIR = Path(__file__).parent / "uploads"
+TAMANHO_MAX_ANEXO = 15 * 1024 * 1024  # 15 MB
 
 app = FastAPI(title="Dashboard ITBI-SP", version="1.0")
 
@@ -52,11 +59,18 @@ async def no_cache_html(request: Request, call_next):
 
 
 ROTAS_PROTEGIDAS_PREFIXO = "/api/"
-ROTAS_PUBLICAS = ("/api/auth/", "/api/webhook/")
+# /api/tickets/anexos/ também é pública para o middleware: tags <img>/<audio src=...>
+# nunca enviam o header Authorization (o navegador não anexa headers customizados em
+# carregamentos de mídia), então a exigência de Bearer token bloquearia toda visualização
+# de anexo. A autenticação dessa rota específica é feita manualmente dentro do endpoint,
+# aceitando o token tanto no header quanto via query string (?token=...).
+ROTAS_PUBLICAS = ("/api/auth/", "/api/webhook/", "/api/tickets/anexos/")
 # Exige login (token válido) mas não assinatura ativa — é a própria rota que leva o
 # usuário inativo até o Stripe, então exigir assinatura ativa aqui é um paradoxo
-# que travava todo usuário novo antes de conseguir pagar.
-ROTAS_SEM_EXIGENCIA_ASSINATURA = ("/api/billing/checkout",)
+# que travava todo usuário novo antes de conseguir pagar. /api/tickets também entra
+# aqui: um usuário com assinatura vencida precisa conseguir abrir um chamado de
+# suporte (ex: sobre a própria cobrança), não pode ficar bloqueado pelo paywall.
+ROTAS_SEM_EXIGENCIA_ASSINATURA_PREFIXO = ("/api/billing/checkout", "/api/tickets")
 
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@itbismart.com.br")
 
@@ -65,7 +79,7 @@ ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@itbismart.com.br")
 async def exigir_assinatura_ativa(request: Request, call_next):
     path = request.url.path
     if (not path.startswith(ROTAS_PROTEGIDAS_PREFIXO) or path.startswith(ROTAS_PUBLICAS)
-            or path in ROTAS_SEM_EXIGENCIA_ASSINATURA):
+            or path.startswith(ROTAS_SEM_EXIGENCIA_ASSINATURA_PREFIXO)):
         return await call_next(request)
     if request.client and request.client.host in ("127.0.0.1", "::1"):
         return await call_next(request)
@@ -79,6 +93,11 @@ async def exigir_assinatura_ativa(request: Request, call_next):
         return JSONResponse({"detail": e.detail}, status_code=e.status_code)
 
     with get_db() as conn:
+        usuario_row = conn.execute(
+            "SELECT ativo FROM usuarios WHERE id = ?", (int(payload["sub"]),)
+        ).fetchone()
+        if usuario_row and not usuario_row["ativo"]:
+            return JSONResponse({"detail": "Conta desativada"}, status_code=403)
         row = conn.execute(
             "SELECT status, acesso_expira_em FROM assinaturas WHERE usuario_id = ?", (int(payload["sub"]),)
         ).fetchone()
@@ -115,6 +134,9 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.create_function("UNACCENT", 1, _unaccent)   # disponível em todas as queries
+    # Sem isso, uma escrita concorrente com o scraper/popular_iptu (que segura o banco por
+    # bastante tempo) falha na hora com "database is locked" em vez de esperar a vaga.
+    conn.execute("PRAGMA busy_timeout = 10000")
     try:
         yield conn
     finally:
@@ -160,6 +182,51 @@ def _log_admin(conn, usuario_id: int, acao: str, detalhe: str | None = None) -> 
         "INSERT INTO admin_logs (usuario_id, acao, detalhe) VALUES (?, ?, ?)",
         (usuario_id, acao, detalhe),
     )
+
+
+_rate_limit_buckets: dict = {}
+
+
+def _rate_limit(request: Request, chave: str, max_tentativas: int, janela_seg: int) -> None:
+    """Limitador simples em memória (processo único — sem múltiplos workers uvicorn,
+    então não precisa de Redis/estado compartilhado) por IP+rota, janela deslizante.
+    Levanta 429 se o IP excedeu max_tentativas dentro de janela_seg."""
+    ip = request.client.host if request.client else "desconhecido"
+    agora = time.time()
+    bucket_chave = f"{chave}:{ip}"
+    fila = _rate_limit_buckets.setdefault(bucket_chave, [])
+    fila[:] = [t for t in fila if agora - t < janela_seg]
+    if len(fila) >= max_tentativas:
+        raise HTTPException(429, "Muitas tentativas. Tente novamente em alguns minutos.")
+    fila.append(agora)
+
+
+_NOME_ARQUIVO_SEGURO = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _sanitizar_nome_arquivo(nome: str) -> str:
+    """Remove path separators e qualquer caractere fora de um alfabeto seguro do nome
+    original do anexo — impede path traversal (../../) e quebra de atributo HTML (aspas,
+    < >) quando o nome é usado depois pra montar a URL do anexo no frontend."""
+    nome = os.path.basename(nome or "arquivo").strip()
+    nome = _NOME_ARQUIVO_SEGURO.sub("_", nome)
+    nome = nome.lstrip(".") or "arquivo"
+    return nome[:120]
+
+
+async def _salvar_anexo(anexo: UploadFile, ticket_id: int) -> tuple[str, str, str]:
+    conteudo = await anexo.read()
+    if len(conteudo) > TAMANHO_MAX_ANEXO:
+        raise HTTPException(413, "Arquivo muito grande (máx. 15MB)")
+    tipo = "imagem" if (anexo.content_type or "").startswith("image/") \
+        else "audio" if (anexo.content_type or "").startswith("audio/") \
+        else "arquivo"
+    pasta = UPLOADS_DIR / "tickets" / str(ticket_id)
+    pasta.mkdir(parents=True, exist_ok=True)
+    nome_original_seguro = _sanitizar_nome_arquivo(anexo.filename)
+    nome_seguro = f"{secrets.token_hex(8)}_{nome_original_seguro}"
+    (pasta / nome_seguro).write_bytes(conteudo)
+    return f"{ticket_id}/{nome_seguro}", tipo, nome_original_seguro
 
 
 def rows_to_list(rows) -> list[dict]:
@@ -237,6 +304,27 @@ def startup():
                 detalhe     TEXT,
                 criado_em   TEXT DEFAULT (datetime('now'))
             );
+            CREATE TABLE IF NOT EXISTS tickets (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
+                assunto       TEXT NOT NULL,
+                status        TEXT NOT NULL DEFAULT 'aberto',
+                encerrado_por TEXT,
+                criado_em     TEXT DEFAULT (datetime('now')),
+                atualizado_em TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS ticket_mensagens (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket_id   INTEGER NOT NULL REFERENCES tickets(id),
+                autor       TEXT NOT NULL,
+                texto       TEXT,
+                anexo_path  TEXT,
+                anexo_tipo  TEXT,
+                anexo_nome  TEXT,
+                lida        INTEGER NOT NULL DEFAULT 0,
+                criado_em   TEXT DEFAULT (datetime('now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_ticket_msgs_ticket ON ticket_mensagens(ticket_id);
         """)
         # Migração: colunas de perfil no cadastro (SQLite não tem ADD COLUMN IF NOT EXISTS)
         # email_verificado usa DEFAULT 1 para não travar contas já existentes; o cadastro
@@ -249,6 +337,8 @@ def startup():
             "token_reset_senha TEXT",
             "token_reset_senha_exp TEXT",
             "ultimo_acesso TEXT",
+            "ativo INTEGER DEFAULT 1",
+            "email_pendente TEXT",
         ):
             try:
                 conn.execute(f"ALTER TABLE usuarios ADD COLUMN {coluna}")
@@ -261,10 +351,17 @@ def startup():
             conn.execute("ALTER TABLE assinaturas ADD COLUMN acesso_expira_em TEXT")
         except sqlite3.OperationalError:
             pass  # coluna já existe
+        try:
+            conn.execute("ALTER TABLE assinaturas ADD COLUMN periodo_fim INTEGER")
+        except sqlite3.OperationalError:
+            pass  # coluna já existe
         conn.commit()
 
     # 2. Cache de geocodificação (mapa)
     geo.init_geo_cache()
+
+    # 2b. Pasta de anexos de tickets de suporte
+    (UPLOADS_DIR / "tickets").mkdir(parents=True, exist_ok=True)
 
     # 3. Pré-aquece o cache do resumo para o range padrão do frontend (últimos 3 anos)
     import threading
@@ -289,7 +386,7 @@ def startup():
                 )
                 time.sleep(2)  # respira entre queries pesadas
             except Exception:
-                pass
+                logger.exception("Falha ao pré-aquecer cache de resumo")
     threading.Thread(target=_prewarm, daemon=True).start()
     threading.Thread(target=_carregar_ac, daemon=True).start()
 
@@ -304,7 +401,7 @@ def startup():
                 if count == 0:
                     popular_iptu()
             except Exception:
-                pass
+                logger.exception("Falha ao popular tabela iptu em background")
         threading.Thread(target=_popular_iptu_lazy, daemon=True).start()
 
 
@@ -335,7 +432,7 @@ def popular_iptu():
             """)
             conn.commit()
     except Exception:
-        pass
+        logger.exception("Falha ao popular tabela iptu")
 
 
 # Cache simples em memória para /api/resumo
@@ -382,7 +479,7 @@ def _carregar_ac():
                 "ORDER BY sql_terreno"
             ).fetchall()]
     except Exception:
-        pass
+        logger.exception("Falha ao carregar cache de autocomplete")
 
 def _resumo_cache_get(key: str):
     entry = _resumo_cache.get(key)
@@ -884,21 +981,15 @@ def sincronizar_status():
         "inicio": _sync_inicio,
     }
 
-@app.post("/api/sincronizar")
-def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None), senha: Optional[str] = Query(None)):
-    """Dispara a sincronização em background."""
-    import os as _os
-    if senha != _os.environ.get("SYNC_SECRET", ""):
-        return JSONResponse({"detail": "Senha incorreta"}, status_code=401)
+def _disparar_sincronizacao(background_tasks: BackgroundTasks, anos_list):
+    """Núcleo compartilhado entre o endpoint legado (SYNC_SECRET) e o endpoint admin (JWT)."""
     global sincronizando, _sync_log, _sync_inicio
     if sincronizando:
-        return JSONResponse({"status": "já rodando"}, status_code=409)
-
-    anos_list = [int(a) for a in anos.split(",") if a.strip().isdigit()] if anos else None
+        raise HTTPException(409, "Sincronização já em andamento")
 
     def _run():
         global sincronizando, _sync_log, _sync_inicio
-        import time, sys, io, contextlib
+        import time, contextlib
         sincronizando = True
         _sync_inicio = time.time()
         _sync_log.clear()
@@ -928,6 +1019,19 @@ def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(N
     return {"status": "iniciado", "anos": anos_list or "todos"}
 
 
+@app.post("/api/sincronizar")
+def sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None), senha: Optional[str] = Query(None)):
+    """Endpoint legado — gated por SYNC_SECRET (script/cron externo)."""
+    import os as _os
+    if senha != _os.environ.get("SYNC_SECRET", ""):
+        return JSONResponse({"detail": "Senha incorreta"}, status_code=401)
+    anos_list = [int(a) for a in anos.split(",") if a.strip().isdigit()] if anos else None
+    try:
+        return _disparar_sincronizacao(background_tasks, anos_list)
+    except HTTPException as e:
+        return JSONResponse({"status": "já rodando"}, status_code=e.status_code)
+
+
 # ──────────────────────────────────────────────
 # AUTENTICAÇÃO
 # ──────────────────────────────────────────────
@@ -946,7 +1050,8 @@ class CadastroIn(BaseModel):
 
 
 @app.post("/api/auth/registrar")
-def registrar(dados: CadastroIn):
+def registrar(dados: CadastroIn, request: Request):
+    _rate_limit(request, "registrar", max_tentativas=5, janela_seg=3600)
     email = dados.email.strip().lower()
     nome = dados.nome.strip()
     sobrenome = dados.sobrenome.strip()
@@ -999,12 +1104,35 @@ def verificar_email(token: str):
     return RedirectResponse(url="/dashboard/login.html?verificado=1")
 
 
+@app.get("/api/auth/confirmar-troca-email")
+def confirmar_troca_email(token: str):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, email_pendente, token_verificacao_exp FROM usuarios WHERE token_verificacao = ?",
+            (token,),
+        ).fetchone()
+        if not row or not row["email_pendente"]:
+            raise HTTPException(400, "Link de confirmação inválido")
+        if row["token_verificacao_exp"] and datetime.fromisoformat(row["token_verificacao_exp"]) < datetime.utcnow():
+            raise HTTPException(400, "Link expirado. Solicite a troca novamente.")
+        try:
+            conn.execute(
+                "UPDATE usuarios SET email = ?, email_pendente = NULL, token_verificacao = NULL, token_verificacao_exp = NULL WHERE id = ?",
+                (row["email_pendente"], row["id"]),
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            raise HTTPException(409, "Esse e-mail foi usado por outra conta enquanto a confirmação estava pendente.")
+    return RedirectResponse(url="/dashboard/login.html?email_alterado=1")
+
+
 class ReenviarIn(BaseModel):
     email: str
 
 
 @app.post("/api/auth/reenviar-verificacao")
-def reenviar_verificacao(dados: ReenviarIn):
+def reenviar_verificacao(dados: ReenviarIn, request: Request):
+    _rate_limit(request, "reenviar-verificacao", max_tentativas=5, janela_seg=3600)
     email = dados.email.strip().lower()
     with get_db() as conn:
         row = conn.execute(
@@ -1027,16 +1155,19 @@ def reenviar_verificacao(dados: ReenviarIn):
 
 
 @app.post("/api/auth/login")
-def login(dados: CredenciaisIn):
+def login(dados: CredenciaisIn, request: Request):
+    _rate_limit(request, "login", max_tentativas=10, janela_seg=300)
     email = dados.email.strip().lower()
     with get_db() as conn:
         row = conn.execute(
-            "SELECT id, senha_hash, email_verificado FROM usuarios WHERE email = ?", (email,)
+            "SELECT id, senha_hash, email_verificado, ativo FROM usuarios WHERE email = ?", (email,)
         ).fetchone()
     if not row or not auth.verificar_senha(dados.senha, row["senha_hash"]):
         raise HTTPException(401, "E-mail ou senha incorretos")
     if not row["email_verificado"]:
         raise HTTPException(403, "E-mail ainda não verificado. Confira sua caixa de entrada.")
+    if not row["ativo"]:
+        raise HTTPException(403, "Conta desativada. Entre em contato com o suporte.")
     with get_db() as conn:
         conn.execute("UPDATE usuarios SET ultimo_acesso = datetime('now') WHERE id = ?", (row["id"],))
         conn.commit()
@@ -1049,7 +1180,8 @@ class EsqueciSenhaIn(BaseModel):
 
 
 @app.post("/api/auth/esqueci-senha")
-def esqueci_senha(dados: EsqueciSenhaIn):
+def esqueci_senha(dados: EsqueciSenhaIn, request: Request):
+    _rate_limit(request, "esqueci-senha", max_tentativas=5, janela_seg=3600)
     email = dados.email.strip().lower()
     with get_db() as conn:
         row = conn.execute("SELECT id, nome FROM usuarios WHERE email = ?", (email,)).fetchone()
@@ -1064,7 +1196,7 @@ def esqueci_senha(dados: EsqueciSenhaIn):
             try:
                 emailing.enviar_redefinicao_senha(email, row["nome"] or "", token_reset)
             except Exception:
-                pass  # não expõe falha de envio — resposta segue genérica
+                logger.exception("Falha ao enviar e-mail de redefinição de senha")  # não expõe falha de envio — resposta segue genérica
     # Resposta genérica mesmo se o e-mail não existir (evita enumeração de contas)
     return {"status": "ok"}
 
@@ -1075,7 +1207,8 @@ class RedefinirSenhaIn(BaseModel):
 
 
 @app.post("/api/auth/redefinir-senha")
-def redefinir_senha(dados: RedefinirSenhaIn):
+def redefinir_senha(dados: RedefinirSenhaIn, request: Request):
+    _rate_limit(request, "redefinir-senha", max_tentativas=10, janela_seg=3600)
     if len(dados.nova_senha) < 6:
         raise HTTPException(400, "Senha muito curta (mín. 6 caracteres)")
     with get_db() as conn:
@@ -1158,7 +1291,7 @@ def abrir_portal(usuario: dict = Depends(auth.get_usuario_atual)):
 def minha_conta(usuario: dict = Depends(auth.get_usuario_atual)):
     with get_db() as conn:
         u = conn.execute(
-            "SELECT nome, sobrenome, email, criado_em, ultimo_acesso FROM usuarios WHERE id = ?",
+            "SELECT nome, sobrenome, email, telefone, email_pendente, criado_em, ultimo_acesso FROM usuarios WHERE id = ?",
             (usuario["id"],),
         ).fetchone()
         a = conn.execute(
@@ -1181,23 +1314,242 @@ def minha_conta(usuario: dict = Depends(auth.get_usuario_atual)):
             if detalhes:
                 assinatura.update(detalhes)
         except Exception:
-            pass
+            logger.exception("Falha ao consultar detalhes da assinatura no Stripe")
     if a and a["stripe_customer_id"]:
         try:
             faturas = billing.listar_faturas(a["stripe_customer_id"], limite=12)
         except Exception:
-            pass
+            logger.exception("Falha ao listar faturas no Stripe")
 
     return {
         "nome": u["nome"] if u else "",
         "sobrenome": u["sobrenome"] if u else "",
         "email": u["email"] if u else usuario["email"],
+        "telefone": u["telefone"] if u else "",
+        "email_pendente": u["email_pendente"] if u else None,
         "criado_em": u["criado_em"] if u else None,
         "ultimo_acesso": u["ultimo_acesso"] if u else None,
         "is_admin": usuario["email"] == ADMIN_EMAIL,
         "assinatura": assinatura,
         "faturas": faturas,
     }
+
+
+# ──────────────────────────────────────────────
+# USUÁRIO — autoatendimento (editar dados, trocar e-mail/senha)
+# ──────────────────────────────────────────────
+
+class AtualizarPerfilIn(BaseModel):
+    nome: str
+    sobrenome: str
+    telefone: str
+
+
+@app.put("/api/usuario/perfil")
+def atualizar_perfil(dados: AtualizarPerfilIn, usuario: dict = Depends(auth.get_usuario_atual)):
+    nome, sobrenome, telefone = dados.nome.strip(), dados.sobrenome.strip(), dados.telefone.strip()
+    if not nome or not sobrenome:
+        raise HTTPException(400, "Informe nome e sobrenome")
+    if not telefone:
+        raise HTTPException(400, "Informe o telefone")
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE usuarios SET nome = ?, sobrenome = ?, telefone = ? WHERE id = ?",
+            (nome, sobrenome, telefone, usuario["id"]),
+        )
+        conn.commit()
+    return {"status": "ok"}
+
+
+class TrocarEmailIn(BaseModel):
+    novo_email: str
+
+
+@app.post("/api/usuario/trocar-email")
+def trocar_email(dados: TrocarEmailIn, usuario: dict = Depends(auth.get_usuario_atual)):
+    novo = dados.novo_email.strip().lower()
+    if not novo or "@" not in novo:
+        raise HTTPException(400, "E-mail inválido")
+    if novo == usuario["email"]:
+        raise HTTPException(400, "Esse já é o seu e-mail atual")
+    with get_db() as conn:
+        existe = conn.execute(
+            "SELECT 1 FROM usuarios WHERE email = ? AND id != ?", (novo, usuario["id"])
+        ).fetchone()
+        if existe:
+            raise HTTPException(409, "E-mail já está em uso por outra conta")
+        token = secrets.token_urlsafe(32)
+        expira_em = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+        conn.execute(
+            "UPDATE usuarios SET email_pendente = ?, token_verificacao = ?, token_verificacao_exp = ? WHERE id = ?",
+            (novo, token, expira_em, usuario["id"]),
+        )
+        conn.commit()
+        nome_row = conn.execute("SELECT nome FROM usuarios WHERE id = ?", (usuario["id"],)).fetchone()
+    try:
+        emailing.enviar_confirmacao_troca_email(novo, nome_row["nome"] or "", token)
+    except Exception:
+        raise HTTPException(500, "Não foi possível enviar o e-mail de confirmação. Tente novamente.")
+    return {"status": "confirmacao_enviada", "email_pendente": novo}
+
+
+class TrocarSenhaIn(BaseModel):
+    senha_atual: str
+    nova_senha: str
+
+
+@app.post("/api/usuario/trocar-senha")
+def trocar_senha(dados: TrocarSenhaIn, request: Request, usuario: dict = Depends(auth.get_usuario_atual)):
+    _rate_limit(request, "trocar-senha", max_tentativas=10, janela_seg=300)
+    if len(dados.nova_senha) < 6:
+        raise HTTPException(400, "Senha muito curta (mín. 6 caracteres)")
+    with get_db() as conn:
+        row = conn.execute("SELECT senha_hash FROM usuarios WHERE id = ?", (usuario["id"],)).fetchone()
+        if not row or not auth.verificar_senha(dados.senha_atual, row["senha_hash"]):
+            raise HTTPException(401, "Senha atual incorreta")
+        if _senha_ja_usada(conn, usuario["id"], dados.nova_senha, row["senha_hash"]):
+            raise HTTPException(400, "Você já usou essa senha antes. Escolha uma senha diferente.")
+        _trocar_senha(conn, usuario["id"], auth.hash_senha(dados.nova_senha))
+        conn.commit()
+    return {"status": "ok"}
+
+
+# ──────────────────────────────────────────────
+# SUPORTE — tickets (usuário)
+# ──────────────────────────────────────────────
+
+@app.post("/api/tickets")
+async def criar_ticket(assunto: str = Form(...), mensagem: str = Form(""),
+                        anexo: Optional[UploadFile] = File(None),
+                        usuario: dict = Depends(auth.get_usuario_atual)):
+    assunto = assunto.strip()
+    if not assunto:
+        raise HTTPException(400, "Informe o assunto")
+    if not mensagem.strip() and not anexo:
+        raise HTTPException(400, "Escreva uma mensagem ou anexe algo")
+    with get_db() as conn:
+        cur = conn.execute("INSERT INTO tickets (usuario_id, assunto) VALUES (?, ?)", (usuario["id"], assunto))
+        ticket_id = cur.lastrowid
+        anexo_path = anexo_tipo = anexo_nome = None
+        if anexo:
+            anexo_path, anexo_tipo, anexo_nome = await _salvar_anexo(anexo, ticket_id)
+        conn.execute(
+            "INSERT INTO ticket_mensagens (ticket_id, autor, texto, anexo_path, anexo_tipo, anexo_nome) VALUES (?, 'usuario', ?, ?, ?, ?)",
+            (ticket_id, mensagem.strip() or None, anexo_path, anexo_tipo, anexo_nome),
+        )
+        conn.commit()
+    try:
+        emailing.enviar_notificacao_ticket(assunto, ticket_id, usuario["email"])
+    except Exception:
+        logger.exception("Falha ao enviar notificação de ticket por e-mail (best-effort)")
+    return {"status": "criado", "ticket_id": ticket_id}
+
+
+@app.get("/api/tickets")
+def listar_meus_tickets(usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT t.id, t.assunto, t.status, t.criado_em, t.atualizado_em,
+                   (SELECT COUNT(*) FROM ticket_mensagens m WHERE m.ticket_id=t.id AND m.autor='admin' AND m.lida=0) AS nao_lidas
+            FROM tickets t WHERE t.usuario_id = ? ORDER BY t.atualizado_em DESC
+        """, (usuario["id"],)).fetchall()
+    return {"tickets": rows_to_list(rows)}
+
+
+@app.get("/api/tickets/{ticket_id}/mensagens")
+def listar_mensagens_meu_ticket(ticket_id: int, usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        t = conn.execute("SELECT status FROM tickets WHERE id = ? AND usuario_id = ?", (ticket_id, usuario["id"])).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        conn.execute("UPDATE ticket_mensagens SET lida = 1 WHERE ticket_id = ? AND autor = 'admin' AND lida = 0", (ticket_id,))
+        conn.commit()
+        msgs = conn.execute(
+            "SELECT id, autor, texto, anexo_path, anexo_tipo, anexo_nome, criado_em FROM ticket_mensagens WHERE ticket_id = ? ORDER BY criado_em ASC",
+            (ticket_id,),
+        ).fetchall()
+    return {"status": t["status"], "mensagens": rows_to_list(msgs)}
+
+
+@app.post("/api/tickets/{ticket_id}/mensagens")
+async def enviar_mensagem_ticket(ticket_id: int, texto: str = Form(""),
+                                  anexo: Optional[UploadFile] = File(None),
+                                  usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        t = conn.execute("SELECT status FROM tickets WHERE id = ? AND usuario_id = ?", (ticket_id, usuario["id"])).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        if t["status"] != "aberto":
+            raise HTTPException(403, "Ticket encerrado")
+        if not texto.strip() and not anexo:
+            raise HTTPException(400, "Mensagem vazia")
+        anexo_path = anexo_tipo = anexo_nome = None
+        if anexo:
+            anexo_path, anexo_tipo, anexo_nome = await _salvar_anexo(anexo, ticket_id)
+        conn.execute(
+            "INSERT INTO ticket_mensagens (ticket_id, autor, texto, anexo_path, anexo_tipo, anexo_nome) VALUES (?, 'usuario', ?, ?, ?, ?)",
+            (ticket_id, texto.strip() or None, anexo_path, anexo_tipo, anexo_nome),
+        )
+        conn.execute("UPDATE tickets SET atualizado_em = datetime('now') WHERE id = ?", (ticket_id,))
+        conn.commit()
+        assunto = conn.execute("SELECT assunto FROM tickets WHERE id = ?", (ticket_id,)).fetchone()["assunto"]
+    try:
+        emailing.enviar_notificacao_ticket(assunto, ticket_id, usuario["email"])
+    except Exception:
+        logger.exception("Falha ao enviar notificação de ticket por e-mail (best-effort)")
+    return {"status": "ok"}
+
+
+@app.post("/api/tickets/{ticket_id}/encerrar")
+def encerrar_ticket_usuario(ticket_id: int, usuario: dict = Depends(auth.get_usuario_atual)):
+    with get_db() as conn:
+        t = conn.execute("SELECT id FROM tickets WHERE id = ? AND usuario_id = ?", (ticket_id, usuario["id"])).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        conn.execute("UPDATE tickets SET status = 'encerrado', encerrado_por = 'usuario', atualizado_em = datetime('now') WHERE id = ?", (ticket_id,))
+        conn.commit()
+    return {"status": "encerrado"}
+
+
+@app.get("/api/tickets/anexos/{caminho:path}")
+def obter_anexo_ticket(caminho: str, token: Optional[str] = Query(None), authorization: Optional[str] = Header(None)):
+    # <img>/<audio src=...> não enviam o header Authorization, então aceita o token
+    # também via query string — usado só por essa rota, que precisa ser carregável
+    # diretamente pelo navegador em tags de mídia.
+    if authorization and authorization.startswith("Bearer "):
+        tok = authorization.removeprefix("Bearer ").strip()
+    elif token:
+        tok = token
+    else:
+        raise HTTPException(401, "Não autenticado")
+    payload = auth.decodificar_token(tok)
+    usuario_id = int(payload["sub"])
+    usuario_email = payload["email"]
+
+    try:
+        ticket_id = int(caminho.split("/")[0])
+    except (ValueError, IndexError):
+        raise HTTPException(404, "Não encontrado")
+    with get_db() as conn:
+        t = conn.execute("SELECT usuario_id FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+    if not t:
+        raise HTTPException(404, "Não encontrado")
+    if usuario_id != t["usuario_id"] and usuario_email != ADMIN_EMAIL:
+        raise HTTPException(403, "Sem acesso")
+    base = (UPLOADS_DIR / "tickets").resolve()
+    caminho_completo = (UPLOADS_DIR / "tickets" / caminho).resolve()
+    # Garante que o caminho resolvido continua dentro da pasta de uploads — bloqueia
+    # qualquer "../" no parâmetro de URL tentando sair da pasta (path traversal).
+    if base not in caminho_completo.parents and caminho_completo != base:
+        raise HTTPException(404, "Não encontrado")
+    if not caminho_completo.is_file():
+        raise HTTPException(404, "Não encontrado")
+    # Lê o arquivo inteiro e responde de uma vez (em vez de streaming via FileResponse) —
+    # anexos são pequenos (máx. 15MB) e isso evita cortes de conteúdo observados com
+    # respostas chunked através do proxy nginx.
+    conteudo = caminho_completo.read_bytes()
+    tipo_mime = mimetypes.guess_type(str(caminho_completo))[0] or "application/octet-stream"
+    return Response(content=conteudo, media_type=tipo_mime)
 
 
 @app.post("/api/webhook/stripe")
@@ -1216,17 +1568,26 @@ async def webhook_stripe(request: Request):
         if tipo == "checkout.session.completed":
             usuario_id = int(obj.get("client_reference_id") or obj.get("metadata", {}).get("usuario_id", 0))
             if usuario_id:
+                periodo_fim = None
+                subscription_id = obj.get("subscription")
+                if subscription_id:
+                    try:
+                        detalhes = billing.detalhes_assinatura(subscription_id)
+                        periodo_fim = detalhes["periodo_fim"] if detalhes else None
+                    except Exception:
+                        logger.exception("Falha ao buscar periodo_fim no checkout.session.completed")
                 conn.execute(
                     """UPDATE assinaturas SET stripe_customer_id = ?, stripe_subscription_id = ?,
-                       status = 'active', atualizado_em = datetime('now') WHERE usuario_id = ?""",
-                    (obj.get("customer"), obj.get("subscription"), usuario_id),
+                       status = 'active', periodo_fim = ?, atualizado_em = datetime('now') WHERE usuario_id = ?""",
+                    (obj.get("customer"), subscription_id, periodo_fim, usuario_id),
                 )
         elif tipo in ("customer.subscription.updated", "customer.subscription.deleted"):
             status = obj.get("status", "inativa")
+            periodo_fim = obj.get("current_period_end")
             conn.execute(
-                """UPDATE assinaturas SET status = ?, atualizado_em = datetime('now')
+                """UPDATE assinaturas SET status = ?, periodo_fim = ?, atualizado_em = datetime('now')
                    WHERE stripe_subscription_id = ?""",
-                (status, obj.get("id")),
+                (status, periodo_fim, obj.get("id")),
             )
         elif tipo == "invoice.payment_failed":
             conn.execute(
@@ -1253,13 +1614,29 @@ def exigir_admin(usuario: dict = Depends(auth.get_usuario_atual)) -> dict:
 def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         rows = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso,
-                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
+                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.periodo_fim, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
             ORDER BY u.criado_em DESC
         """).fetchall()
-    return {"usuarios": rows_to_list(rows)}
+        usuarios = rows_to_list(rows)
+        # Backfill pontual: assinaturas criadas antes da coluna periodo_fim existir não têm
+        # esse dado até o próximo evento da Stripe — busca uma vez e grava localmente.
+        for u in usuarios:
+            if u["stripe_subscription_id"] and not u["periodo_fim"] and u["status"] in ("active", "past_due", "unpaid"):
+                try:
+                    detalhes = billing.detalhes_assinatura(u["stripe_subscription_id"])
+                    if detalhes and detalhes.get("periodo_fim"):
+                        conn.execute(
+                            "UPDATE assinaturas SET periodo_fim = ? WHERE usuario_id = ?",
+                            (detalhes["periodo_fim"], u["id"]),
+                        )
+                        u["periodo_fim"] = detalhes["periodo_fim"]
+                except Exception:
+                    logger.exception("Falha no backfill de periodo_fim para usuario_id=%s", u["id"])
+        conn.commit()
+    return {"usuarios": usuarios}
 
 
 class CriarUsuarioAdminIn(BaseModel):
@@ -1296,8 +1673,8 @@ def admin_criar_usuario(dados: CriarUsuarioAdminIn, admin: dict = Depends(exigir
 def admin_detalhes_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         usuario = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso,
-                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.atualizado_em
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
+                   a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.periodo_fim, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
             WHERE u.id = ?
@@ -1323,7 +1700,7 @@ def admin_revogar(usuario_id: int, admin: dict = Depends(exigir_admin)):
             try:
                 billing.cancelar_assinatura(row["stripe_subscription_id"])
             except Exception:
-                pass  # pode já estar cancelada no Stripe — segue revogando localmente
+                logger.exception("Falha ao cancelar assinatura no Stripe (pode já estar cancelada) — segue revogando localmente")
         conn.execute(
             "UPDATE assinaturas SET status = 'inativa', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
             (usuario_id,),
@@ -1331,6 +1708,165 @@ def admin_revogar(usuario_id: int, admin: dict = Depends(exigir_admin)):
         _log_admin(conn, usuario_id, "revogar")
         conn.commit()
     return {"status": "revogado"}
+
+
+@app.post("/api/admin/usuarios/{usuario_id}/desativar")
+def admin_desativar(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        row = conn.execute(
+            "SELECT stripe_subscription_id FROM assinaturas WHERE usuario_id = ?", (usuario_id,)
+        ).fetchone()
+        if row and row["stripe_subscription_id"]:
+            try:
+                billing.cancelar_assinatura(row["stripe_subscription_id"])
+            except Exception:
+                logger.exception("Falha ao cancelar assinatura no Stripe (pode já estar cancelada)")
+        conn.execute("UPDATE usuarios SET ativo = 0 WHERE id = ?", (usuario_id,))
+        conn.execute(
+            "UPDATE assinaturas SET status = 'inativa', acesso_expira_em = NULL, atualizado_em = datetime('now') WHERE usuario_id = ?",
+            (usuario_id,),
+        )
+        _log_admin(conn, usuario_id, "desativar")
+        conn.commit()
+    return {"status": "desativado"}
+
+
+@app.post("/api/admin/usuarios/{usuario_id}/reativar")
+def admin_reativar(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        conn.execute("UPDATE usuarios SET ativo = 1 WHERE id = ?", (usuario_id,))
+        _log_admin(conn, usuario_id, "reativar")
+        conn.commit()
+    return {"status": "reativado"}
+
+
+@app.delete("/api/admin/usuarios/{usuario_id}")
+def admin_excluir_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
+    """Exclui o usuário e todos os dados relacionados PERMANENTEMENTE. Irreversível."""
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        row = conn.execute(
+            "SELECT stripe_subscription_id FROM assinaturas WHERE usuario_id = ?", (usuario_id,)
+        ).fetchone()
+        if row and row["stripe_subscription_id"]:
+            try:
+                billing.cancelar_assinatura(row["stripe_subscription_id"])
+            except Exception:
+                logger.exception("Falha ao cancelar assinatura no Stripe (pode já estar cancelada)")
+        conn.execute("DELETE FROM senhas_antigas WHERE usuario_id = ?", (usuario_id,))
+        conn.execute("DELETE FROM admin_logs WHERE usuario_id = ?", (usuario_id,))
+        conn.execute("DELETE FROM assinaturas WHERE usuario_id = ?", (usuario_id,))
+        conn.execute("DELETE FROM usuarios WHERE id = ?", (usuario_id,))
+        conn.commit()
+    return {"status": "excluido"}
+
+
+class EditarPerfilAdminIn(BaseModel):
+    nome: str
+    sobrenome: str
+    telefone: str
+    email: str
+
+
+@app.put("/api/admin/usuarios/{usuario_id}/perfil")
+def admin_editar_perfil(usuario_id: int, dados: EditarPerfilAdminIn, admin: dict = Depends(exigir_admin)):
+    email = dados.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(400, "E-mail inválido")
+    with get_db() as conn:
+        existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        if not existe:
+            raise HTTPException(404, "Usuário não encontrado")
+        duplicado = conn.execute(
+            "SELECT 1 FROM usuarios WHERE email = ? AND id != ?", (email, usuario_id)
+        ).fetchone()
+        if duplicado:
+            raise HTTPException(409, "E-mail já está em uso por outra conta")
+        conn.execute(
+            "UPDATE usuarios SET nome = ?, sobrenome = ?, telefone = ?, email = ? WHERE id = ?",
+            (dados.nome.strip(), dados.sobrenome.strip(), dados.telefone.strip(), email, usuario_id),
+        )
+        _log_admin(conn, usuario_id, "editar-perfil")
+        conn.commit()
+    return {"status": "ok"}
+
+
+# ──────────────────────────────────────────────
+# SUPORTE — tickets (admin)
+# ──────────────────────────────────────────────
+
+@app.get("/api/admin/tickets")
+def admin_listar_tickets(admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT t.id, t.assunto, t.status, t.criado_em, t.atualizado_em,
+                   u.nome, u.sobrenome, u.email,
+                   (SELECT COUNT(*) FROM ticket_mensagens m WHERE m.ticket_id=t.id AND m.autor='usuario' AND m.lida=0) AS nao_lidas
+            FROM tickets t JOIN usuarios u ON u.id = t.usuario_id
+            ORDER BY t.atualizado_em DESC
+        """).fetchall()
+    return {"tickets": rows_to_list(rows)}
+
+
+@app.get("/api/admin/tickets/{ticket_id}/mensagens")
+def admin_mensagens_ticket(ticket_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        t = conn.execute("""
+            SELECT t.id, t.status, t.assunto, u.nome, u.sobrenome, u.email
+            FROM tickets t JOIN usuarios u ON u.id = t.usuario_id WHERE t.id = ?
+        """, (ticket_id,)).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        conn.execute("UPDATE ticket_mensagens SET lida = 1 WHERE ticket_id = ? AND autor = 'usuario' AND lida = 0", (ticket_id,))
+        conn.commit()
+        msgs = conn.execute(
+            "SELECT id, autor, texto, anexo_path, anexo_tipo, anexo_nome, criado_em FROM ticket_mensagens WHERE ticket_id = ? ORDER BY criado_em ASC",
+            (ticket_id,),
+        ).fetchall()
+    return {"ticket": dict(t), "mensagens": rows_to_list(msgs)}
+
+
+@app.post("/api/admin/tickets/{ticket_id}/mensagens")
+async def admin_enviar_mensagem(ticket_id: int, texto: str = Form(""),
+                                 anexo: Optional[UploadFile] = File(None),
+                                 admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        t = conn.execute("SELECT status FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        if t["status"] != "aberto":
+            raise HTTPException(403, "Ticket encerrado")
+        if not texto.strip() and not anexo:
+            raise HTTPException(400, "Mensagem vazia")
+        anexo_path = anexo_tipo = anexo_nome = None
+        if anexo:
+            anexo_path, anexo_tipo, anexo_nome = await _salvar_anexo(anexo, ticket_id)
+        conn.execute(
+            "INSERT INTO ticket_mensagens (ticket_id, autor, texto, anexo_path, anexo_tipo, anexo_nome) VALUES (?, 'admin', ?, ?, ?, ?)",
+            (ticket_id, texto.strip() or None, anexo_path, anexo_tipo, anexo_nome),
+        )
+        conn.execute("UPDATE tickets SET atualizado_em = datetime('now') WHERE id = ?", (ticket_id,))
+        conn.commit()
+    return {"status": "ok"}
+
+
+@app.post("/api/admin/tickets/{ticket_id}/encerrar")
+def admin_encerrar_ticket(ticket_id: int, admin: dict = Depends(exigir_admin)):
+    with get_db() as conn:
+        t = conn.execute("SELECT id FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
+        if not t:
+            raise HTTPException(404, "Ticket não encontrado")
+        conn.execute("UPDATE tickets SET status = 'encerrado', encerrado_por = 'admin', atualizado_em = datetime('now') WHERE id = ?", (ticket_id,))
+        conn.commit()
+    return {"status": "encerrado"}
 
 
 class LiberarAcessoIn(BaseModel):
@@ -1395,6 +1931,59 @@ def admin_resetar_senha(usuario_id: int, admin: dict = Depends(exigir_admin)):
         _log_admin(conn, usuario_id, "resetar-senha")
         conn.commit()
     return {"senha_temporaria": nova_senha}
+
+
+class CriarCupomIn(BaseModel):
+    codigo: str
+    percent_off: Optional[float] = None
+    valor_off: Optional[float] = None      # em reais; convertido para centavos aqui
+    duration: str                          # 'once' | 'repeating' | 'forever'
+    duration_in_months: Optional[int] = None
+    redeem_by: Optional[str] = None        # ISO date (yyyy-mm-dd), opcional
+
+
+@app.get("/api/admin/cupons")
+def admin_listar_cupons(admin: dict = Depends(exigir_admin)):
+    try:
+        return {"cupons": billing.listar_cupons()}
+    except Exception as e:
+        raise HTTPException(502, f"Erro ao consultar Stripe: {e}")
+
+
+@app.post("/api/admin/cupons")
+def admin_criar_cupom(dados: CriarCupomIn, admin: dict = Depends(exigir_admin)):
+    if not dados.codigo.strip():
+        raise HTTPException(400, "Informe um código")
+    if (dados.percent_off is None) == (dados.valor_off is None):
+        raise HTTPException(400, "Informe percent_off OU valor_off (não os dois, nem nenhum)")
+    if dados.duration not in ("once", "repeating", "forever"):
+        raise HTTPException(400, "duration inválida")
+    amount_off_centavos = int(round(dados.valor_off * 100)) if dados.valor_off is not None else None
+    redeem_by_ts = int(datetime.fromisoformat(dados.redeem_by).timestamp()) if dados.redeem_by else None
+    try:
+        resultado = billing.criar_cupom(
+            percent_off=dados.percent_off, amount_off_centavos=amount_off_centavos,
+            duration=dados.duration, duration_in_months=dados.duration_in_months,
+            codigo=dados.codigo.strip().upper(), redeem_by_ts=redeem_by_ts,
+        )
+    except Exception as e:
+        raise HTTPException(400, f"Erro ao criar cupom no Stripe: {e}")
+    return {"status": "criado", **resultado}
+
+
+@app.post("/api/admin/cupons/{promotion_code_id}/desativar")
+def admin_desativar_cupom(promotion_code_id: str, admin: dict = Depends(exigir_admin)):
+    try:
+        billing.desativar_promo_code(promotion_code_id)
+    except Exception as e:
+        raise HTTPException(400, f"Erro ao desativar no Stripe: {e}")
+    return {"status": "desativado"}
+
+
+@app.post("/api/admin/sincronizar")
+def admin_sincronizar(background_tasks: BackgroundTasks, anos: Optional[str] = Query(None), admin: dict = Depends(exigir_admin)):
+    anos_list = [int(a) for a in anos.split(",") if a.strip().isdigit()] if anos else None
+    return _disparar_sincronizacao(background_tasks, anos_list)
 
 
 # Serve o frontend estático (deve ficar no final para não sobrescrever as rotas da API)

@@ -8,6 +8,7 @@ import requests
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM = os.environ.get("RESEND_FROM", "ITBI Smart <noreply@itbismart.com.br>")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8000")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@itbismart.com.br")
 
 # API_BASE = origem do backend (FRONTEND_URL aponta para /dashboard; a rota de
 # verificação é /api/auth/verificar, no mesmo domínio mas fora do /dashboard).
@@ -46,6 +47,39 @@ def enviar_redefinicao_senha(email: str, nome: str, token: str) -> None:
     </div>
     """
     _enviar(email, "Redefinir senha — ITBI Smart", html)
+
+
+def enviar_confirmacao_troca_email(email: str, nome: str, token: str) -> None:
+    link = f"{API_BASE}/api/auth/confirmar-troca-email?token={token}"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
+      <h2 style="color:#e08560">Confirme seu novo e-mail</h2>
+      <p>Olá{f', {nome}' if nome else ''}! Confirme para trocar o e-mail da sua conta no ITBI Smart para este endereço.</p>
+      <p>
+        <a href="{link}" style="background:#e08560;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">
+          Confirmar novo e-mail
+        </a>
+      </p>
+      <p style="color:#888;font-size:13px">Se você não pediu essa troca, ignore este e-mail. Este link expira em 24 horas.</p>
+    </div>
+    """
+    _enviar(email, "Confirme seu novo e-mail — ITBI Smart", html)
+
+
+def enviar_notificacao_ticket(assunto: str, ticket_id: int, usuario_email: str) -> None:
+    link = f"{FRONTEND_URL}/admin.html"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
+      <h2 style="color:#e08560">Novo ticket de suporte</h2>
+      <p><b>{usuario_email}</b> abriu/respondeu o ticket #{ticket_id}: "{assunto}"</p>
+      <p>
+        <a href="{link}" style="background:#e08560;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">
+          Abrir painel admin
+        </a>
+      </p>
+    </div>
+    """
+    _enviar(ADMIN_EMAIL, f"Novo ticket de suporte — {assunto}", html)
 
 
 def _enviar(destinatario: str, assunto: str, html: str) -> None:

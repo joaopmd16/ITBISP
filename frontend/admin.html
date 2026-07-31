@@ -7,6 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
 <style>
   :root{
     --bg:#000; --surface:#0d0d0d; --surface2:#151515; --border:#232323;
@@ -50,16 +51,20 @@
   .b-active{background:rgba(95,191,122,.15);color:var(--ok)}
   .b-trialing{background:rgba(224,185,95,.15);color:var(--warn)}
   .b-dev{background:rgba(95,127,224,.15);color:#7f9bee}
-  .b-inativa,.b-none{background:rgba(224,95,95,.15);color:var(--err)}
-  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .b-inativa,.b-none,.b-canceled,.b-incomplete_expired{background:rgba(224,95,95,.15);color:var(--err)}
+  .b-past_due,.b-unpaid,.b-incomplete{background:rgba(224,185,95,.15);color:var(--warn)}
+  .actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
   button.act{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:12px;white-space:nowrap}
   button.act:hover{border-color:var(--primary);color:var(--primary)}
   button.act.danger:hover{border-color:var(--err);color:var(--err)}
   button.act.ok:hover{border-color:var(--ok);color:var(--ok)}
 
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
-  .overlay.open{display:flex}
-  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;max-width:480px;width:100%;max-height:85vh;overflow:auto}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;transition:background .18s ease}
+  .overlay.open{display:flex;background:rgba(0,0,0,.65)}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;max-width:480px;width:100%;max-height:85vh;overflow:auto;transform:scale(.94) translateY(10px);opacity:0;transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
+  .overlay.open .modal{transform:scale(1) translateY(0);opacity:1}
+  @keyframes tkFlashEncerrado{0%{background:rgba(224,95,95,0)}30%{background:rgba(224,95,95,.15)}100%{background:rgba(224,95,95,0)}}
+  .tk-flash-encerrado{animation:tkFlashEncerrado .7s ease}
   .modal h3{font-size:17px;margin-bottom:16px}
   .modal .close{float:right;cursor:pointer;color:var(--muted);font-size:20px;line-height:1}
   .opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
@@ -88,6 +93,31 @@
   .btn-novo:hover{background:var(--primary-dark)}
   .warn-email{display:inline-block;margin-left:6px;color:var(--warn);font-size:11px;font-weight:600;white-space:nowrap}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  .nav-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:9px 16px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}
+  .nav-btn:hover{color:var(--text);border-color:var(--primary)}
+  .nav-btn.active{background:var(--primary);color:#000;border-color:var(--primary)}
+  .tabs-nav{display:flex;gap:8px;flex-wrap:wrap}
+  .log-box{white-space:pre-wrap;font-family:monospace;font-size:12px;max-height:320px;overflow:auto;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:14px}
+
+  #tk-msgs{display:flex;flex-direction:column;gap:10px;max-height:380px;overflow-y:auto;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px}
+  .tk-msg{max-width:75%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4}
+  .tk-msg.admin{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:3px}
+  .tk-msg.usuario{align-self:flex-start;background:var(--surface);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:3px}
+  .tk-msg img{max-width:100%;border-radius:8px;margin-top:4px;display:block}
+  .tk-msg audio{margin-top:4px;max-width:100%}
+  .tk-msg .anexo-arquivo{display:block;margin-top:4px;color:inherit;text-decoration:underline;font-size:12px}
+  .tk-msg .quando{font-size:10px;opacity:.7;margin-top:3px}
+  #tk-composer{display:flex;align-items:center;gap:6px}
+  #tk-composer input[type=text]{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none}
+  #tk-composer input[type=text]:focus{border-color:var(--primary)}
+  .act.gravando{border-color:var(--err);color:var(--err)}
+  .tk-gravando-indicator{display:none;align-items:center;gap:8px;padding:4px 2px 10px;font-size:12px;color:var(--err);font-weight:600}
+  .tk-gravando-indicator.on{display:flex}
+  .tk-onda{display:flex;align-items:center;gap:2px;height:20px}
+  .tk-onda span{width:3px;min-height:3px;background:var(--err);border-radius:2px;transition:height .08s ease-out}
+  .radio-row{display:flex;gap:18px;align-items:center;font-size:13.5px;margin-bottom:14px}
+  .radio-row label{display:flex;align-items:center;gap:6px;cursor:pointer}
 
   #loginScreen{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center}
   .login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;max-width:380px;width:100%}
@@ -132,25 +162,108 @@
     <header>
       <h1>Painel <span>Admin</span></h1>
       <div style="display:flex;gap:10px">
-        <button class="btn-novo" onclick="abrirCriar()">+ Criar usuário</button>
         <button id="logout" onclick="logout()">Sair</button>
       </div>
     </header>
 
-    <div class="stats" id="stats"></div>
-
-    <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Acesso até</th><th>Cadastro</th><th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="7" class="loading">Carregando...</td></tr>
-        </tbody>
-      </table>
+    <div class="tabs-nav" style="margin-bottom:24px">
+      <button class="nav-btn active" data-view="usuarios" onclick="mostrarView('usuarios')">Usuários</button>
+      <button class="nav-btn" data-view="cupons" onclick="mostrarView('cupons')">Cupons</button>
+      <button class="nav-btn" data-view="sync" onclick="mostrarView('sync')">Atualizar dados</button>
+      <button class="nav-btn" data-view="tickets" onclick="mostrarView('tickets')">Tickets<span class="badge b-inativa" id="ticketsBadge" style="display:none;margin-left:6px"></span></button>
     </div>
+
+    <section id="view-usuarios" class="view">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+        <button class="btn-novo" onclick="abrirCriar()">+ Criar usuário</button>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="tabs-nav" id="statusTabs" style="margin-bottom:14px">
+        <button class="nav-btn active" data-status="todos" onclick="filtrarStatus('todos')">Todos</button>
+        <button class="nav-btn" data-status="pagantes" onclick="filtrarStatus('pagantes')">Pagantes</button>
+        <button class="nav-btn" data-status="trial" onclick="filtrarStatus('trial')">Trial ou Liberado</button>
+        <button class="nav-btn" data-status="sem_acesso" onclick="filtrarStatus('sem_acesso')">Sem acesso</button>
+        <button class="nav-btn" data-status="desativados" onclick="filtrarStatus('desativados')">Desativados</button>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Acesso até</th><th>Cadastro</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="7" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-cupons" class="view" style="display:none">
+      <div class="card" style="padding:22px;margin-bottom:20px">
+        <h3 style="font-size:16px;margin-bottom:16px">Criar cupom</h3>
+        <form id="formCupom" onsubmit="return criarCupom(event)">
+          <div class="field"><label>Código</label><input id="cupCodigo" type="text" required style="text-transform:uppercase"></div>
+          <div class="radio-row">
+            <label><input type="radio" name="cupTipo" value="percent" checked onchange="alternarTipoCupom()"> Percentual (%)</label>
+            <label><input type="radio" name="cupTipo" value="valor" onchange="alternarTipoCupom()"> Valor fixo (R$)</label>
+          </div>
+          <div class="field-row">
+            <div class="field" id="cupPercentField"><label>Percentual (%)</label><input id="cupPercent" type="number" step="0.01" min="0" max="100"></div>
+            <div class="field" id="cupValorField" style="display:none"><label>Valor (R$)</label><input id="cupValor" type="number" step="0.01" min="0"></div>
+            <div class="field"><label>Duração</label>
+              <select id="cupDuration" onchange="document.getElementById('cupMesesField').style.display = this.value==='repeating' ? 'block' : 'none'" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:12px;font-family:inherit;font-size:14px">
+                <option value="once">Uma vez</option>
+                <option value="repeating">Recorrente (N meses)</option>
+                <option value="forever">Para sempre</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field" id="cupMesesField" style="display:none"><label>Nº de meses</label><input id="cupMeses" type="number" min="1" step="1"></div>
+            <div class="field"><label>Válido até (opcional)</label><input id="cupRedeemBy" type="date"></div>
+          </div>
+          <button class="btn-primary" id="cupBtn" type="submit">Criar cupom</button>
+          <div id="cupMsg"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Código</th><th>Desconto</th><th>Duração</th><th>Válido até</th><th>Status</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="cuponsBody">
+            <tr><td colspan="6" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-sync" class="view" style="display:none">
+      <div class="card" style="padding:22px">
+        <h3 style="font-size:16px;margin-bottom:6px">Atualização da base de dados</h3>
+        <p class="muted" style="font-size:13px;margin-bottom:16px">Dispara o scraper para os anos padrão (2024–2026), re-baixando os arquivos oficiais e atualizando o banco.</p>
+        <button class="btn-novo" id="syncBtn" onclick="dispararSincronizacao()">Sincronizar agora</button>
+        <span id="syncStatusLabel" class="muted" style="margin-left:14px;font-size:13px"></span>
+        <div id="syncMsg"></div>
+        <div class="log-box" id="syncLog"></div>
+      </div>
+    </section>
+
+    <section id="view-tickets" class="view" style="display:none">
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Protocolo</th><th>Cliente</th><th>Assunto</th><th>Status</th><th>Última atualização</th><th>Não lidas</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="ticketsBody">
+            <tr><td colspan="7" class="loading">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -177,6 +290,18 @@
   </div>
 </div>
 
+<div class="overlay" id="modalExcluir">
+  <div class="modal">
+    <span class="close" onclick="fecharModais()">&times;</span>
+    <h3>Excluir permanentemente — <span id="xNome"></span></h3>
+    <p class="muted" style="font-size:13px">Isso apaga o usuário e todo o histórico (assinatura, senhas, logs) do banco de dados <b>para sempre</b>. Não tem como desfazer — isso é diferente de "Desativar".</p>
+    <p class="muted" style="font-size:13px;margin-top:8px">Para confirmar, digite o e-mail <b id="xEmailAlvo"></b> abaixo:</p>
+    <div class="field" style="margin-top:10px"><input id="xConfirmEmail" type="text" oninput="document.getElementById('xBtn').disabled = this.value.trim().toLowerCase() !== xEmailAtual"></div>
+    <button class="act danger" id="xBtn" disabled style="width:100%;padding:12px" onclick="excluirUsuario()">Excluir permanentemente</button>
+    <div id="xMsg"></div>
+  </div>
+</div>
+
 <div class="overlay" id="modalPagamentos">
   <div class="modal">
     <span class="close" onclick="fecharModais()">&times;</span>
@@ -190,6 +315,31 @@
     <span class="close" onclick="fecharModais()">&times;</span>
     <h3 id="dNome"></h3>
     <div id="dConteudo" class="loading">Carregando...</div>
+  </div>
+</div>
+
+<div class="overlay" id="modalTicket">
+  <div class="modal wide">
+    <span class="close" onclick="fecharModalTicket()">&times;</span>
+    <h3 id="tkTitulo"></h3>
+    <p class="muted" style="font-size:12.5px;margin-bottom:10px" id="tkCliente"></p>
+    <div id="tk-msgs"></div>
+    <div class="tk-gravando-indicator" id="tk-gravando-indicator">
+      <div class="tk-onda" id="tk-onda"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <span id="tk-gravando-tempo">0:00</span>
+    </div>
+    <div id="tk-composer">
+      <input type="file" id="tk-anexo-input" style="display:none" onchange="tkAnexarArquivo(this.files[0])">
+      <button type="button" class="act" onclick="document.getElementById('tk-anexo-input').click()" title="Anexar arquivo">📎</button>
+      <button type="button" class="act" id="tk-mic-btn" onclick="tkToggleGravarAudio()" title="Gravar áudio">🎤</button>
+      <button type="button" class="act" onclick="tkCapturarTela()" title="Capturar tela">🖥️</button>
+      <input type="text" id="tk-texto-input" placeholder="Digite sua resposta..." onkeydown="if(event.key==='Enter')tkEnviarMensagem()">
+      <button type="button" class="act ok" onclick="tkEnviarMensagem()">Enviar</button>
+    </div>
+    <div style="margin-top:10px">
+      <button class="act danger" id="tk-encerrar-btn" onclick="tkEncerrarTicket()">Encerrar ticket</button>
+      <span class="muted" id="tk-encerrado-aviso" style="display:none;font-size:12.5px">Este ticket foi encerrado.</span>
+    </div>
   </div>
 </div>
 
@@ -273,10 +423,30 @@ async function api(path, opts={}){
   return res.json();
 }
 
+const STATUS_LABEL = {
+  active:'ativo', trialing:'trial', dev:'vitalício', inativa:'inativo', none:'sem assinatura',
+  past_due:'falta pagamento', unpaid:'falta pagamento',
+  canceled:'renovação pendente', incomplete:'pagamento incompleto', incomplete_expired:'assinatura expirada',
+};
 function badge(status){
   const s = status || 'none';
-  const label = {active:'ativo', trialing:'trial', dev:'vitalício', inativa:'inativo', none:'sem assinatura'}[s] || s;
+  const label = STATUS_LABEL[s] || s;
   return `<span class="badge b-${s}">${label}</span>`;
+}
+function fmtDataUnix(ts){
+  if(!ts) return '—';
+  try{ return new Date(ts*1000).toLocaleDateString('pt-BR'); }catch(e){ return '—'; }
+}
+function acessoAte(u){
+  if(u.status==='trialing') return fmtData(u.acesso_expira_em);
+  if(u.status==='dev') return 'Vitalício';
+  if(['active','past_due','unpaid','canceled'].includes(u.status) && u.periodo_fim) return fmtDataUnix(u.periodo_fim);
+  return '—';
+}
+
+function _esc(s){
+  if(s===null||s===undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function fmtData(iso){
@@ -288,11 +458,36 @@ function fecharModais(){
   document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));
 }
 
+function mostrarView(nome){
+  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+  document.getElementById('view-'+nome).style.display='block';
+  document.querySelectorAll('.wrap > .tabs-nav .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===nome));
+  if(nome==='cupons' && !window._cuponsCarregados){ carregarCupons(); }
+  if(nome==='sync'){ atualizarStatusSync(); }
+  if(nome==='tickets'){ carregarTickets(); _iniciarPollListaTickets(); } else { _pararPollListaTickets(); }
+}
+
+let _usuarios = [];
+let _filtroAtual = 'todos';
+const FILTROS_STATUS = {
+  todos: u => true,
+  pagantes: u => u.status === 'active',
+  trial: u => ['trialing','dev'].includes(u.status),
+  sem_acesso: u => !!u.ativo && ['inativa', null, undefined, 'none'].includes(u.status),
+  desativados: u => !u.ativo,
+};
+function filtrarStatus(nome){
+  _filtroAtual = nome;
+  document.querySelectorAll('#statusTabs .nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.status===nome));
+  renderTabela(_usuarios.filter(FILTROS_STATUS[nome]));
+}
+
 async function carregar(){
   try{
     const data = await api('/api/admin/usuarios');
+    _usuarios = data.usuarios;
     renderStats(data.usuarios);
-    renderTabela(data.usuarios);
+    filtrarStatus(_filtroAtual);
   }catch(e){
     document.getElementById('tbody').innerHTML = `<tr><td colspan="7" class="loading">Erro ao carregar: ${e.message}</td></tr>`;
   }
@@ -316,11 +511,11 @@ function renderTabela(usuarios){
   }
   document.getElementById('tbody').innerHTML = usuarios.map(u => `
     <tr class="clicavel" onclick='abrirDetalhes(${u.id})'>
-      <td>${(u.nome||'')} ${(u.sobrenome||'')}</td>
-      <td>${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</td>
-      <td class="muted">${u.telefone || '—'}</td>
+      <td>${_esc(u.nome||'')} ${_esc(u.sobrenome||'')}</td>
+      <td>${_esc(u.email)}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</td>
+      <td class="muted">${_esc(u.telefone) || '—'}</td>
       <td>${badge(u.status)}</td>
-      <td class="muted">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : '—'}</td>
+      <td class="muted">${acessoAte(u)}</td>
       <td class="muted">${fmtData(u.criado_em)}</td>
       <td onclick="event.stopPropagation()">
         <div class="actions">
@@ -328,6 +523,10 @@ function renderTabela(usuarios){
           <button class="act danger" onclick='revogar(${u.id})'>Revogar</button>
           <button class="act" onclick='abrirSenha(${JSON.stringify(u)})'>Resetar senha</button>
           <button class="act" onclick='abrirPagamentos(${u.id}, ${JSON.stringify(u.nome||u.email)})'>Pagamentos</button>
+          ${u.ativo
+            ? `<button class="act danger" onclick='desativarUsuario(${u.id})'>Desativar</button>`
+            : `<button class="act ok" onclick='reativarUsuario(${u.id})'>Reativar</button>`}
+          <button class="act danger" onclick='abrirExcluir(${JSON.stringify(u)})'>Excluir</button>
         </div>
       </td>
     </tr>
@@ -339,6 +538,9 @@ const LOG_LABEL = {
   'revogar': 'Revogou acesso',
   'resetar-senha': 'Resetou senha',
   'criar-usuario': 'Usuário criado pelo admin',
+  'desativar': 'Desativou usuário',
+  'reativar': 'Reativou usuário',
+  'editar-perfil': 'Editou dados do usuário',
 };
 
 async function abrirDetalhes(id){
@@ -359,12 +561,13 @@ async function abrirDetalhes(id){
       : `<p class="muted" style="font-size:13px">Nenhuma ação registrada ainda.</p>`;
     document.getElementById('dConteudo').innerHTML = `
       <div class="info-grid">
-        <div><div class="l">E-mail</div><div class="v">${u.email}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</div></div>
-        <div><div class="l">Telefone</div><div class="v">${u.telefone || '—'}</div></div>
+        <div><div class="l">E-mail</div><div class="v">${_esc(u.email)}${!u.email_verificado ? '<span class="warn-email">⚠ não validado</span>' : ''}</div></div>
+        <div><div class="l">Telefone</div><div class="v">${_esc(u.telefone) || '—'}</div></div>
         <div><div class="l">Status</div><div class="v">${badge(u.status)}</div></div>
-        <div><div class="l">Acesso até</div><div class="v">${u.status==='trialing' ? fmtData(u.acesso_expira_em) : '—'}</div></div>
+        <div><div class="l">Acesso até</div><div class="v">${acessoAte(u)}</div></div>
         <div><div class="l">Cadastro</div><div class="v">${fmtData(u.criado_em)}</div></div>
         <div><div class="l">Último acesso</div><div class="v">${fmtData(u.ultimo_acesso)}</div></div>
+        ${u.email_pendente ? `<div style="grid-column:1/-1"><div class="l">E-mail pendente</div><div class="v">${_esc(u.email_pendente)} <span class="warn-email">aguardando confirmação do usuário</span></div></div>` : ''}
       </div>
       <div class="sec-title">Ações rápidas</div>
       <div class="actions">
@@ -372,13 +575,52 @@ async function abrirDetalhes(id){
         <button class="act danger" onclick='revogarDetalhe(${u.id})'>Revogar</button>
         <button class="act" onclick='abrirSenha(${JSON.stringify(u)})'>Resetar senha</button>
         <button class="act" onclick='abrirPagamentos(${u.id}, ${JSON.stringify(u.nome||u.email)})'>Pagamentos</button>
+        ${u.ativo
+          ? `<button class="act danger" onclick='desativarUsuario(${u.id})'>Desativar</button>`
+          : `<button class="act ok" onclick='reativarUsuario(${u.id})'>Reativar</button>`}
+        <button class="act danger" onclick='abrirExcluir(${JSON.stringify(u)})'>Excluir</button>
       </div>
+      <div class="sec-title">Editar dados</div>
+      <form onsubmit="return salvarPerfilAdmin(event, ${u.id})">
+        <div class="field-row">
+          <div class="field"><label>Nome</label><input id="epNome" type="text" value="${_esc(u.nome||'')}"></div>
+          <div class="field"><label>Sobrenome</label><input id="epSobrenome" type="text" value="${_esc(u.sobrenome||'')}"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>E-mail</label><input id="epEmail" type="email" value="${_esc(u.email)}"></div>
+          <div class="field"><label>Telefone</label><input id="epTelefone" type="text" value="${_esc(u.telefone||'')}"></div>
+        </div>
+        <button class="btn-primary" type="submit">Salvar alterações</button>
+        <div id="epMsg"></div>
+      </form>
       <div class="sec-title">Logs de ações do admin</div>
       ${logsHtml}
     `;
   }catch(e){
     document.getElementById('dConteudo').innerHTML = `<div class="msg err">${e.message}</div>`;
   }
+}
+
+async function salvarPerfilAdmin(ev, id){
+  ev.preventDefault();
+  const msg = document.getElementById('epMsg');
+  msg.innerHTML = '';
+  try{
+    await api(`/api/admin/usuarios/${id}/perfil`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        nome: document.getElementById('epNome').value.trim(),
+        sobrenome: document.getElementById('epSobrenome').value.trim(),
+        telefone: document.getElementById('epTelefone').value.trim(),
+        email: document.getElementById('epEmail').value.trim(),
+      })
+    });
+    msg.innerHTML = `<div class="msg ok">Dados atualizados.</div>`;
+    setTimeout(()=>{ abrirDetalhes(id); carregar(); }, 700);
+  }catch(e){
+    msg.innerHTML = `<div class="msg err">${e.message}</div>`;
+  }
+  return false;
 }
 
 async function revogarDetalhe(id){
@@ -490,6 +732,439 @@ async function abrirPagamentos(id, nome){
   }catch(e){
     document.getElementById('pConteudo').innerHTML = `<div class="msg err">${e.message}</div>`;
   }
+}
+
+let xEmailAtual = '';
+function abrirExcluir(u){
+  document.getElementById('modalDetalhes').classList.remove('open');
+  xEmailAtual = u.email.trim().toLowerCase();
+  usuarioAtual = u;
+  document.getElementById('xNome').textContent = u.nome || u.email;
+  document.getElementById('xEmailAlvo').textContent = u.email;
+  document.getElementById('xConfirmEmail').value = '';
+  document.getElementById('xBtn').disabled = true;
+  document.getElementById('xMsg').innerHTML = '';
+  document.getElementById('modalExcluir').classList.add('open');
+}
+async function excluirUsuario(){
+  const msg = document.getElementById('xMsg');
+  msg.innerHTML = '';
+  try{
+    await api(`/api/admin/usuarios/${usuarioAtual.id}`, { method: 'DELETE' });
+    msg.innerHTML = `<div class="msg ok">Usuário excluído.</div>`;
+    setTimeout(()=>{ fecharModais(); carregar(); }, 700);
+  }catch(e){
+    msg.innerHTML = `<div class="msg err">${e.message}</div>`;
+  }
+}
+
+async function desativarUsuario(id){
+  if(!confirm('Desativar este usuário? Ele não conseguirá mais fazer login (mesmo com sessão já aberta) e a assinatura Stripe, se houver, será cancelada.')) return;
+  try{ await api(`/api/admin/usuarios/${id}/desativar`, {method:'POST'}); carregar(); }
+  catch(e){ alert('Erro: ' + e.message); }
+}
+
+async function reativarUsuario(id){
+  try{ await api(`/api/admin/usuarios/${id}/reativar`, {method:'POST'}); carregar(); }
+  catch(e){ alert('Erro: ' + e.message); }
+}
+
+function alternarTipoCupom(){
+  const tipo = document.querySelector('input[name=cupTipo]:checked').value;
+  document.getElementById('cupPercentField').style.display = tipo === 'percent' ? 'block' : 'none';
+  document.getElementById('cupValorField').style.display = tipo === 'valor' ? 'block' : 'none';
+}
+
+async function criarCupom(ev){
+  ev.preventDefault();
+  const btn = document.getElementById('cupBtn');
+  const msg = document.getElementById('cupMsg');
+  btn.disabled = true;
+  msg.innerHTML = '';
+  try{
+    const tipo = document.querySelector('input[name=cupTipo]:checked').value;
+    const body = {
+      codigo: document.getElementById('cupCodigo').value.trim(),
+      duration: document.getElementById('cupDuration').value,
+    };
+    if(tipo === 'percent') body.percent_off = parseFloat(document.getElementById('cupPercent').value);
+    else body.valor_off = parseFloat(document.getElementById('cupValor').value);
+    if(body.duration === 'repeating') body.duration_in_months = parseInt(document.getElementById('cupMeses').value, 10);
+    const redeemBy = document.getElementById('cupRedeemBy').value;
+    if(redeemBy) body.redeem_by = redeemBy;
+    await api('/api/admin/cupons', { method:'POST', body: JSON.stringify(body) });
+    msg.innerHTML = `<div class="msg ok">Cupom criado com sucesso.</div>`;
+    document.getElementById('formCupom').reset();
+    alternarTipoCupom();
+    carregarCupons();
+  }catch(e){
+    msg.innerHTML = `<div class="msg err">${e.message}</div>`;
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+async function carregarCupons(){
+  window._cuponsCarregados = true;
+  const tbody = document.getElementById('cuponsBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="loading">Carregando...</td></tr>`;
+  try{
+    const data = await api('/api/admin/cupons');
+    if(!data.cupons.length){
+      tbody.innerHTML = `<tr><td colspan="6" class="loading">Nenhum cupom criado.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.cupons.map(c => `
+      <tr>
+        <td>${_esc(c.codigo)}</td>
+        <td>${c.percent_off ? c.percent_off + '%' : 'R$ ' + Number(c.amount_off).toFixed(2)}</td>
+        <td>${c.duration}${c.duration_in_months ? ' (' + c.duration_in_months + 'm)' : ''}</td>
+        <td class="muted">${c.expires_at ? new Date(c.expires_at*1000).toLocaleDateString('pt-BR') : '—'}</td>
+        <td>${c.ativo ? '<span class="badge b-active">ativo</span>' : '<span class="badge b-inativa">inativo</span>'}</td>
+        <td>${c.ativo ? `<button class="act danger" onclick="desativarCupom('${c.id}')">Desativar</button>` : '—'}</td>
+      </tr>
+    `).join('');
+  }catch(e){
+    tbody.innerHTML = `<tr><td colspan="6" class="loading">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+async function desativarCupom(id){
+  if(!confirm('Desativar este código promocional? Ele deixa de poder ser resgatado (quem já usou mantém o desconto).')) return;
+  try{ await api(`/api/admin/cupons/${id}/desativar`, {method:'POST'}); carregarCupons(); }
+  catch(e){ alert('Erro: ' + e.message); }
+}
+
+let _syncPollTimer = null;
+
+async function dispararSincronizacao(){
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  document.getElementById('syncMsg').innerHTML = '';
+  try{
+    await api('/api/admin/sincronizar', { method:'POST' });
+    atualizarStatusSync();
+  }catch(e){
+    document.getElementById('syncMsg').innerHTML = `<div class="msg err">${e.message}</div>`;
+    btn.disabled = false;
+  }
+}
+
+async function atualizarStatusSync(){
+  try{
+    const data = await api('/api/sincronizar/status');
+    document.getElementById('syncStatusLabel').textContent = data.rodando ? 'Rodando...' : 'Parado';
+    document.getElementById('syncLog').textContent = (data.log || []).join('\n');
+    document.getElementById('syncBtn').disabled = data.rodando;
+    if(data.rodando){ iniciarPollSync(); } else { pararPollSync(); }
+  }catch(e){ /* silencioso — status é best-effort */ }
+}
+
+function iniciarPollSync(){
+  if(_syncPollTimer) return;
+  _syncPollTimer = setInterval(atualizarStatusSync, 3000);
+}
+function pararPollSync(){
+  clearInterval(_syncPollTimer);
+  _syncPollTimer = null;
+}
+
+/* ─── Tickets de suporte ─── */
+let _tkAtual = null, _tkPollTimer = null, _tkListaPollTimer = null;
+let _tkGravador = null, _tkAudioChunks = [];
+
+async function tkFetchMultipart(url, formData){
+  const res = await fetch(`${API}${url}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+  if(res.status === 401 || res.status === 403){ mostrarLogin('Sessão expirada ou sem acesso. Entre novamente.'); throw new Error('sem acesso'); }
+  const d = await res.json().catch(()=>null);
+  if(!res.ok) throw new Error(d&&d.detail || `erro (HTTP ${res.status})`);
+  return d;
+}
+
+function _iniciarPollListaTickets(){
+  _pararPollListaTickets();
+  _tkListaPollTimer = setInterval(carregarTickets, 20000);
+}
+function _pararPollListaTickets(){
+  if(_tkListaPollTimer){ clearInterval(_tkListaPollTimer); _tkListaPollTimer = null; }
+}
+
+const TK_STATUS_LABEL = { aberto: 'aberto', encerrado: 'encerrado' };
+
+async function carregarTickets(){
+  try{
+    const data = await api('/api/admin/tickets');
+    const tickets = data.tickets || [];
+    const naoLidas = tickets.reduce((s,t)=>s+(t.nao_lidas||0), 0);
+    const badge = document.getElementById('ticketsBadge');
+    if(naoLidas > 0){ badge.textContent = naoLidas; badge.style.display = 'inline-block'; }
+    else{ badge.style.display = 'none'; }
+    if(!tickets.length){
+      document.getElementById('ticketsBody').innerHTML = `<tr><td colspan="7" class="loading">Nenhum ticket ainda.</td></tr>`;
+      return;
+    }
+    document.getElementById('ticketsBody').innerHTML = tickets.map(t => `
+      <tr class="clicavel" onclick='tkAbrir(${t.id}, ${JSON.stringify(t.assunto)}, ${JSON.stringify((t.nome||'')+' '+(t.sobrenome||'')+' — '+t.email)})'>
+        <td style="font-family:monospace">#${t.id}</td>
+        <td>${_esc(t.nome||'')} ${_esc(t.sobrenome||'')}<br><span class="muted" style="font-size:11.5px">${_esc(t.email)}</span></td>
+        <td>${_esc(t.assunto)}</td>
+        <td><span class="badge ${t.status==='aberto'?'b-active':'b-inativa'}">${TK_STATUS_LABEL[t.status]||t.status}</span></td>
+        <td class="muted">${fmtData(t.atualizado_em)}</td>
+        <td>${t.nao_lidas>0?`<span class="badge b-trialing">${t.nao_lidas}</span>`:'—'}</td>
+        <td onclick="event.stopPropagation()"><button class="act" onclick='tkAbrir(${t.id}, ${JSON.stringify(t.assunto)}, ${JSON.stringify((t.nome||'')+' '+(t.sobrenome||'')+' — '+t.email)})'>Abrir</button></td>
+      </tr>
+    `).join('');
+  }catch(e){
+    document.getElementById('ticketsBody').innerHTML = `<tr><td colspan="7" class="loading">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+function tkAnexoHtml(m){
+  if(!m.anexo_path) return '';
+  const url = _esc(`${API}/api/tickets/anexos/${encodeURI(m.anexo_path)}?token=${encodeURIComponent(token)}`);
+  if(m.anexo_tipo === 'imagem') return `<img src="${url}" alt="anexo">`;
+  if(m.anexo_tipo === 'audio') return `<audio controls src="${url}"></audio>`;
+  return `<a class="anexo-arquivo" href="${url}" target="_blank">📎 ${_esc(m.anexo_nome||'arquivo')}</a>`;
+}
+
+let _tkUltimoRenderFingerprint = null;
+
+function tkRenderMensagens(mensagens){
+  // O poll roda a cada 4s — se as mensagens nao mudaram, nao recria o HTML: isso
+  // destruiria (e reiniciaria do zero) qualquer <audio>/<img> ja em reproducao/carregada.
+  const fingerprint = mensagens.map(m=>m.id).join(',');
+  if(fingerprint === _tkUltimoRenderFingerprint) return;
+  _tkUltimoRenderFingerprint = fingerprint;
+  const el = document.getElementById('tk-msgs');
+  const pertoDoFim = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  el.innerHTML = mensagens.map(m => `
+    <div class="tk-msg ${m.autor}">
+      ${m.texto ? `<div>${_esc(m.texto)}</div>` : ''}
+      ${tkAnexoHtml(m)}
+      <div class="quando">${fmtData(m.criado_em)}</div>
+    </div>
+  `).join('');
+  if(pertoDoFim) el.scrollTop = el.scrollHeight;
+}
+
+async function tkAbrir(id, assunto, cliente){
+  _tkAtual = id;
+  _tkUltimoRenderFingerprint = null;
+  document.getElementById('tkTitulo').textContent = `Protocolo #${id} — ${assunto}`;
+  document.getElementById('tkCliente').textContent = cliente;
+  document.getElementById('tk-msgs').innerHTML = `<div class="loading">Carregando...</div>`;
+  document.getElementById('modalTicket').classList.add('open');
+  await tkAtualizarThread();
+  _tkPollTimer = setInterval(tkAtualizarThread, 4000);
+}
+
+async function tkAtualizarThread(){
+  if(!_tkAtual) return;
+  try{
+    const data = await api(`/api/admin/tickets/${_tkAtual}/mensagens`);
+    tkRenderMensagens(data.mensagens || []);
+    const encerrado = data.ticket.status !== 'aberto';
+    document.getElementById('tk-composer').style.display = encerrado ? 'none' : 'flex';
+    document.getElementById('tk-encerrar-btn').style.display = encerrado ? 'none' : 'inline-block';
+    document.getElementById('tk-encerrado-aviso').style.display = encerrado ? 'inline' : 'none';
+  }catch(e){}
+}
+
+function fecharModalTicket(){
+  if(_tkPollTimer){ clearInterval(_tkPollTimer); _tkPollTimer = null; }
+  if(_tkGravador && _tkGravador.state === 'recording'){ _tkGravador.stop(); }
+  _tkAtual = null;
+  document.getElementById('modalTicket').classList.remove('open');
+}
+
+async function tkEnviarMensagemComAnexo(texto, blob, filename){
+  if(!_tkAtual) return;
+  const fd = new FormData();
+  fd.append('texto', texto || '');
+  if(blob) fd.append('anexo', blob, filename || 'anexo');
+  try{
+    await tkFetchMultipart(`/api/admin/tickets/${_tkAtual}/mensagens`, fd);
+    await tkAtualizarThread();
+  }catch(e){ alert('Erro: ' + e.message); }
+}
+
+function tkEnviarMensagem(){
+  if(_tkGravador && _tkGravador.state === 'recording'){ _tkGravador.stop(); return; }
+  const input = document.getElementById('tk-texto-input');
+  const texto = input.value.trim();
+  if(!texto) return;
+  input.value = '';
+  tkEnviarMensagemComAnexo(texto, null, null);
+}
+
+function tkAnexarArquivo(file){
+  if(!file) return;
+  const input = document.getElementById('tk-texto-input');
+  const texto = input.value.trim();
+  input.value = '';
+  tkEnviarMensagemComAnexo(texto, file, file.name);
+  document.getElementById('tk-anexo-input').value = '';
+}
+
+function _tkEscolherMimeTypeAudio(){
+  const candidatos = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg'];
+  for(const tipo of candidatos){
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(tipo)) return tipo;
+  }
+  return '';
+}
+
+let _tkGravInicio = 0, _tkGravTimer = null;
+let _tkOndaAudioCtx = null, _tkOndaAnalyser = null, _tkOndaRAF = null;
+
+function _tkFmtDuracao(seg){
+  const m = Math.floor(seg/60), s = Math.floor(seg%60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function _tkIniciarOnda(stream){
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if(!AudioCtx) return;
+  try{
+    _tkOndaAudioCtx = new AudioCtx();
+    const source = _tkOndaAudioCtx.createMediaStreamSource(stream);
+    _tkOndaAnalyser = _tkOndaAudioCtx.createAnalyser();
+    _tkOndaAnalyser.fftSize = 64;
+    source.connect(_tkOndaAnalyser);
+    const data = new Uint8Array(_tkOndaAnalyser.frequencyBinCount);
+    const barras = document.querySelectorAll('#tk-onda span');
+    const loop = () => {
+      _tkOndaAnalyser.getByteFrequencyData(data);
+      barras.forEach((b,i) => { const v=data[i+2]||0; b.style.height=Math.max(3,(v/255)*18)+'px'; });
+      _tkOndaRAF = requestAnimationFrame(loop);
+    };
+    loop();
+  }catch(e){}
+}
+function _tkPararOnda(){
+  if(_tkOndaRAF){ cancelAnimationFrame(_tkOndaRAF); _tkOndaRAF = null; }
+  if(_tkOndaAudioCtx){ _tkOndaAudioCtx.close().catch(()=>{}); _tkOndaAudioCtx = null; }
+  _tkOndaAnalyser = null;
+}
+
+function _tkAudioBufferToWavBlob(buffer){
+  const numChannels=buffer.numberOfChannels, sampleRate=buffer.sampleRate, bitDepth=16;
+  const bytesPerSample=bitDepth/8, blockAlign=numChannels*bytesPerSample;
+  const dataLength=buffer.length*blockAlign;
+  const arrBuf=new ArrayBuffer(44+dataLength);
+  const view=new DataView(arrBuf);
+  const ws=(offset,str)=>{ for(let i=0;i<str.length;i++) view.setUint8(offset+i, str.charCodeAt(i)); };
+  ws(0,'RIFF'); view.setUint32(4,36+dataLength,true); ws(8,'WAVE');
+  ws(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,numChannels,true); view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*blockAlign,true); view.setUint16(32,blockAlign,true);
+  view.setUint16(34,bitDepth,true); ws(36,'data'); view.setUint32(40,dataLength,true);
+  let offset=44;
+  const channels=[]; for(let i=0;i<numChannels;i++) channels.push(buffer.getChannelData(i));
+  for(let s=0;s<buffer.length;s++){
+    for(let c=0;c<numChannels;c++){
+      let v=Math.max(-1,Math.min(1,channels[c][s]));
+      v = v<0 ? v*0x8000 : v*0x7FFF;
+      view.setInt16(offset, v, true); offset+=2;
+    }
+  }
+  return new Blob([arrBuf],{type:'audio/wav'});
+}
+
+async function _tkBlobParaWav(blob){
+  try{
+    const arrayBuffer=await blob.arrayBuffer();
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    const ctx=new AudioCtx();
+    const audioBuffer=await ctx.decodeAudioData(arrayBuffer);
+    const wav=_tkAudioBufferToWavBlob(audioBuffer);
+    ctx.close();
+    return wav;
+  }catch(e){ return null; }
+}
+
+async function tkToggleGravarAudio(){
+  const btn = document.getElementById('tk-mic-btn');
+  const indicador = document.getElementById('tk-gravando-indicator');
+  if(_tkGravador && _tkGravador.state === 'recording'){ _tkGravador.stop(); return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert('Este navegador não suporta gravação de áudio (requer HTTPS e um navegador atualizado).');
+    return;
+  }
+  if(!window.MediaRecorder){
+    alert('Este navegador não suporta gravação de áudio.');
+    return;
+  }
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  }catch(e){
+    if(e.name === 'NotAllowedError') alert('Permissão de microfone negada. Habilite o acesso ao microfone nas configurações do navegador.');
+    else if(e.name === 'NotFoundError') alert('Nenhum microfone encontrado.');
+    else alert('Não foi possível acessar o microfone: ' + e.message);
+    return;
+  }
+  const mimeType = _tkEscolherMimeTypeAudio();
+  try{
+    _tkAudioChunks = [];
+    _tkGravador = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+  }catch(e){
+    stream.getTracks().forEach(t => t.stop());
+    alert('Este navegador não suporta gravação de áudio: ' + e.message);
+    return;
+  }
+  _tkGravador.ondataavailable = e => { if(e.data.size > 0) _tkAudioChunks.push(e.data); };
+  _tkGravador.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop());
+    btn.classList.remove('gravando');
+    indicador.classList.remove('on');
+    clearInterval(_tkGravTimer);
+    _tkPararOnda();
+    const duracaoSeg = (Date.now()-_tkGravInicio)/1000;
+    if(duracaoSeg < 1 || !_tkAudioChunks.length){
+      alert('Gravação muito curta ou vazia. Segure por mais tempo antes de parar.');
+      return;
+    }
+    const blobOriginal = new Blob(_tkAudioChunks, { type: mimeType || 'audio/webm' });
+    const wav = await _tkBlobParaWav(blobOriginal);
+    tkEnviarMensagemComAnexo(`🎤 Mensagem de voz (${_tkFmtDuracao(duracaoSeg)})`, wav||blobOriginal, 'audio.wav');
+  };
+  _tkGravador.start();
+  _tkGravInicio = Date.now();
+  btn.classList.add('gravando');
+  indicador.classList.add('on');
+  document.getElementById('tk-gravando-tempo').textContent = '0:00';
+  _tkGravTimer = setInterval(()=>{
+    document.getElementById('tk-gravando-tempo').textContent = _tkFmtDuracao((Date.now()-_tkGravInicio)/1000);
+  }, 250);
+  _tkIniciarOnda(stream);
+}
+
+function tkCapturarTela(){
+  if(typeof html2canvas==='undefined'){ alert('Não foi possível carregar a ferramenta de captura de tela.'); return; }
+  const modal = document.getElementById('modalTicket');
+  modal.style.display = 'none';
+  html2canvas(document.body, { useCORS: true }).then(canvas => {
+    modal.style.display = '';
+    canvas.toBlob(blob => {
+      if(blob) tkEnviarMensagemComAnexo('', blob, 'print.png');
+      else alert('Não foi possível capturar a tela.');
+    }, 'image/png');
+  }).catch(e => { modal.style.display = ''; alert('Não foi possível capturar a tela: '+e.message); });
+}
+
+async function tkEncerrarTicket(){
+  if(!_tkAtual) return;
+  if(!confirm('Encerrar este ticket? Não será possível enviar novas mensagens depois.')) return;
+  try{
+    await api(`/api/admin/tickets/${_tkAtual}/encerrar`, { method: 'POST' });
+    await tkAtualizarThread();
+    carregarTickets();
+    const modal=document.querySelector('#modalTicket .modal');
+    modal.classList.remove('tk-flash-encerrado');
+    void modal.offsetWidth;
+    modal.classList.add('tk-flash-encerrado');
+  }catch(e){ alert('Erro ao encerrar: ' + e.message); }
 }
 
 if(token){ mostrarApp(); } else { mostrarLogin(); }

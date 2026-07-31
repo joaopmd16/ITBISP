@@ -227,7 +227,7 @@ def init_db():
 # ──────────────────────────────────────────────
 
 def file_hash(path: Path) -> str:
-    h = hashlib.md5()
+    h = hashlib.md5(usedforsecurity=False)
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
@@ -627,8 +627,8 @@ def processar_ano_csv(xlsx_path: Path, ano: int, forcar_csv: bool = False) -> pd
                     del df_raw_cached, df
                     gc.collect()
                     continue
-            except Exception:
-                pass  # CSV corrompido → refaz do XLSX
+            except Exception as e:
+                print(f"      ⚠️  CSV cache corrompido para {sheet_name}, refazendo do XLSX: {e}")
 
         # ── Lê do XLSX com pandas (1 aba por vez) ─────────
         try:
@@ -653,8 +653,8 @@ def processar_ano_csv(xlsx_path: Path, ano: int, forcar_csv: bool = False) -> pd
             # Salva CSV para reruns futuros
             try:
                 df_raw.to_csv(csv_path, index=False)
-            except Exception:
-                pass  # falha no cache não é crítica
+            except Exception as e:
+                print(f"      ⚠️  Falha ao salvar cache CSV para {sheet_name} (não crítico): {e}")
 
             df = normalizar_df(df_raw, ano_sheet, mes)
             del df_raw

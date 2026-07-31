@@ -6,6 +6,7 @@ Oracle/
 # ── Banco e cache (gerados localmente) ──────
 backend/itbi.db
 backend/cache/
+backend/uploads/
 
 # ── Python ──────────────────────────────────
 __pycache__/

@@ -1,7 +1,7 @@
 # Dashboard ITBI · São Paulo
 
 Dashboard para consulta das transações imobiliárias com recolhimento de ITBI da Prefeitura de SP.
-Dados de **2006 a 2026**, atualizados mensalmente direto da fonte oficial.
+Dados de **2006 a 2026**, atualizados direto da fonte oficial — pelo painel admin ou por scraper manual.
 
 Produção atual: **VPS Hostinger** — `https://itbismart.com.br` (landing na raiz, dashboard em `/dashboard`, também acessível em `http://179.197.67.42:8000`)
 
@@ -15,21 +15,23 @@ Produção atual: **VPS Hostinger** — `https://itbismart.com.br` (landing na r
 ITBISP/
 ├── backend/
 │   ├── main.py             — API FastAPI + serve frontend estático
-│   ├── scraper.py          — Baixa planilhas XLSX e salva no SQLite
+│   ├── scraper.py          — Scraper original (openpyxl, linha a linha)
 │   ├── scraper_csv.py      — Scraper otimizado (XLSX→CSV) p/ VMs com pouca RAM
+│   ├── geocode_all.py      — Geocodificação em lote de todos os CEPs (rodar manualmente na VPS)
 │   ├── exportar.py         — Exportação Excel/PDF
-│   ├── geo.py              — Geocodificação por CEP (cache-only, ver seção Mapa)
-│   ├── geocode_all.py      — Script standalone p/ geocodificar todos os CEPs (roda na VPS, com sharding)
-│   ├── auth.py             — Autenticação JWT + hash de senha
-│   ├── billing.py          — Integração Stripe (checkout, portal, faturas, cancelamento)
-│   ├── emailing.py         — E-mails transacionais via Resend (verificação, redefinição de senha)
+│   ├── geo.py              — Geocodificação do mapa (cache-only, sem chamadas externas em runtime)
+│   ├── auth.py             — Autenticação JWT
+│   ├── billing.py          — Integração Stripe (assinatura + cupons)
+│   ├── emailing.py         — E-mails transacionais via Resend
 │   ├── requirements.txt
-│   └── itbi.db             — Banco SQLite (gerado pelo scraper, não commitado)
+│   ├── itbi.db             — Banco SQLite (gerado pelo scraper, não commitado)
+│   └── uploads/             — Anexos de tickets de suporte (gerado em runtime, não commitado)
 ├── frontend/
-│   ├── index.html          — SPA single-file (vanilla JS + Chart.js) — dashboard principal
-│   ├── login.html          — Login / cadastro / redefinição de senha
-│   └── admin.html          — Painel administrativo (gestão de usuários, pagamentos, logs)
-└── landing/                — Landing page (Next.js, App Router + Tailwind), export estático servido na raiz do domínio
+│   ├── index.html          — SPA single-file (vanilla JS + Chart.js + Leaflet) — dashboard principal
+│   ├── admin.html           — Painel admin single-file (usuários, cupons, sincronização, tickets)
+│   └── login.html          — Login/cadastro/redefinição de senha
+└── landing/
+    └── Next.js — landing page de marketing, deploy como export estático na raiz do domínio
 ```
 
 ---
@@ -50,11 +52,16 @@ pip install -r requirements.txt
 ```
 JWT_SECRET=uma_chave_secreta_longa
 FRONTEND_URL=http://localhost:8000        # em produção: https://itbismart.com.br/dashboard
+ADMIN_EMAIL=admin@itbismart.com.br        # e-mail com acesso ao painel /dashboard/admin.html
 
 # Stripe (assinatura mensal) — opcional em dev; obrigatório p/ cobrar em produção
 STRIPE_SECRET_KEY=sk_test_...             # em produção: sk_live_...
-STRIPE_PRICE_ID=price_...                 # se vazio, billing.py cria um Price R$30/mês na 1ª cobrança
-STRIPE_WEBHOOK_SECRET=whsec_...           # segredo do endpoint /api/webhook/stripe (ativa a assinatura após o pagamento)
+STRIPE_PRICE_ID=price_...                 # se vazio, billing.py cria um Price na 1ª cobrança
+STRIPE_WEBHOOK_SECRET=whsec_...           # segredo do endpoint /api/webhook/stripe
+
+# E-mails transacionais (verificação de conta, redefinição de senha, tickets de suporte)
+RESEND_API_KEY=re_...
+RESEND_FROM=ITBI Smart <noreply@itbismart.com.br>
 ```
 
 > Sem login em `localhost` — o middleware faz bypass de auth/paywall para `127.0.0.1`.
@@ -69,15 +76,16 @@ python scraper_csv.py
 python scraper_csv.py --forcar --limpar-csv
 
 # Estender para anos antigos
-python scraper_csv.py --anos 2020 2021 2022 2023 2024 2025 2026
+python scraper_csv.py --anos 2006 2010 2015 2020 2021 2022 2023 2024 2025 2026
 ```
 
 ### 4. Subir a API
 
 ```bash
 uvicorn main:app --reload
-# → http://localhost:8000   (sem login — bypass automático em localhost)
-# → http://localhost:8000/docs   (Swagger)
+# → http://localhost:8000          (sem login — bypass automático em localhost)
+# → http://localhost:8000/docs     (Swagger)
+# → http://localhost:8000/dashboard/admin.html   (painel admin)
 ```
 
 ---
@@ -87,11 +95,12 @@ uvicorn main:app --reload
 **IP:** `179.197.67.42` · **Porta:** `8000` · **App:** `/root/ITBISP`
 
 O app roda como serviço `systemd` (`itbi`), que sobe no boot e reinicia sozinho se cair.
+Nginx faz o reverse proxy + TLS (Certbot) na frente — `/etc/nginx/sites-available/itbismart`.
 
 ### Deploy do zero
 
 ```bash
-apt update && apt install -y python3 python3-venv git
+apt update && apt install -y python3 python3-venv git nginx
 cd /opt && git clone https://github.com/joaopmd16/ITBISP.git
 cd ITBISP && python3 -m venv venv && source venv/bin/activate
 pip install -r backend/requirements.txt
@@ -117,15 +126,27 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
+### Nginx — pontos de atenção
+
+Os blocos `location /api/` e `location /dashboard` no site do nginx precisam de:
+
+```nginx
+client_max_body_size 20M;          # default do nginx é 1MB — quebra upload de anexo/foto
+proxy_http_version 1.1;
+proxy_set_header Connection "";    # default HTTP/1.0 pode truncar respostas maiores
+```
+
 ### Comandos úteis
 
 ```bash
 systemctl status itbi        # ver estado
-systemctl restart itbi       # reiniciar (após atualizar código)
+systemctl restart itbi       # reiniciar (após atualizar código Python)
 journalctl -u itbi -f        # logs ao vivo
 
 # atualizar código do GitHub e reiniciar
-cd /root/ITBISP && git pull && systemctl restart itbi
+cd /root/ITBISP && git pull && pip install -r backend/requirements.txt && systemctl restart itbi
+# (o pip install só é necessário quando requirements.txt muda; mudanças só em frontend/*.html
+#  não precisam nem de restart, StaticFiles serve direto do disco)
 ```
 
 ---
@@ -135,38 +156,34 @@ cd /root/ITBISP && git pull && systemctl restart itbi
 ```
 GET  /api/transacoes?logradouro=paulista&ano_min=2020&ano_max=2026
 GET  /api/resumo?bairro=pinheiros
-GET  /api/autocomplete/{logradouro,bairro,cep,sql,numero}?q=...&offset=0
+GET  /api/autocomplete/{logradouro,bairro,cep,sql,numero}?q=...
 GET  /api/iptu/{sql_terreno}
 GET  /api/status
-GET  /api/exportar/excel
-GET  /api/exportar/pdf
-POST /api/sincronizar
-GET  /api/mapa                     — pontos geocodificados agregados por CEP (respeita filtros ativos)
-GET  /api/mapa/status              — status global do cache de geocodificação
+GET  /api/exportar/{excel,pdf}
+GET  /api/mapa                              # pontos geocodificados por CEP (cache-only)
+GET  /api/mapa/status
+POST /api/sincronizar                       # trigger legado (SYNC_SECRET), usado por script/cron externo
 
-# Autenticação
-POST /api/auth/login
-POST /api/auth/registrar
-GET  /api/auth/verificar?token=...
-POST /api/auth/esqueci-senha
-POST /api/auth/resetar-senha
-GET  /api/auth/me                  — email, nome, status da assinatura, is_admin
+# Autoatendimento do usuário (perfil, senha, e-mail)
+GET/PUT  /api/usuario/perfil
+POST     /api/usuario/trocar-email
+POST     /api/usuario/trocar-senha
+GET      /api/auth/confirmar-troca-email
 
-# Cobrança (Stripe)
-POST /api/billing/checkout         — inicia o Stripe Checkout
-POST /api/billing/portal           — abre o Stripe Customer Portal (gerenciar assinatura)
-GET  /api/billing/minha-conta      — dados da conta: assinatura (início/renovação) + faturas
-POST /api/billing/liberar-beta
-POST /api/webhook/stripe
+# Tickets de suporte (chat)
+GET/POST /api/tickets
+GET/POST /api/tickets/{id}/mensagens
+POST     /api/tickets/{id}/encerrar
+GET      /api/tickets/anexos/{ticket_id}/{arquivo}
 
-# Admin (requer usuário admin@itbismart.com.br)
-GET  /api/admin/usuarios
-POST /api/admin/usuarios
-GET  /api/admin/usuarios/{id}
-POST /api/admin/usuarios/{id}/revogar
-POST /api/admin/usuarios/{id}/liberar
-GET  /api/admin/usuarios/{id}/pagamentos
-POST /api/admin/usuarios/{id}/resetar-senha
+# Painel admin (exigir_admin — só ADMIN_EMAIL)
+GET/POST /api/admin/usuarios
+PUT      /api/admin/usuarios/{id}/perfil
+POST     /api/admin/usuarios/{id}/{desativar,reativar}
+DELETE   /api/admin/usuarios/{id}
+GET/POST /api/admin/cupons
+POST     /api/admin/sincronizar
+GET/POST /api/admin/tickets*
 ```
 
 Documentação interativa: `/docs`
@@ -177,26 +194,37 @@ Documentação interativa: `/docs`
 
 - **Login/cadastro:** `frontend/login.html` (em produção `https://itbismart.com.br/dashboard/login.html`).
   - **Entrar:** e-mail + senha.
-  - **Criar conta:** nome, sobrenome, telefone (com máscara BR), e-mail, senha + confirmação. Os campos extras
-    ficam `disabled` no modo login para não travar a validação nativa; o backend valida e grava tudo.
-  - **Verificação de e-mail:** cadastro dispara e-mail transacional (via Resend, `backend/emailing.py`) com link
-    de confirmação; o admin pode criar usuários já verificados pelo painel admin (ver abaixo).
-  - **Esqueci a senha:** fluxo com token por e-mail; rejeita reutilização de qualquer senha já usada antes
-    (tabela `senhas_antigas`, checado por `_senha_ja_usada`).
+  - **Criar conta:** nome, sobrenome, telefone (com máscara BR), e-mail, senha + confirmação.
 - **Paywall:** o middleware `exigir_assinatura_ativa` (em `main.py`) protege as rotas `/api/` (exceto
-  `/api/auth/` e `/api/webhook/`). Só passam usuários com `assinaturas.status` em **`active`, `trialing` ou `dev`**;
-  os demais recebem **402** e são mandados ao checkout. O `login.html` espelha essa mesma lista (`ACESSO_LIBERADO`).
-- **Conta admin (bypass):** `admin@itbismart.com.br` com `status = 'dev'` entra direto no dashboard, sem Stripe.
-  Só essa conta vê o botão "Sincronizar" na sidebar do dashboard (gate client-side via `is_admin` retornado por
-  `/api/auth/me`) e tem acesso ao painel `frontend/admin.html` (gestão de usuários, criação sem exigir verificação
-  de e-mail, logs de ações administrativas, reset de senha, liberar/revogar acesso).
-- **Painel "Minha conta":** ícone de pessoa na sidebar do dashboard abre um painel com saudação por horário do
-  dia, status/início/próxima renovação da assinatura e lista de faturas (`GET /api/billing/minha-conta`), além
-  dos atalhos "Gerenciar assinatura" (Stripe Customer Portal) e "Sair".
-- **Cobrança:** assinatura mensal **R$ 30,00** via Stripe Checkout (`/api/billing/checkout`). Após o pagamento,
-  o Stripe chama o webhook `POST /api/webhook/stripe` (eventos `checkout.session.completed`,
-  `customer.subscription.updated/deleted`, `invoice.payment_failed`), que atualiza `assinaturas.status` para `active`.
-  Configurar `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` e `STRIPE_WEBHOOK_SECRET` no `.env` (ver seção de config).
+  `/api/auth/`, `/api/webhook/`, `/api/tickets/anexos/` e `/api/billing/checkout`/`/api/tickets`, que só
+  exigem login, não assinatura ativa). Só passam usuários com `assinaturas.status` em **`active`,
+  `trialing` ou `dev`**; os demais recebem **402** e são mandados ao checkout.
+- **Conta admin (bypass):** e-mail definido em `ADMIN_EMAIL` com `status = 'dev'` entra direto no
+  dashboard, sem Stripe, e tem acesso ao painel `/dashboard/admin.html`.
+- **Cobrança:** assinatura mensal (preço configurado em `STRIPE_PRICE_ID`) via Stripe Checkout
+  (`/api/billing/checkout`). Após o pagamento, o Stripe chama o webhook `POST /api/webhook/stripe`
+  (eventos `checkout.session.completed`, `customer.subscription.updated/deleted`,
+  `invoice.payment_failed`), que atualiza `assinaturas.status` para `active`.
+- **Cupons de desconto:** geridos direto pelo painel admin (`/dashboard/admin.html` → aba Cupons),
+  sem precisar abrir o Dashboard da Stripe manualmente.
+
+---
+
+## Painel admin (`/dashboard/admin.html`)
+
+Restrito a `ADMIN_EMAIL`. Três abas:
+
+- **Usuários** — listar/criar/editar, liberar/revogar/desativar/reativar acesso, resetar senha,
+  ver pagamentos, excluir permanentemente (com confirmação forte).
+- **Cupons** — criar/listar/desativar cupons de desconto da Stripe.
+- **Atualizar dados** — dispara o scraper e acompanha o log em tempo real, sem precisar de SSH.
+- **Tickets** — responde aos chamados de suporte abertos pelos usuários (texto, anexo, áudio, print).
+
+## Suporte (chat de tickets)
+
+Bolinha flutuante no dashboard principal abre um chat de suporte com histórico de vários tickets.
+Ambos os lados (usuário e admin) podem anexar arquivo, gravar áudio e capturar a própria tela, e
+encerrar um ticket (fica somente leitura depois). Sem WebSocket — atualiza por polling.
 
 ---
 
@@ -210,17 +238,9 @@ muda a cada atualização). Para os demais anos usa-se a URL fixa.
 não pela "gaveta" do ano. Isso evita que um arquivo publicado fora de ordem (ex.: o
 consolidado de 2025 publicado em jan/2026) seja gravado com o ano errado.
 
-Total atual: **~539 mil transações** (2024–2026, com 2025 completo).
+Total atual: **~2,59 milhões de transações**, histórico completo 2006–2026 (confirmar via `/api/status`).
 
 ---
-
-## Próximos passos (backlog)
-
-- Trocar a senha fixa de `/api/sincronizar` (via `prompt()` + `?senha=`) por checagem `is_admin` real.
-- Rate limiting nas rotas de auth (login, esqueci senha).
-- Confirmar aviso visível ao usuário quando um pagamento falha (`invoice.payment_failed`).
-- Fechar os preços da landing page (`landing/components/Pricing.tsx`, hoje placeholder).
-- Testes automatizados básicos (login, checkout, paywall).
 
 ## Git
 

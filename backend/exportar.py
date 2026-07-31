@@ -241,25 +241,25 @@ def gerar_excel(df: pd.DataFrame, filtros: dict = None) -> bytes:
 # PDF — estilo relatório profissional (light)
 # ──────────────────────────────────────────────
 
-# Paleta dark — preto e laranja/coral (igual ao dashboard)
-_BG       = '#0d0d0d'
-_SURFACE  = '#161616'
-_SURFACE2 = '#1e1e1e'
-_NAVY     = '#e08560'   # coral como "destaque principal"
-_INK      = '#f0f0f0'
-_INK2     = '#c8c8c8'
-_MU       = '#808080'
-_LINE     = '#2a2a2a'
-_BLUE     = '#e08560'   # coral
-_GREEN    = '#f0a484'   # coral claro
-_PURPLE   = '#c46e4a'   # coral escuro
-_AMBER    = '#e8c44a'   # amarelo quente
-_RED      = '#e08560'
-_TEAL     = '#d4956a'
+# Paleta clara — cores normais, fundo branco, igual ao dashboard em modo claro
+_BG       = '#ffffff'
+_SURFACE  = '#f7f8fb'
+_SURFACE2 = '#eef0f6'
+_NAVY     = '#3a5bff'   # azul como "destaque principal"
+_INK      = '#181b2c'
+_INK2     = '#3a3e54'
+_MU       = '#6b7280'
+_LINE     = '#e2e5ee'
+_BLUE     = '#3a5bff'
+_GREEN    = '#159a5d'
+_PURPLE   = '#7c4dff'
+_AMBER    = '#c98a16'
+_RED      = '#e23f7e'
+_TEAL     = '#0ea5e9'
 
-# Paleta de cores para gráficos (dark)
-_CHART_COLORS = ['#e08560','#c46e4a','#f0a484','#e8c44a','#d4956a',
-                 '#a85c38','#f5c5a3','#c8a878','#8c4a28','#e0b090']
+# Paleta de cores para gráficos (categorias, tons vivos sobre fundo branco)
+_CHART_COLORS = ['#3a5bff','#7c4dff','#159a5d','#c98a16','#e23f7e',
+                 '#0ea5e9','#f97316','#10b981','#8b5cf6','#ec4899']
 
 
 def _fmt(v, mode='brl'):
@@ -285,15 +285,15 @@ def _draw_page(canvas, doc):
     from reportlab.lib import colors
     W_PAGE, H_PAGE = doc.pagesize
     canvas.saveState()
-    # Fundo total da página preto
+    # Fundo total da página branco
     canvas.setFillColor(colors.HexColor(_BG))
     canvas.rect(0, 0, W_PAGE, H_PAGE, fill=1, stroke=0)
-    # Barra de topo coral/laranja
-    canvas.setFillColor(colors.HexColor('#e08560'))
+    # Barra de topo azul
+    canvas.setFillColor(colors.HexColor(_BLUE))
     canvas.rect(0, H_PAGE - 28, W_PAGE, 28, fill=1, stroke=0)
     # Título no topo
     canvas.setFont('Helvetica-Bold', 9)
-    canvas.setFillColor(colors.HexColor('#0d0d0d'))
+    canvas.setFillColor(colors.white)
     canvas.drawString(18, H_PAGE - 18, 'ITBI · São Paulo  —  Relatório de Transações Imobiliárias')
     canvas.setFont('Helvetica', 8)
     canvas.drawRightString(W_PAGE - 18, H_PAGE - 18,
@@ -523,11 +523,11 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
 
     # ── KPI cards (5 indicadores em linha) ────────────────────────────────
     kpi_data = [
-        ('Transacoes',      _fmt(total, 'num'), '#e08560', '#1e1e1e'),
-        ('Volume Total',    _fmt(vol),          '#f0a484', '#1e1e1e'),
-        ('Ticket Medio',    _fmt(med),          '#e8c44a', '#1e1e1e'),
-        ('Maior Transacao', _fmt(maxi),         '#c46e4a', '#1e1e1e'),
-        ('Base ITBI Total', _fmt(itbi),         '#d4956a', '#1e1e1e'),
+        ('Transacoes',      _fmt(total, 'num'), '#3a5bff', '#f7f8fb'),
+        ('Volume Total',    _fmt(vol),          '#7c4dff', '#f7f8fb'),
+        ('Ticket Medio',    _fmt(med),          '#c98a16', '#f7f8fb'),
+        ('Maior Transacao', _fmt(maxi),         '#159a5d', '#f7f8fb'),
+        ('Base ITBI Total', _fmt(itbi),         '#e23f7e', '#f7f8fb'),
     ]
     cw_kpi = W / len(kpi_data)
 
@@ -587,18 +587,18 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
         elems.append(Paragraph('Graficos e Indicadores', s_section))
         elems.append(Spacer(1, 6))
 
-        plt.style.use('dark_background')
+        plt.style.use('default')
 
         def _ax_style(ax, title=''):
-            ax.set_facecolor('#161616')
+            ax.set_facecolor('#ffffff')
             for sp in ax.spines.values():
-                sp.set_color('#2a2a2a'); sp.set_linewidth(0.6)
-            ax.tick_params(colors='#808080', labelsize=8, length=0)
-            ax.grid(color='#2a2a2a', linewidth=0.5, axis='y', zorder=0)
+                sp.set_color('#d8dce6'); sp.set_linewidth(0.6)
+            ax.tick_params(colors='#6b7280', labelsize=8, length=0)
+            ax.grid(color='#e2e5ee', linewidth=0.5, axis='y', zorder=0)
             ax.set_axisbelow(True)
             if title:
                 ax.set_title(title, fontsize=10, fontweight='bold',
-                             color='#e08560', pad=10, loc='left')
+                             color=_BLUE, pad=10, loc='left')
 
         fmtK = mticker.FuncFormatter(lambda x, _: f'{int(x/1000)}k' if x>=1000 else str(int(x)))
         fmtM = mticker.FuncFormatter(lambda x, _:
@@ -613,7 +613,7 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
         anos_str = por_ano['ano_referencia'].astype(str).tolist()
         peak_t = por_ano['transacoes'].max()
 
-        FIG_BG = '#0d0d0d'
+        FIG_BG = '#ffffff'
 
         # ── Linha 1: Barras transações + Pizza natureza ──────────────────
         fig1, (axA, axB) = plt.subplots(1, 2, figsize=(16, 4.2),
