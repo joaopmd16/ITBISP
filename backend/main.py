@@ -888,6 +888,21 @@ def exportar_pdf(
     natureza: Optional[str] = Query(None),
     sort: Optional[str] = Query("ano_referencia"),
     dir: Optional[str] = Query("desc"),
+    div_corretor: Optional[str] = Query(None),
+    div_imobiliaria: Optional[str] = Query(None),
+    div_dias: Optional[int] = Query(None),
+    div_parceiros: Optional[int] = Query(None),
+    div_anuncios: Optional[int] = Query(None),
+    div_views_corretores: Optional[int] = Query(None),
+    div_views_clientes: Optional[int] = Query(None),
+    div_sites_parceiros: Optional[int] = Query(None),
+    div_leads: Optional[int] = Query(None),
+    div_compart_parceiros: Optional[int] = Query(None),
+    div_compart_clientes: Optional[int] = Query(None),
+    div_portais: Optional[str] = Query(None),
+    div_valor_negociado: Optional[str] = Query(None),
+    div_prazo: Optional[str] = Query(None),
+    div_obs: Optional[str] = Query(None),
 ):
     from fastapi.responses import Response
     from exportar import buscar, gerar_pdf
@@ -896,7 +911,20 @@ def exportar_pdf(
     id_list = [int(i) for i in ids.split(",") if i.strip().isdigit()] if ids else None
     filtros = _get_filtros(logradouro, numero, bairro, cep, ano_min, ano_max, valor_min, valor_max, natureza)
     df = buscar(filtros, id_list, sort_col=sort_col, sort_dir=sort_dir)
-    pdf = gerar_pdf(df, filtros)
+
+    divulgacao = None
+    if id_list and len(id_list) == 1 and len(df) == 1 and (div_corretor or div_dias or div_parceiros):
+        divulgacao = {
+            "corretor": div_corretor, "imobiliaria": div_imobiliaria or "ITBI Smart",
+            "dias": div_dias, "parceiros": div_parceiros, "anuncios": div_anuncios,
+            "views_corretores": div_views_corretores, "views_clientes": div_views_clientes,
+            "sites_parceiros": div_sites_parceiros, "leads": div_leads,
+            "compart_parceiros": div_compart_parceiros, "compart_clientes": div_compart_clientes,
+            "portais": div_portais, "valor_negociado": div_valor_negociado,
+            "prazo": div_prazo, "obs": div_obs,
+        }
+
+    pdf = gerar_pdf(df, filtros, divulgacao=divulgacao)
     nome = f"ITBI_SP_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     return Response(content=pdf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{nome}"'})

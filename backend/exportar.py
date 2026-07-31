@@ -421,7 +421,184 @@ def gerar_insights(df: pd.DataFrame, filtros: dict = None) -> str:
         return ""
 
 
-def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
+def _build_capa_divulgacao(row, div, W, styles, colors_mod):
+    """Monta a capa de 'Relatório de Divulgação' (estilo carta) para um único imóvel."""
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, HRFlowable
+    C_NAVY, C_INK, C_INK2, C_MU, C_LINE, C_SURF, C_SURF2, C_BLUE, C_GREEN, C_PURP, C_AMBER, C_TEAL = styles
+
+    def s(name, **kw):
+        base = dict(fontName='Helvetica', fontSize=9.5, textColor=C_INK2, leading=15)
+        base.update(kw)
+        return ParagraphStyle(name, **base)
+
+    from reportlab.lib.styles import ParagraphStyle
+
+    hora = datetime.now().hour
+    saudacao = 'Bom dia' if hora < 12 else ('Boa tarde' if hora < 18 else 'Boa noite')
+
+    def gv(key, default=None):
+        v = div.get(key)
+        return v if v not in (None, '', 0) else default
+
+    def gnum(key):
+        v = div.get(key)
+        try:
+            return int(v) if v not in (None, '') else None
+        except Exception:
+            return None
+
+    elems = []
+
+    elems.append(Paragraph(f'{saudacao}!', s('greet', fontSize=13, fontName='Helvetica-Bold', textColor=C_NAVY)))
+    dias = gnum('dias')
+    dias_txt = f' há {dias} dias' if dias else ''
+    elems.append(Paragraph(f'Relatório Atualizado de Divulgação{dias_txt}', s('rep', fontSize=16, fontName='Helvetica-Bold', textColor=C_INK, spaceBefore=2, spaceAfter=10)))
+
+    # ── Cartão do imóvel ────────────────────────────────────────
+    endereco = str(row.get('logradouro') or '').strip()
+    if row.get('numero') not in (None, ''):
+        endereco += f", {row.get('numero')}"
+    bairro = row.get('bairro') or '—'
+    valor_neg = gv('valor_negociado')
+    valor_txt = valor_neg if valor_neg else _fmt(row.get('valor_declarado'))
+    carac = []
+    if row.get('descricao_uso'):
+        carac.append(str(row['descricao_uso']))
+    au = row.get('area_construida')
+    if au not in (None, '', 0) and not (isinstance(au, float) and pd.isna(au)):
+        carac.append(f'{float(au):,.0f} m² construção'.replace(',', '.'))
+    at = row.get('area_terreno')
+    if at not in (None, '', 0) and not (isinstance(at, float) and pd.isna(at)):
+        carac.append(f'{float(at):,.0f} m² terreno'.replace(',', '.'))
+    carac_txt = ' · '.join(carac) if carac else '—'
+
+    card_rows = [
+        [Paragraph(f'<b>Imóvel:</b> {endereco or "—"}', s('c1', fontSize=10, textColor=C_INK))],
+        [Paragraph(f'<b>Bairro:</b> {bairro} &nbsp;&nbsp; <b>Valor atualizado:</b> <font color="{_BLUE}">{valor_txt}</font>', s('c2', fontSize=10, textColor=C_INK))],
+        [Paragraph(f'<b>Características:</b> {carac_txt}', s('c3', fontSize=9, textColor=C_INK2))],
+    ]
+    card = Table(card_rows, colWidths=[W])
+    card.setStyle(TableStyle([
+        ('BACKGROUND',    (0,0),(-1,-1), C_SURF),
+        ('TOPPADDING',    (0,0),(-1,-1), 6),
+        ('BOTTOMPADDING', (0,0),(-1,-1), 6),
+        ('LEFTPADDING',   (0,0),(-1,-1), 14),
+        ('RIGHTPADDING',  (0,0),(-1,-1), 14),
+        ('LINEBEFORE',    (0,0),(0,-1),  3, C_BLUE),
+        ('LINEBELOW',     (0,1),(-1,1),  0.5, C_LINE),
+    ]))
+    elems.append(card)
+    elems.append(Spacer(1, 8))
+
+    corretor = gv('corretor', '—')
+    imobiliaria = gv('imobiliaria', 'ITBI Smart')
+    elems.append(Paragraph(f'Corretor responsável: <b>{corretor}</b> &nbsp;·&nbsp; Imobiliária: <b>{imobiliaria}</b>',
+                            s('cor', fontSize=9, textColor=C_MU)))
+    elems.append(Spacer(1, 12))
+
+    # ── Estatísticas de gestão ──────────────────────────────────
+    stats = [
+        ('Parceiros conectados',        gnum('parceiros')),
+        ('Views por corretores',        gnum('views_corretores')),
+        ('Views por clientes finais',   gnum('views_clientes')),
+        ('Sites de parceiros anunciando', gnum('sites_parceiros')),
+        ('Compart. com parceiros',      gnum('compart_parceiros')),
+        ('Compart. com clientes',       gnum('compart_clientes')),
+        ('Anúncios ativos',             gnum('anuncios')),
+        ('Leads gerados até o momento', gnum('leads')),
+    ]
+    stats = [(l, v) for l, v in stats if v is not None]
+    if stats:
+        elems.append(Paragraph('Estatísticas de Gestão — Plataforma ITBI Smart', s('sh', fontSize=10.5, fontName='Helvetica-Bold', textColor=C_NAVY, spaceAfter=6)))
+        srows = []
+        for i in range(0, len(stats), 2):
+            pair = stats[i:i+2]
+            cells = []
+            for label, val in pair:
+                cells.append(Paragraph(f'<b><font color="{_BLUE}">{val:,}</font></b>  {label}'.replace(',', '.'), s('stv', fontSize=8.5, textColor=C_INK2)))
+            if len(cells) == 1:
+                cells.append(Paragraph('', s('empty')))
+            srows.append(cells)
+        stbl = Table(srows, colWidths=[W/2, W/2])
+        stbl.setStyle(TableStyle([
+            ('TOPPADDING',    (0,0),(-1,-1), 3),
+            ('BOTTOMPADDING', (0,0),(-1,-1), 3),
+            ('LEFTPADDING',   (0,0),(-1,-1), 4),
+            ('RIGHTPADDING',  (0,0),(-1,-1), 4),
+        ]))
+        elems.append(stbl)
+        elems.append(Spacer(1, 10))
+
+    # ── Distribuição por portal ──────────────────────────────────
+    portais_raw = gv('portais')
+    if portais_raw:
+        pares = []
+        for item in str(portais_raw).split(','):
+            if ':' in item:
+                nome, qtd = item.split(':', 1)
+                nome, qtd = nome.strip(), qtd.strip()
+                if nome and qtd:
+                    pares.append((nome, qtd))
+        if pares:
+            elems.append(Paragraph('Distribuição dos Anúncios por Portal', s('sh2', fontSize=10.5, fontName='Helvetica-Bold', textColor=C_NAVY, spaceAfter=6)))
+            prows = [[Paragraph(f'• <b>{nome}</b>', s('pn', fontSize=8.5)), Paragraph(f'{qtd} publicações', s('pq', fontSize=8.5, textColor=C_MU))] for nome, qtd in pares]
+            ptbl = Table(prows, colWidths=[W*0.5, W*0.5])
+            ptbl.setStyle(TableStyle([
+                ('TOPPADDING',    (0,0),(-1,-1), 2),
+                ('BOTTOMPADDING', (0,0),(-1,-1), 2),
+                ('LEFTPADDING',   (0,0),(-1,-1), 4),
+            ]))
+            elems.append(ptbl)
+            elems.append(Spacer(1, 10))
+
+    # ── Engajamento da rede ──────────────────────────────────────
+    elems.append(Paragraph('Engajamento da Rede', s('sh3', fontSize=10.5, fontName='Helvetica-Bold', textColor=C_NAVY, spaceAfter=6)))
+    elems.append(Paragraph(f'✓ Participação ativa de corretores da rede {imobiliaria} e parceiros externos', s('eng1', fontSize=8.5, textColor=colors_mod.HexColor(_GREEN))))
+    elems.append(Paragraph('✓ Ampla capilaridade de divulgação em diversos sites imobiliários', s('eng2', fontSize=8.5, textColor=colors_mod.HexColor(_GREEN))))
+    elems.append(Spacer(1, 12))
+
+    # ── Parágrafo de fechamento ──────────────────────────────────
+    leads_n = gnum('leads')
+    leads_txt = ('nenhum lead agendado até o momento' if leads_n == 0
+                 else (f'{leads_n} lead(s) gerado(s) até o momento' if leads_n else 'monitoramento contínuo de leads'))
+    fecho = (f'Os números demonstram boa presença digital e distribuição consistente do imóvel no mercado, '
+             f'mantendo visibilidade ativa junto a corretores e compradores, com {leads_txt}.')
+    prazo = gv('prazo')
+    if valor_neg or prazo:
+        partes = []
+        if valor_neg:
+            partes.append(f'o valor foi atualizado para {valor_neg} conforme acordado em contrato')
+        if prazo:
+            partes.append(f'permanecendo válido até {prazo}')
+        frase = ', '.join(partes)
+        fecho += ' ' + frase[:1].upper() + frase[1:] + '.'
+    elems.append(Paragraph(fecho, s('fecho', fontSize=9, textColor=C_INK2, leading=14)))
+    elems.append(Spacer(1, 8))
+
+    obs = gv('obs')
+    if obs:
+        elems.append(Paragraph(str(obs), s('obs', fontSize=9, textColor=C_INK2, leading=14)))
+        elems.append(Spacer(1, 8))
+
+    elems.append(Paragraph('Seguimos monitorando os indicadores e avaliando estratégias para ampliar ainda mais o '
+                            'alcance e estimular a geração de leads qualificados.',
+                            s('mon', fontSize=9, textColor=C_INK2, leading=14)))
+    elems.append(Spacer(1, 6))
+    elems.append(Paragraph('Permaneço totalmente à disposição para qualquer dúvida ou alinhamento estratégico.',
+                            s('disp', fontSize=9, textColor=C_INK2, leading=14)))
+    elems.append(Spacer(1, 10))
+
+    elems.append(Paragraph('Atenciosamente,', s('at', fontSize=9, textColor=C_MU)))
+    elems.append(Paragraph(f'<b>{corretor}</b>', s('assn', fontSize=10, textColor=C_INK)))
+    elems.append(Paragraph(imobiliaria, s('assi', fontSize=9, textColor=C_MU)))
+
+    elems.append(Spacer(1, 4))
+    elems.append(HRFlowable(width=W, thickness=1, color=C_LINE, spaceBefore=10, spaceAfter=14))
+
+    return elems
+
+
+def gerar_pdf(df: pd.DataFrame, filtros: dict = None, divulgacao: dict = None) -> bytes:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -487,6 +664,12 @@ def gerar_pdf(df: pd.DataFrame, filtros: dict = None) -> bytes:
     maxi = df['valor_declarado'].max()  if 'valor_declarado' in df.columns else 0
     mini = df['valor_declarado'].min()  if 'valor_declarado' in df.columns else 0
     itbi = df['valor_itbi'].sum()       if 'valor_itbi'      in df.columns else 0
+
+    # ── Capa de relatório de divulgação (imóvel único, campos manuais) ─────
+    if divulgacao and total == 1:
+        estilos = (C_NAVY, C_INK, C_INK2, C_MU, C_LINE, C_SURF, C_SURF2, C_BLUE, C_GREEN, C_PURP, C_AMBER, C_TEAL)
+        elems.extend(_build_capa_divulgacao(df.iloc[0].to_dict(), divulgacao, W, estilos, colors))
+        elems.append(PageBreak())
 
     # ── Cabeçalho ─────────────────────────────────────────────────────────
     # Título + data numa linha, filtros separados embaixo

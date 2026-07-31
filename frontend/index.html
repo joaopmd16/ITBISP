@@ -1226,6 +1226,61 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
   </div>
 </div>
 
+<!-- ─── Relatório de divulgação (formulário) ─── -->
+<div class="acc-backdrop" id="divBackdrop" onclick="fecharDivForm()"></div>
+<div class="settings-panel acc-modal" id="divModal">
+  <div class="settings-header">
+    <span class="settings-title">Relatório de divulgação</span>
+    <button class="settings-close" onclick="fecharDivForm()">✕</button>
+  </div>
+  <div class="acc-modal-body" id="divModalBody">
+    <div class="settings-section acc-full">
+      <div class="settings-info" style="margin-bottom:8px">Preencha os dados de divulgação para gerar um relatório em PDF pronto para enviar ao cliente.</div>
+    </div>
+    <div class="settings-section">
+      <div class="acc-row">
+        <input class="acc-input" id="div-corretor" placeholder="Corretor responsável">
+        <input class="acc-input" id="div-imobiliaria" placeholder="Imobiliária" value="ITBI Smart">
+      </div>
+      <input class="acc-input" id="div-dias" type="number" min="0" placeholder="Dias em divulgação">
+    </div>
+    <div class="settings-section">
+      <div class="acc-row">
+        <input class="acc-input" id="div-parceiros" type="number" min="0" placeholder="Parceiros conectados">
+        <input class="acc-input" id="div-anuncios" type="number" min="0" placeholder="Anúncios ativos">
+      </div>
+      <div class="acc-row">
+        <input class="acc-input" id="div-views-corretores" type="number" min="0" placeholder="Views por corretores">
+        <input class="acc-input" id="div-views-clientes" type="number" min="0" placeholder="Views por clientes">
+      </div>
+      <div class="acc-row">
+        <input class="acc-input" id="div-sites-parceiros" type="number" min="0" placeholder="Sites de parceiros anunciando">
+        <input class="acc-input" id="div-leads" type="number" min="0" placeholder="Leads gerados">
+      </div>
+      <div class="acc-row">
+        <input class="acc-input" id="div-compart-parceiros" type="number" min="0" placeholder="Compart. com parceiros">
+        <input class="acc-input" id="div-compart-clientes" type="number" min="0" placeholder="Compart. com clientes">
+      </div>
+    </div>
+    <div class="settings-section acc-full">
+      <div class="settings-info" style="margin-bottom:6px">Distribuição por portal (rótulo:quantidade, separados por vírgula)</div>
+      <input class="acc-input" id="div-portais" placeholder="Ex: Site:56, Zap:15, Imovelweb:16">
+    </div>
+    <div class="settings-section">
+      <div class="acc-row">
+        <input class="acc-input" id="div-valor-negociado" placeholder="Novo valor (se reduzido)">
+        <input class="acc-input" id="div-prazo" placeholder="Prazo final do contrato">
+      </div>
+    </div>
+    <div class="settings-section acc-full">
+      <textarea class="acc-input" id="div-obs" rows="3" placeholder="Observação final (opcional)" style="resize:vertical;font-family:inherit"></textarea>
+    </div>
+    <div class="settings-section acc-full">
+      <button class="sopt" style="width:100%;background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700" onclick="gerarRelatorioDivulgacao()">Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── Export bar ─── -->
 <div class="expbar" id="expbar" style="display:none">
   <span class="expbar-count" id="exp-count" onclick="toggleSelPopup()" style="cursor:pointer">0 selecionados</span>
@@ -2697,7 +2752,42 @@ function renderTable({dados,total,pagina,paginas,por_pagina}){
 let _modalData=null;
 function exportarFicha(){
   if(!_modalData?.id)return;
-  window.open(`${API}/api/exportar/pdf?ids=${_modalData.id}`,'_blank');
+  abrirDivForm();
+}
+function abrirDivForm(){
+  if(!_modalData?.id)return;
+  const nomeCompleto=[MEU_USUARIO?.nome,MEU_USUARIO?.sobrenome].filter(Boolean).join(' ');
+  const corretorInp=document.getElementById('div-corretor');
+  if(corretorInp && !corretorInp.value) corretorInp.value=nomeCompleto;
+  document.getElementById('divModal').classList.add('open');
+  document.getElementById('divBackdrop').classList.add('open');
+}
+function fecharDivForm(){
+  document.getElementById('divModal').classList.remove('open');
+  document.getElementById('divBackdrop').classList.remove('open');
+}
+function gerarRelatorioDivulgacao(){
+  if(!_modalData?.id)return;
+  const v=id=>document.getElementById(id).value.trim();
+  const p=new URLSearchParams();
+  p.set('ids',_modalData.id);
+  if(v('div-corretor'))p.set('div_corretor',v('div-corretor'));
+  if(v('div-imobiliaria'))p.set('div_imobiliaria',v('div-imobiliaria'));
+  if(v('div-dias'))p.set('div_dias',v('div-dias'));
+  if(v('div-parceiros'))p.set('div_parceiros',v('div-parceiros'));
+  if(v('div-anuncios'))p.set('div_anuncios',v('div-anuncios'));
+  if(v('div-views-corretores'))p.set('div_views_corretores',v('div-views-corretores'));
+  if(v('div-views-clientes'))p.set('div_views_clientes',v('div-views-clientes'));
+  if(v('div-sites-parceiros'))p.set('div_sites_parceiros',v('div-sites-parceiros'));
+  if(v('div-leads'))p.set('div_leads',v('div-leads'));
+  if(v('div-compart-parceiros'))p.set('div_compart_parceiros',v('div-compart-parceiros'));
+  if(v('div-compart-clientes'))p.set('div_compart_clientes',v('div-compart-clientes'));
+  if(v('div-portais'))p.set('div_portais',v('div-portais'));
+  if(v('div-valor-negociado'))p.set('div_valor_negociado',v('div-valor-negociado'));
+  if(v('div-prazo'))p.set('div_prazo',v('div-prazo'));
+  if(v('div-obs'))p.set('div_obs',v('div-obs'));
+  fecharDivForm();
+  _downloadUrl(`${API}/api/exportar/pdf?${p}`,'pdf');
 }
 function openModal(d){
   _modalData=d;
