@@ -114,8 +114,10 @@ html,body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',
 .status-dot.status-online{background:var(--good);animation:pulse-dot 2s ease-in-out infinite}
 .status-dot.status-offline{background:var(--bad);animation:pulse-dot .8s ease-in-out infinite}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
-.settings-panel{position:fixed;top:70px;right:16px;width:300px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow-lg);z-index:500;padding:0;overflow:hidden;display:none;flex-direction:column}
-.settings-panel.open{display:flex}
+.settings-panel{position:fixed;top:70px;right:16px;width:300px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow-lg);z-index:500;padding:0;overflow:hidden;display:flex;flex-direction:column;
+  opacity:0;transform:translateY(-10px) scale(.95);visibility:hidden;pointer-events:none;transform-origin:top right;
+  transition:opacity .2s ease,transform .2s cubic-bezier(.34,1.56,.64,1),visibility .2s}
+.settings-panel.open{opacity:1;transform:translateY(0) scale(1);visibility:visible;pointer-events:auto}
 .settings-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
 .settings-title{font-size:14px;font-weight:700;color:var(--ink)}
 .settings-close{background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px;padding:0;line-height:1}
@@ -196,9 +198,12 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
 .acc-input:focus{border-color:var(--primary)}
 .acc-row{display:flex;gap:10px}
 .acc-row .acc-input{flex:1}
-.acc-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:499;display:none}
-.acc-backdrop.open{display:block}
-.acc-modal{position:fixed;top:50%;left:50%;right:auto;transform:translate(-50%,-50%);width:min(680px,92vw);max-height:85vh;z-index:501}
+.acc-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:499;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility .22s}
+.acc-backdrop.open{opacity:1;visibility:visible;pointer-events:auto}
+.acc-modal{position:fixed;top:50%;left:50%;right:auto;width:min(680px,92vw);max-height:85vh;z-index:501;
+  opacity:0;transform:translate(-50%,-50%) scale(.94);visibility:hidden;pointer-events:none;
+  transition:opacity .22s ease,transform .22s cubic-bezier(.34,1.56,.64,1),visibility .22s}
+.acc-modal.open{opacity:1;transform:translate(-50%,-50%) scale(1);visibility:visible;pointer-events:auto}
 .acc-modal-body{overflow-y:auto;max-height:calc(85vh - 110px)}
 .acc-modal .settings-section{max-width:100%}
 @media (min-width:760px){
