@@ -49,6 +49,15 @@ def init_geo_cache():
 # GEOCODING — fontes com fallback
 # ──────────────────────────────────────────────
 
+# Bounding box de São Paulo cidade (aproximado)
+SP_BOUNDS = {"lat_min": -24.01, "lat_max": -23.35, "lng_min": -46.83, "lng_max": -46.36}
+
+def _dentro_de_sp(lat: float, lng: float) -> bool:
+    """Verifica se as coordenadas estão dentro do município de São Paulo."""
+    return (SP_BOUNDS["lat_min"] <= lat <= SP_BOUNDS["lat_max"] and
+            SP_BOUNDS["lng_min"] <= lng <= SP_BOUNDS["lng_max"])
+
+
 def _via_brasilapi(cep: str) -> dict | None:
     try:
         r = requests.get(
@@ -60,40 +69,77 @@ def _via_brasilapi(cep: str) -> dict | None:
             lat = d.get("location", {}).get("coordinates", {}).get("latitude")
             lng = d.get("location", {}).get("coordinates", {}).get("longitude")
             if lat and lng:
-                return {"lat": float(lat), "lng": float(lng),
-                        "bairro": d.get("neighborhood",""), "fonte": "brasilapi"}
+                lat, lng = float(lat), float(lng)
+                if _dentro_de_sp(lat, lng):
+                    return {"lat": lat, "lng": lng,
+                            "bairro": d.get("neighborhood",""), "fonte": "brasilapi"}
     except Exception:
         logger.debug("Falha ao geocodificar CEP %s via BrasilAPI", cep, exc_info=True)
     return None
 
 
-# Bounding box de São Paulo cidade (aproximado)
-SP_BOUNDS = {"lat_min": -24.01, "lat_max": -23.35, "lng_min": -46.83, "lng_max": -46.36}
+# Tipos de resultado do Nominatim aceitos como um endereço/local real (rua, quadra,
+# bairro, prédio). Qualquer outra classe (amenity, shop, tourism, office, leisure...)
+# é um ponto de interesse (ex.: "PUC-SP", "Centro Cultural BB") que pode aparecer no
+# topo de uma busca por texto livre sem ter nenhuma relação com o CEP pesquisado —
+# foi exatamente isso que causou pins errados no mapa (CEP da Vila Penteado/Zona Norte
+# caindo em cima da PUC-SP em Perdizes). Só aceitamos tipos que descrevem geografia/
+# endereçamento de fato.
+_TIPOS_ENDERECO_VALIDOS = {
+    "road", "residential", "house", "building", "postcode", "suburb",
+    "neighbourhood", "quarter", "city_block", "place", "administrative",
+}
+_CLASSES_ENDERECO_VALIDAS = {"highway", "place", "boundary", "building", "landuse"}
 
-def _dentro_de_sp(lat: float, lng: float) -> bool:
-    """Verifica se as coordenadas estão dentro do município de São Paulo."""
-    return (SP_BOUNDS["lat_min"] <= lat <= SP_BOUNDS["lat_max"] and
-            SP_BOUNDS["lng_min"] <= lng <= SP_BOUNDS["lng_max"])
+
+def _resultado_e_endereco_valido(item: dict) -> bool:
+    return (item.get("addresstype") in _TIPOS_ENDERECO_VALIDOS or
+            item.get("class") in _CLASSES_ENDERECO_VALIDAS)
 
 
-def _via_nominatim(cep: str) -> dict | None:
-    """Geocodifica via Nominatim com validação de bounding box de SP."""
+def _via_nominatim(cep: str, logradouro: str = "", bairro: str = "") -> dict | None:
+    """
+    Geocodifica via Nominatim usando busca ESTRUTURADA pelo nome da rua (campo
+    `street`), não pelo número do CEP nem por texto livre. O Brasil tem cobertura
+    muito ruim de CEPs no OpenStreetMap — uma busca por texto livre do tipo
+    "02842-901 São Paulo SP" costuma cair em correspondência aproximada por
+    relevância e retornar um ponto turístico/comercial qualquer dentro dos limites
+    da cidade, sem nenhuma relação com o CEP. Sem um logradouro conhecido não há
+    como fazer essa busca de forma confiável, então nesse caso desistimos (fica
+    pendente) em vez de arriscar um pino errado.
+
+    O `bairro` é recebido mas deliberadamente NÃO é enviado ao Nominatim (nem via
+    `street`, nem via `county`): testado na prática, o nome oficial do bairro nos
+    dados da prefeitura frequentemente não bate com o nome que o OSM usa pro mesmo
+    lugar (ex.: CEP 02842-901 é "Vila Penteado" pro fisco e "Jardim Tiro ao Pombo"
+    pra BrasilAPI) — incluir esse campo faz a busca estruturada zerar resultados
+    em vez de refinar. O nome da rua sozinho já é específico o suficiente dentro
+    do bounding box de São Paulo.
+    """
+    if not logradouro:
+        return None
     try:
         r = requests.get(
             "https://nominatim.openstreetmap.org/search",
             params={
-                "q": f"{cep[:5]}-{cep[5:]} São Paulo SP",
+                "street": logradouro,
+                "city": "São Paulo",
+                "state": "São Paulo",
+                "country": "Brazil",
                 "format": "json",
-                "limit": 3,
+                "limit": 5,
                 "countrycodes": "br",
                 "viewbox": "-47.0,-24.1,-46.3,-23.3",
                 "bounded": 1,
+                "addressdetails": 1,
             },
             headers=HEADERS, timeout=8
         )
         if r.status_code == 200:
             data = r.json()
             for item in data:
+                if not _resultado_e_endereco_valido(item):
+                    continue
                 lat = float(item["lat"])
                 lng = float(item["lon"])
                 if _dentro_de_sp(lat, lng):
@@ -103,12 +149,12 @@ def _via_nominatim(cep: str) -> dict | None:
     return None
 
 
-def geocodificar_um(cep: str) -> dict | None:
-    """Tenta BrasilAPI primeiro, depois Nominatim."""
+def geocodificar_um(cep: str, logradouro: str = "", bairro: str = "") -> dict | None:
+    """Tenta BrasilAPI primeiro, depois Nominatim (busca estruturada por rua+bairro)."""
     geo = _via_brasilapi(cep)
     if not geo:
-        time.sleep(0.3)  # respeita rate limit do Nominatim
-        geo = _via_nominatim(cep)
+        time.sleep(1.1)  # respeita o limite de 1 req/s da política de uso do Nominatim
+        geo = _via_nominatim(cep, logradouro, bairro)
     return geo
 
 

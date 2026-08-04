@@ -28,22 +28,23 @@ def main():
     geo.init_geo_cache()
     conn = sqlite3.connect(DB_PATH)
 
-    todos = [r[0] for r in conn.execute("""
-        SELECT DISTINCT REPLACE(t.cep, '-', '') AS cep_clean
+    todos = [(r[0], r[1] or "", r[2] or "") for r in conn.execute("""
+        SELECT REPLACE(t.cep, '-', '') AS cep_clean, MAX(t.logradouro), MAX(t.bairro)
         FROM transacoes t
         LEFT JOIN geo_cache g ON g.cep = REPLACE(t.cep, '-', '')
         WHERE t.cep IS NOT NULL AND t.cep != '' AND g.cep IS NULL
+        GROUP BY cep_clean
     """).fetchall()]
     conn.close()
 
-    ceps = [c for i, c in enumerate(todos) if i % total_shards == shard_id]
+    itens = [c for i, c in enumerate(todos) if i % total_shards == shard_id]
 
-    total = len(ceps)
+    total = len(itens)
     print(f"{tag} {total} CEPs pendentes neste shard", flush=True)
 
     ok, falha = 0, 0
-    for i, cep in enumerate(ceps, 1):
-        resultado = geo.geocodificar_um(cep)
+    for i, (cep, logradouro, bairro) in enumerate(itens, 1):
+        resultado = geo.geocodificar_um(cep, logradouro, bairro)
         geo._salvar_cache(cep, resultado)
         if resultado:
             ok += 1
