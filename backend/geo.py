@@ -49,13 +49,34 @@ def init_geo_cache():
 # GEOCODING — fontes com fallback
 # ──────────────────────────────────────────────
 
-# Bounding box de São Paulo cidade (aproximado)
+# Bounding box de São Paulo cidade (aproximado) — só uma triagem grosseira e barata
+# ANTES da checagem forte por nome de município (ver _e_municipio_sao_paulo). Uma
+# caixa retangular em volta de uma cidade de contorno irregular inevitavelmente
+# "vaza" pra cidades vizinhas que ficam na mesma faixa de latitude/longitude —
+# confirmado na prática: essa caixa incluía Cubatão, Santos, São Vicente e
+# Embu-Guaçu, todas fora do município de São Paulo mas dentro do retângulo, o que
+# deixava passar rua de mesmo nome geocodificada na cidade errada. Não dá pra
+# resolver isso só apertando os limites do retângulo sem também cortar bairros
+# legítimos do extremo sul de SP (Parelheiros/Marsilac), então o retângulo fica
+# só como filtro rápido e a validação de verdade é pelo nome do município mesmo.
 SP_BOUNDS = {"lat_min": -24.01, "lat_max": -23.35, "lng_min": -46.83, "lng_max": -46.36}
 
 def _dentro_de_sp(lat: float, lng: float) -> bool:
-    """Verifica se as coordenadas estão dentro do município de São Paulo."""
+    """Triagem grosseira por coordenada — não substitui _e_municipio_sao_paulo."""
     return (SP_BOUNDS["lat_min"] <= lat <= SP_BOUNDS["lat_max"] and
             SP_BOUNDS["lng_min"] <= lng <= SP_BOUNDS["lng_max"])
+
+
+def _normalizar(txt: str) -> str:
+    import unicodedata
+    return unicodedata.normalize("NFKD", txt or "").encode("ascii", "ignore").decode().strip().lower()
+
+
+def _e_municipio_sao_paulo(cidade: str) -> bool:
+    """Compara o nome do município retornado pela fonte com 'São Paulo', ignorando
+    acentuação/maiúsculas — é a validação que realmente impede um resultado de
+    Cubatão/Santos/Embu-Guaçu (ou qualquer outra cidade) de ser aceito."""
+    return _normalizar(cidade) == "sao paulo"
 
 
 def _via_brasilapi(cep: str) -> dict | None:
@@ -68,7 +89,7 @@ def _via_brasilapi(cep: str) -> dict | None:
             d = r.json()
             lat = d.get("location", {}).get("coordinates", {}).get("latitude")
             lng = d.get("location", {}).get("coordinates", {}).get("longitude")
-            if lat and lng:
+            if lat and lng and _e_municipio_sao_paulo(d.get("city", "")):
                 lat, lng = float(lat), float(lng)
                 if _dentro_de_sp(lat, lng):
                     return {"lat": lat, "lng": lng,
@@ -140,6 +161,10 @@ def _via_nominatim(cep: str, logradouro: str = "", bairro: str = "") -> dict | N
             for item in data:
                 if not _resultado_e_endereco_valido(item):
                     continue
+                addr = item.get("address", {})
+                cidade = addr.get("city") or addr.get("town") or addr.get("municipality") or ""
+                if not _e_municipio_sao_paulo(cidade):
+                    continue  # rua de mesmo nome em outra cidade (Cubatão, Santos, Embu-Guaçu...)
                 lat = float(item["lat"])
                 lng = float(item["lon"])
                 if _dentro_de_sp(lat, lng):
