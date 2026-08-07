@@ -1417,6 +1417,31 @@ def atualizar_perfil(dados: AtualizarPerfilIn, usuario: dict = Depends(auth.get_
     return {"status": "ok"}
 
 
+class AtualizarCpfIn(BaseModel):
+    cpf: str
+
+
+@app.put("/api/usuario/cpf")
+def atualizar_cpf(dados: AtualizarCpfIn, usuario: dict = Depends(auth.get_usuario_atual)):
+    """Endpoint dedicado do gate obrigatório de CPF (contas antigas sem CPF) — grava só o
+    CPF, sem exigir nome/sobrenome/telefone como o /api/usuario/perfil completo exige. Contas
+    criadas antes desses campos serem obrigatórios podem ter nome/sobrenome vazios no banco,
+    e o gate não tem como coletar isso; travar o CPF nesse caso por causa de um campo que o
+    usuário nem consegue editar ali seria um beco sem saída."""
+    cpf = re.sub(r"\D", "", dados.cpf or "")
+    if not cpf or not _cpf_valido(cpf):
+        raise HTTPException(400, "Informe um CPF válido")
+    with get_db() as conn:
+        duplicado = conn.execute(
+            "SELECT 1 FROM usuarios WHERE cpf = ? AND id != ?", (cpf, usuario["id"])
+        ).fetchone()
+        if duplicado:
+            raise HTTPException(409, "Este CPF já está cadastrado em outra conta")
+        conn.execute("UPDATE usuarios SET cpf = ? WHERE id = ?", (cpf, usuario["id"]))
+        conn.commit()
+    return {"status": "ok"}
+
+
 class TrocarEmailIn(BaseModel):
     novo_email: str
 

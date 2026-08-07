@@ -1442,11 +1442,8 @@ async function salvarCpfGate(){
   msg.textContent=''; msg.className='acc-msg';
   if(!cpf){ msg.textContent='Informe seu CPF.'; msg.className='acc-msg err'; return; }
   try{
-    const res=await fetch(`${API}/api/usuario/perfil`,{method:'PUT',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        nome:MEU_USUARIO?.nome||'', sobrenome:MEU_USUARIO?.sobrenome||'',
-        telefone:MEU_USUARIO?.telefone||'', cpf,
-      })});
+    const res=await fetch(`${API}/api/usuario/cpf`,{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({cpf})});
     const d=await res.json();
     if(!res.ok) throw new Error(d.detail||'Erro ao salvar CPF');
     document.getElementById('cpfGateBackdrop').classList.remove('open');
