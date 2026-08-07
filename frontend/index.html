@@ -1388,7 +1388,15 @@ if(!IS_LOCAL && !TOKEN){
 }
 const _fetchOriginal=window.fetch.bind(window);
 window.fetch=async function(url,opts={}){
-  const isApi=String(url).includes('/api/') && !String(url).includes('/api/auth/') && !String(url).includes('/api/webhook');
+  // /api/auth/* é excluído do header Authorization por padrão (login/registrar/etc. são
+  // públicos e não devem mandar um token velho/ausente) — MAS /api/auth/me é a única rota
+  // desse prefixo que na verdade EXIGE autenticação (Depends(auth.get_usuario_atual) no
+  // backend). Sem essa exceção, toda chamada a /api/auth/me sai sem token e volta 401,
+  // fazendo carregarMeuUsuario() tratar o corpo de erro como se fosse os dados do usuário
+  // (MEU_USUARIO vira {detail:"Não autenticado"}, sem campo cpf) — foi isso que reabria o
+  // gate de CPF mesmo depois de salvar com sucesso.
+  const isApi=String(url).includes('/api/') && !String(url).includes('/api/webhook')
+    && (!String(url).includes('/api/auth/') || String(url).includes('/api/auth/me'));
   if(isApi){
     opts.headers={...(opts.headers||{}),Authorization:`Bearer ${TOKEN}`};
   }
