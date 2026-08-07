@@ -131,8 +131,16 @@
           <input type="text" id="sobrenome" autocomplete="family-name" placeholder="Silva" disabled>
         </div>
       </div>
-      <label>Telefone</label>
-      <input type="tel" id="telefone" autocomplete="tel" placeholder="(11) 91234-5678" oninput="mascaraTelefone(this)" disabled>
+      <div class="row">
+        <div class="col">
+          <label>Telefone</label>
+          <input type="tel" id="telefone" autocomplete="tel" placeholder="(11) 91234-5678" oninput="mascaraTelefone(this)" disabled>
+        </div>
+        <div class="col">
+          <label>CPF</label>
+          <input type="text" id="cpf" inputmode="numeric" placeholder="000.000.000-00" oninput="mascaraCPF(this)" disabled>
+        </div>
+      </div>
     </div>
 
     <label>E-mail</label>
@@ -325,7 +333,7 @@ async function enviarRedefinirSenha(ev){
   return false;
 }
 
-const CAMPOS_CADASTRO=['nome','sobrenome','telefone','senha2'];
+const CAMPOS_CADASTRO=['nome','sobrenome','telefone','cpf','senha2'];
 
 function trocarAba(m){
   modo=m;
@@ -361,6 +369,14 @@ function mascaraTelefone(el){
   else if(v.length>0) v=`(${v}`;
   el.value=v;
 }
+function mascaraCPF(el){
+  const d=el.value.replace(/\D/g,'').slice(0,11);
+  let v=d;
+  if(d.length>9)      v=`${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+  else if(d.length>6) v=`${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+  else if(d.length>3) v=`${d.slice(0,3)}.${d.slice(3)}`;
+  el.value=v;
+}
 
 async function enviar(ev){
   ev.preventDefault();
@@ -379,6 +395,7 @@ async function enviar(ev){
       nome:document.getElementById('nome').value.trim(),
       sobrenome:document.getElementById('sobrenome').value.trim(),
       telefone:document.getElementById('telefone').value.trim(),
+      cpf:document.getElementById('cpf').value.trim(),
     };
   }
   btn.disabled=true;

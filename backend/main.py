@@ -204,6 +204,20 @@ def _rate_limit(request: Request, chave: str, max_tentativas: int, janela_seg: i
 _NOME_ARQUIVO_SEGURO = re.compile(r"[^A-Za-z0-9._-]+")
 
 
+def _cpf_valido(cpf: str) -> bool:
+    """Valida os 2 dígitos verificadores do CPF (algoritmo módulo 11 oficial da Receita).
+    Rejeita também sequências repetidas (111.111.111-11 etc.), que passariam no cálculo
+    dos dígitos mas não são CPFs reais — motivo clássico de teste/preenchimento fake."""
+    d = re.sub(r"\D", "", cpf or "")
+    if len(d) != 11 or d == d[0] * 11:
+        return False
+    def _dv(parcial: str) -> int:
+        soma = sum(int(c) * (len(parcial) + 1 - i) for i, c in enumerate(parcial))
+        resto = (soma * 10) % 11
+        return 0 if resto == 10 else resto
+    return _dv(d[:9]) == int(d[9]) and _dv(d[:10]) == int(d[10])
+
+
 def _sanitizar_nome_arquivo(nome: str) -> str:
     """Remove path separators e qualquer caractere fora de um alfabeto seguro do nome
     original do anexo — impede path traversal (../../) e quebra de atributo HTML (aspas,
@@ -330,7 +344,7 @@ def startup():
         # email_verificado usa DEFAULT 1 para não travar contas já existentes; o cadastro
         # (registrar()) grava 0 explicitamente para exigir confirmação nas contas novas.
         for coluna in (
-            "nome TEXT", "sobrenome TEXT", "telefone TEXT",
+            "nome TEXT", "sobrenome TEXT", "telefone TEXT", "cpf TEXT",
             "email_verificado INTEGER DEFAULT 1",
             "token_verificacao TEXT",
             "token_verificacao_exp TEXT",
@@ -1075,6 +1089,7 @@ class CadastroIn(BaseModel):
     nome: str = ""
     sobrenome: str = ""
     telefone: str = ""
+    cpf: str = ""
 
 
 @app.post("/api/auth/registrar")
@@ -1084,23 +1099,29 @@ def registrar(dados: CadastroIn, request: Request):
     nome = dados.nome.strip()
     sobrenome = dados.sobrenome.strip()
     telefone = dados.telefone.strip()
+    cpf = re.sub(r"\D", "", dados.cpf or "")
     if not email or "@" not in email or len(dados.senha) < 6:
         raise HTTPException(400, "E-mail inválido ou senha muito curta (mín. 6 caracteres)")
     if not nome or not sobrenome:
         raise HTTPException(400, "Informe nome e sobrenome")
     if not telefone:
         raise HTTPException(400, "Informe o telefone")
+    if not cpf or not _cpf_valido(cpf):
+        raise HTTPException(400, "Informe um CPF válido")
     token_verificacao = secrets.token_urlsafe(32)
     expira_em = (datetime.utcnow() + timedelta(hours=24)).isoformat()
     with get_db() as conn:
         existe = conn.execute("SELECT 1 FROM usuarios WHERE email = ?", (email,)).fetchone()
         if existe:
             raise HTTPException(409, "E-mail já cadastrado")
+        cpf_existe = conn.execute("SELECT 1 FROM usuarios WHERE cpf = ?", (cpf,)).fetchone()
+        if cpf_existe:
+            raise HTTPException(409, "Este CPF já está cadastrado em outra conta")
         cur = conn.execute(
             """INSERT INTO usuarios
-               (email, senha_hash, nome, sobrenome, telefone, email_verificado, token_verificacao, token_verificacao_exp)
-               VALUES (?, ?, ?, ?, ?, 0, ?, ?)""",
-            (email, auth.hash_senha(dados.senha), nome, sobrenome, telefone, token_verificacao, expira_em),
+               (email, senha_hash, nome, sobrenome, telefone, cpf, email_verificado, token_verificacao, token_verificacao_exp)
+               VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)""",
+            (email, auth.hash_senha(dados.senha), nome, sobrenome, telefone, cpf, token_verificacao, expira_em),
         )
         usuario_id = cur.lastrowid
         conn.execute(
@@ -1262,7 +1283,7 @@ def redefinir_senha(dados: RedefinirSenhaIn, request: Request):
 def me(usuario: dict = Depends(auth.get_usuario_atual)):
     with get_db() as conn:
         u = conn.execute(
-            "SELECT nome, sobrenome FROM usuarios WHERE id = ?", (usuario["id"],)
+            "SELECT nome, sobrenome, telefone, cpf FROM usuarios WHERE id = ?", (usuario["id"],)
         ).fetchone()
         row = conn.execute(
             "SELECT status FROM assinaturas WHERE usuario_id = ?", (usuario["id"],)
@@ -1271,6 +1292,8 @@ def me(usuario: dict = Depends(auth.get_usuario_atual)):
         "email": usuario["email"],
         "nome": u["nome"] if u else "",
         "sobrenome": u["sobrenome"] if u else "",
+        "telefone": u["telefone"] if u else "",
+        "cpf": u["cpf"] if u else "",
         "assinatura_status": row["status"] if row else "inativa",
         "is_admin": usuario["email"] == ADMIN_EMAIL,
     }
@@ -1319,7 +1342,7 @@ def abrir_portal(usuario: dict = Depends(auth.get_usuario_atual)):
 def minha_conta(usuario: dict = Depends(auth.get_usuario_atual)):
     with get_db() as conn:
         u = conn.execute(
-            "SELECT nome, sobrenome, email, telefone, email_pendente, criado_em, ultimo_acesso FROM usuarios WHERE id = ?",
+            "SELECT nome, sobrenome, email, telefone, cpf, email_pendente, criado_em, ultimo_acesso FROM usuarios WHERE id = ?",
             (usuario["id"],),
         ).fetchone()
         a = conn.execute(
@@ -1354,6 +1377,7 @@ def minha_conta(usuario: dict = Depends(auth.get_usuario_atual)):
         "sobrenome": u["sobrenome"] if u else "",
         "email": u["email"] if u else usuario["email"],
         "telefone": u["telefone"] if u else "",
+        "cpf": u["cpf"] if u else "",
         "email_pendente": u["email_pendente"] if u else None,
         "criado_em": u["criado_em"] if u else None,
         "ultimo_acesso": u["ultimo_acesso"] if u else None,
@@ -1371,19 +1395,23 @@ class AtualizarPerfilIn(BaseModel):
     nome: str
     sobrenome: str
     telefone: str
+    cpf: str = ""
 
 
 @app.put("/api/usuario/perfil")
 def atualizar_perfil(dados: AtualizarPerfilIn, usuario: dict = Depends(auth.get_usuario_atual)):
     nome, sobrenome, telefone = dados.nome.strip(), dados.sobrenome.strip(), dados.telefone.strip()
+    cpf_digitos = re.sub(r"\D", "", dados.cpf or "")
     if not nome or not sobrenome:
         raise HTTPException(400, "Informe nome e sobrenome")
     if not telefone:
         raise HTTPException(400, "Informe o telefone")
+    if cpf_digitos and not _cpf_valido(cpf_digitos):
+        raise HTTPException(400, "CPF inválido")
     with get_db() as conn:
         conn.execute(
-            "UPDATE usuarios SET nome = ?, sobrenome = ?, telefone = ? WHERE id = ?",
-            (nome, sobrenome, telefone, usuario["id"]),
+            "UPDATE usuarios SET nome = ?, sobrenome = ?, telefone = ?, cpf = ? WHERE id = ?",
+            (nome, sobrenome, telefone, cpf_digitos, usuario["id"]),
         )
         conn.commit()
     return {"status": "ok"}
@@ -1642,7 +1670,7 @@ def exigir_admin(usuario: dict = Depends(auth.get_usuario_atual)) -> dict:
 def admin_listar_usuarios(admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         rows = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.cpf, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
                    a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.periodo_fim, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
@@ -1701,7 +1729,7 @@ def admin_criar_usuario(dados: CriarUsuarioAdminIn, admin: dict = Depends(exigir
 def admin_detalhes_usuario(usuario_id: int, admin: dict = Depends(exigir_admin)):
     with get_db() as conn:
         usuario = conn.execute("""
-            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
+            SELECT u.id, u.nome, u.sobrenome, u.email, u.telefone, u.cpf, u.criado_em, u.email_verificado, u.ultimo_acesso, u.ativo, u.email_pendente,
                    a.status, a.stripe_customer_id, a.stripe_subscription_id, a.acesso_expira_em, a.periodo_fim, a.atualizado_em
             FROM usuarios u
             LEFT JOIN assinaturas a ON a.usuario_id = u.id
@@ -1802,13 +1830,17 @@ class EditarPerfilAdminIn(BaseModel):
     sobrenome: str
     telefone: str
     email: str
+    cpf: str = ""
 
 
 @app.put("/api/admin/usuarios/{usuario_id}/perfil")
 def admin_editar_perfil(usuario_id: int, dados: EditarPerfilAdminIn, admin: dict = Depends(exigir_admin)):
     email = dados.email.strip().lower()
+    cpf = re.sub(r"\D", "", dados.cpf or "")
     if not email or "@" not in email:
         raise HTTPException(400, "E-mail inválido")
+    if cpf and not _cpf_valido(cpf):
+        raise HTTPException(400, "CPF inválido")
     with get_db() as conn:
         existe = conn.execute("SELECT 1 FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
         if not existe:
@@ -1818,9 +1850,15 @@ def admin_editar_perfil(usuario_id: int, dados: EditarPerfilAdminIn, admin: dict
         ).fetchone()
         if duplicado:
             raise HTTPException(409, "E-mail já está em uso por outra conta")
+        if cpf:
+            cpf_duplicado = conn.execute(
+                "SELECT 1 FROM usuarios WHERE cpf = ? AND id != ?", (cpf, usuario_id)
+            ).fetchone()
+            if cpf_duplicado:
+                raise HTTPException(409, "Este CPF já está cadastrado em outra conta")
         conn.execute(
-            "UPDATE usuarios SET nome = ?, sobrenome = ?, telefone = ?, email = ? WHERE id = ?",
-            (dados.nome.strip(), dados.sobrenome.strip(), dados.telefone.strip(), email, usuario_id),
+            "UPDATE usuarios SET nome = ?, sobrenome = ?, telefone = ?, email = ?, cpf = ? WHERE id = ?",
+            (dados.nome.strip(), dados.sobrenome.strip(), dados.telefone.strip(), email, cpf, usuario_id),
         )
         _log_admin(conn, usuario_id, "editar-perfil")
         conn.commit()

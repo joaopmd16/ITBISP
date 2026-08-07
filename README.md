@@ -194,7 +194,12 @@ Documentação interativa: `/docs`
 
 - **Login/cadastro:** `frontend/login.html` (em produção `https://itbismart.com.br/dashboard/login.html`).
   - **Entrar:** e-mail + senha.
-  - **Criar conta:** nome, sobrenome, telefone (com máscara BR), e-mail, senha + confirmação.
+  - **Criar conta:** nome, sobrenome, telefone (com máscara BR), **CPF (obrigatório, com máscara BR e validação
+    de dígitos verificadores)**, e-mail, senha + confirmação.
+- **CPF obrigatório:** contas criadas antes desse campo existir são bloqueadas por um popup no dashboard
+  (`index.html`) até preencherem o CPF — sem fechar, sem pular. A conta admin fica isenta dessa trava.
+  A validação hoje é só matemática (dígitos verificadores) — **não** confirma que o CPF é real na Receita
+  nem preenche o nome automaticamente (exigiria um serviço pago de terceiros, ainda não integrado).
 - **Paywall:** o middleware `exigir_assinatura_ativa` (em `main.py`) protege as rotas `/api/` (exceto
   `/api/auth/`, `/api/webhook/`, `/api/tickets/anexos/` e `/api/billing/checkout`/`/api/tickets`, que só
   exigem login, não assinatura ativa). Só passam usuários com `assinaturas.status` em **`active`,
@@ -214,8 +219,9 @@ Documentação interativa: `/docs`
 
 Restrito a `ADMIN_EMAIL`. Três abas:
 
-- **Usuários** — listar/criar/editar, liberar/revogar/desativar/reativar acesso, resetar senha,
-  ver pagamentos, excluir permanentemente (com confirmação forte).
+- **Usuários** — listar/criar/editar (inclui CPF), liberar/revogar/desativar/reativar acesso, resetar senha,
+  ver pagamentos, excluir permanentemente (com confirmação forte). Usuário sem CPF cadastrado aparece
+  marcado com "⚠ sem CPF" na tabela.
 - **Cupons** — criar/listar/desativar cupons de desconto da Stripe.
 - **Atualizar dados** — dispara o scraper e acompanha o log em tempo real, sem precisar de SSH.
 - **Tickets** — responde aos chamados de suporte abertos pelos usuários (texto, anexo, áudio, print).

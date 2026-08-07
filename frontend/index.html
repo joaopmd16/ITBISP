@@ -215,6 +215,51 @@ kbd{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;p
   .acc-modal{width:calc(100vw - 24px)}
 }
 
+/* ─── Minha conta — cabeçalho com avatar ─── */
+#contaPanel{width:min(760px,94vw)}
+.acc-head-id{display:flex;align-items:center;gap:12px;min-width:0}
+.acc-avatar{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--primary) 55%,#000));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;letter-spacing:0}
+.acc-head-text{min-width:0}
+.acc-head-email{font-size:11.5px;color:var(--mu);font-family:'JetBrains Mono';margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+
+/* ─── Minha conta — cards por seção ─── */
+#contaBody{padding:16px;display:flex;flex-direction:column;gap:14px}
+@media (min-width:760px){
+  #contaBody{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start}
+  #contaBody .acc-full{grid-column:1/-1}
+}
+.acc-card{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;transition:border-color .15s}
+.acc-card:hover{border-color:var(--line-2)}
+.acc-card-head{display:flex;align-items:center;gap:11px}
+.acc-card-ico{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.acc-card-ico svg{width:17px;height:17px;stroke-width:2}
+.acc-card-ico.blue{background:var(--tint-blue-bg);color:var(--tint-blue-fg)}
+.acc-card-ico.violet{background:var(--tint-violet-bg);color:var(--tint-violet-fg)}
+.acc-card-ico.amber{background:var(--tint-amber-bg);color:var(--tint-amber-fg)}
+.acc-card-ico.green{background:var(--tint-green-bg);color:var(--tint-green-fg)}
+.acc-card-ico.pink{background:var(--tint-pink-bg);color:var(--tint-pink-fg)}
+.acc-card-head-text{flex:1;min-width:0}
+.acc-card-title{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3}
+.acc-card-sub{font-size:11px;color:var(--mu);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-badge{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:var(--r-pill);white-space:nowrap;letter-spacing:.02em;flex-shrink:0}
+.acc-badge.on{background:var(--tint-green-bg);color:var(--tint-green-fg)}
+.acc-badge.warn{background:var(--tint-amber-bg);color:var(--tint-amber-fg)}
+.acc-badge.off{background:var(--tint-pink-bg);color:var(--tint-pink-fg)}
+.acc-card .acc-input{margin-bottom:0}
+.acc-card-fields{display:flex;flex-direction:column;gap:8px}
+.acc-msg{font-size:11.5px;min-height:14px;color:var(--mu)}
+.acc-msg.ok{color:var(--good)}
+.acc-msg.err{color:var(--bad)}
+.acc-kv{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--ink-2);padding:2px 0}
+.acc-kv b{color:var(--ink);font-weight:600}
+.acc-faturas-list{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto}
+.acc-fatura-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--ink-2);padding:8px 10px;background:var(--surface);border-radius:10px;border:1px solid var(--line)}
+.acc-fatura-row a{color:var(--primary);font-weight:600;text-decoration:none}
+.acc-footer-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:2px 4px 0}
+.acc-logout-btn{background:none;border:1px solid var(--line);color:var(--bad);cursor:pointer;font-size:12.5px;font-weight:600;font-family:inherit;padding:8px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.acc-logout-btn:hover{background:var(--tint-pink-bg);border-color:var(--tint-pink-fg)}
+.acc-logout-btn svg{width:14px;height:14px}
+
 /* ─── Suporte (ticket widget) ─── */
 .ticket-bubble{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--primary);color:#fff;border:none;cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-lg);z-index:900}
 .ticket-bubble:hover{filter:brightness(1.08)}
@@ -711,13 +756,38 @@ input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--pr
       <div class="acc-backdrop" id="contaBackdrop" onclick="toggleConta()"></div>
       <div class="settings-panel acc-modal" id="contaPanel">
         <div class="settings-header">
-          <span class="settings-title" id="contaGreeting">Minha conta</span>
+          <div class="acc-head-id">
+            <div class="acc-avatar" id="contaAvatar"></div>
+            <div class="acc-head-text">
+              <div class="settings-title" id="contaGreeting">Minha conta</div>
+              <div class="acc-head-email" id="contaEmail"></div>
+            </div>
+          </div>
           <button class="settings-close" onclick="toggleConta()">✕</button>
         </div>
-        <div class="settings-section">
-          <div class="settings-info" id="contaEmail"></div>
-        </div>
         <div id="contaBody" class="acc-modal-body"></div>
+      </div>
+
+      <!-- Gate obrigatório de CPF (contas antigas sem CPF) — sem X, sem fechar no backdrop -->
+      <div class="acc-backdrop" id="cpfGateBackdrop"></div>
+      <div class="settings-panel acc-modal" id="cpfGateModal" style="width:min(420px,92vw)">
+        <div class="acc-modal-body" style="padding:22px;display:block">
+          <div class="acc-card-head" style="margin-bottom:4px">
+            <div class="acc-card-ico blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="acc-card-head-text">
+              <div class="acc-card-title">Complete seu cadastro</div>
+              <div class="acc-card-sub">Precisamos do seu CPF pra continuar</div>
+            </div>
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-2);line-height:1.6;margin:10px 0 14px">
+            Sua conta ainda não tem um CPF cadastrado. Preencha abaixo pra continuar usando o dashboard.
+          </p>
+          <input class="acc-input" id="cpfGateInput" placeholder="000.000.000-00" inputmode="numeric" oninput="mascaraCPF(this)">
+          <button class="sopt" style="width:100%;margin-top:10px" onclick="salvarCpfGate()">Salvar e continuar</button>
+          <div class="acc-msg" id="cpfGateMsg" style="margin-top:6px"></div>
+        </div>
       </div>
 
       <!-- Suporte (ticket widget) -->
@@ -1357,7 +1427,32 @@ async function carregarMeuUsuario(){
     MEU_USUARIO=r;
     const btnSync=document.getElementById('btn-sync');
     if(btnSync) btnSync.style.display=r.is_admin?'':'none';
+    // CPF é obrigatório pra usar o dashboard — contas antigas que ainda não têm
+    // ficam travadas nesse gate até preencher (admin fica de fora, ver abrirCpfGate).
+    if(!r.is_admin && !r.cpf) abrirCpfGate();
   }catch(e){}
+}
+function abrirCpfGate(){
+  document.getElementById('cpfGateBackdrop').classList.add('open');
+  document.getElementById('cpfGateModal').classList.add('open');
+}
+async function salvarCpfGate(){
+  const msg=document.getElementById('cpfGateMsg');
+  const cpf=document.getElementById('cpfGateInput').value.trim();
+  msg.textContent=''; msg.className='acc-msg';
+  if(!cpf){ msg.textContent='Informe seu CPF.'; msg.className='acc-msg err'; return; }
+  try{
+    const res=await fetch(`${API}/api/usuario/perfil`,{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        nome:MEU_USUARIO?.nome||'', sobrenome:MEU_USUARIO?.sobrenome||'',
+        telefone:MEU_USUARIO?.telefone||'', cpf,
+      })});
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.detail||'Erro ao salvar CPF');
+    document.getElementById('cpfGateBackdrop').classList.remove('open');
+    document.getElementById('cpfGateModal').classList.remove('open');
+    await carregarMeuUsuario();
+  }catch(e){ msg.textContent=e.message; msg.className='acc-msg err'; }
 }
 function saudacao(nome){
   const h=new Date().getHours();
@@ -1375,6 +1470,39 @@ function fmtDataHora(v){
   return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 const ASSINATURA_LABEL={active:'Ativa',trialing:'Período de teste',dev:'Acesso liberado',past_due:'Pagamento atrasado',canceled:'Cancelada',inativa:'Inativa'};
+const ACC_ICONS={
+  user:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>'
+};
+function _accIco(nome,cor){return `<div class="acc-card-ico ${cor}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${ACC_ICONS[nome]}</svg></div>`;}
+function _accIniciais(nome,sobrenome){
+  const a=(nome||'').trim().slice(0,1), b=(sobrenome||'').trim().slice(0,1);
+  return ((a+b).toUpperCase())||'U';
+}
+function _accBadgeClasse(status){
+  if(status==='active'||status==='trialing'||status==='dev') return 'on';
+  if(status==='past_due') return 'warn';
+  return 'off';
+}
+function _fmtCPF(v){
+  const d=(v||'').replace(/\D/g,'').slice(0,11);
+  if(d.length>9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+  if(d.length>6) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+  if(d.length>3) return `${d.slice(0,3)}.${d.slice(3)}`;
+  return d;
+}
+function mascaraCPF(el){ el.value=_fmtCPF(el.value); }
+function mascaraTelefoneConta(el){
+  let v=el.value.replace(/\D/g,'').slice(0,11);
+  if(v.length>6)      v=`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+  else if(v.length>2) v=`(${v.slice(0,2)}) ${v.slice(2)}`;
+  else if(v.length>0) v=`(${v}`;
+  el.value=v;
+}
 async function toggleConta(){
   const p=document.getElementById('contaPanel');
   const bd=document.getElementById('contaBackdrop');
@@ -1384,100 +1512,142 @@ async function toggleConta(){
   if(!abrindo)return;
   document.getElementById('contaGreeting').textContent=saudacao(MEU_USUARIO?.nome);
   document.getElementById('contaEmail').textContent=MEU_USUARIO?.email||'';
+  document.getElementById('contaAvatar').textContent=_accIniciais(MEU_USUARIO?.nome,MEU_USUARIO?.sobrenome);
   const body=document.getElementById('contaBody');
-  body.innerHTML='<div class="settings-info">Carregando...</div>';
+  body.innerHTML='<div class="settings-info" style="padding:16px">Carregando...</div>';
   try{
     const r=await fetch(`${API}/api/billing/minha-conta`).then(x=>x.json());
     document.getElementById('contaGreeting').textContent=saudacao(r.nome);
     document.getElementById('contaEmail').textContent=r.email||'';
+    document.getElementById('contaAvatar').textContent=_accIniciais(r.nome,r.sobrenome);
     const a=r.assinatura||{};
+    const statusTxt=ASSINATURA_LABEL[a.status]||a.status||'—';
     let faturasHtml='<div class="settings-info">Nenhuma fatura encontrada.</div>';
     if(r.faturas && r.faturas.length){
-      faturasHtml=r.faturas.map(f=>`
-        <div class="shortcut-row" style="justify-content:space-between">
+      faturasHtml='<div class="acc-faturas-list">'+r.faturas.map(f=>`
+        <div class="acc-fatura-row">
           <span>${fmtDataHora(f.criada_em)} · R$ ${Number(f.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
-          ${f.url_hospedada?`<a href="${f.url_hospedada}" target="_blank" style="color:var(--primary)">ver</a>`:''}
-        </div>`).join('');
+          ${f.url_hospedada?`<a href="${f.url_hospedada}" target="_blank">ver</a>`:''}
+        </div>`).join('')+'</div>';
     }
     body.innerHTML=`
-      <div class="settings-section">
-        <div class="settings-label">Meus dados</div>
-        <div class="acc-row">
-          <input class="acc-input" id="accNome" placeholder="Nome" value="${_esc(r.nome||'')}">
-          <input class="acc-input" id="accSobrenome" placeholder="Sobrenome" value="${_esc(r.sobrenome||'')}">
+      <div class="acc-card">
+        <div class="acc-card-head">
+          ${_accIco('user','blue')}
+          <div class="acc-card-head-text">
+            <div class="acc-card-title">Dados pessoais</div>
+            <div class="acc-card-sub">Nome, telefone e CPF</div>
+          </div>
         </div>
-        <input class="acc-input" id="accTelefone" placeholder="Telefone" value="${_esc(r.telefone||'')}">
-        <button class="sopt" style="width:100%" onclick="salvarPerfil()">Salvar dados</button>
-        <div class="settings-info" id="accPerfilMsg"></div>
-      </div>
-      <div class="settings-section">
-        <div class="settings-label">Alterar e-mail</div>
-        <div class="settings-info" id="accEmailPendenteInfo">${r.email_pendente?`Confirmação pendente para ${_esc(r.email_pendente)}`:''}</div>
-        <input class="acc-input" id="accNovoEmail" type="email" placeholder="Novo e-mail">
-        <button class="sopt" style="width:100%" onclick="trocarEmail()">Enviar confirmação</button>
-        <div class="settings-info" id="accEmailMsg"></div>
-      </div>
-      <div class="settings-section">
-        <div class="settings-label">Alterar senha</div>
-        <input class="acc-input" id="accSenhaAtual" type="password" placeholder="Senha atual">
-        <input class="acc-input" id="accSenhaNova" type="password" placeholder="Nova senha">
-        <button class="sopt" style="width:100%" onclick="trocarSenha()">Alterar senha</button>
-        <div class="settings-info" id="accSenhaMsg"></div>
-      </div>
-      <div class="settings-section">
-        <div class="settings-label">Assinatura</div>
-        <div class="settings-info">
-          Status: ${ASSINATURA_LABEL[a.status]||a.status||'—'}<br>
-          Início: ${fmtDataHora(a.inicio)}<br>
-          Próxima renovação: ${fmtDataHora(a.periodo_fim)}${a.cancela_no_fim?' (cancela ao fim)':''}
+        <div class="acc-card-fields">
+          <div class="acc-row">
+            <input class="acc-input" id="accNome" placeholder="Nome" value="${_esc(r.nome||'')}">
+            <input class="acc-input" id="accSobrenome" placeholder="Sobrenome" value="${_esc(r.sobrenome||'')}">
+          </div>
+          <div class="acc-row">
+            <input class="acc-input" id="accTelefone" placeholder="Telefone" oninput="mascaraTelefoneConta(this)" value="${_esc(r.telefone||'')}">
+            <input class="acc-input" id="accCpf" placeholder="CPF (opcional)" oninput="mascaraCPF(this)" value="${_esc(_fmtCPF(r.cpf||''))}">
+          </div>
+          <button class="sopt" style="width:100%" onclick="salvarPerfil()">Salvar dados</button>
+          <div class="acc-msg" id="accPerfilMsg"></div>
         </div>
       </div>
-      <div class="settings-section acc-full">
-        <div class="settings-label">Faturas</div>
-        <div class="settings-shortcuts">${faturasHtml}</div>
+      <div class="acc-card">
+        <div class="acc-card-head">
+          ${_accIco('mail','violet')}
+          <div class="acc-card-head-text">
+            <div class="acc-card-title">E-mail</div>
+            <div class="acc-card-sub">${_esc(r.email||'')}</div>
+          </div>
+        </div>
+        <div class="acc-card-fields">
+          <div class="settings-info" id="accEmailPendenteInfo">${r.email_pendente?`Confirmação pendente para ${_esc(r.email_pendente)}`:''}</div>
+          <input class="acc-input" id="accNovoEmail" type="email" placeholder="Novo e-mail">
+          <button class="sopt" style="width:100%" onclick="trocarEmail()">Enviar confirmação</button>
+          <div class="acc-msg" id="accEmailMsg"></div>
+        </div>
       </div>
-      <div class="settings-section acc-full">
-        <div class="settings-label">Conta</div>
-        <div class="settings-options" style="flex-direction:column;gap:8px">
+      <div class="acc-card">
+        <div class="acc-card-head">
+          ${_accIco('lock','amber')}
+          <div class="acc-card-head-text">
+            <div class="acc-card-title">Senha</div>
+            <div class="acc-card-sub">Altere sua senha de acesso</div>
+          </div>
+        </div>
+        <div class="acc-card-fields">
+          <input class="acc-input" id="accSenhaAtual" type="password" placeholder="Senha atual">
+          <input class="acc-input" id="accSenhaNova" type="password" placeholder="Nova senha">
+          <button class="sopt" style="width:100%" onclick="trocarSenha()">Alterar senha</button>
+          <div class="acc-msg" id="accSenhaMsg"></div>
+        </div>
+      </div>
+      <div class="acc-card">
+        <div class="acc-card-head">
+          ${_accIco('card','green')}
+          <div class="acc-card-head-text">
+            <div class="acc-card-title">Assinatura</div>
+            <div class="acc-card-sub">Plano e renovação</div>
+          </div>
+          <span class="acc-badge ${_accBadgeClasse(a.status)}">${statusTxt}</span>
+        </div>
+        <div class="acc-card-fields">
+          <div class="acc-kv"><span>Início</span><b>${fmtDataHora(a.inicio)}</b></div>
+          <div class="acc-kv"><span>Próxima renovação</span><b>${fmtDataHora(a.periodo_fim)}${a.cancela_no_fim?' (cancela ao fim)':''}</b></div>
           <button class="sopt" style="width:100%" onclick="abrirPortalAssinatura()">Gerenciar assinatura</button>
-          <button class="sopt" style="width:100%" onclick="logout()">Sair</button>
         </div>
+      </div>
+      <div class="acc-card acc-full">
+        <div class="acc-card-head">
+          ${_accIco('file','pink')}
+          <div class="acc-card-head-text">
+            <div class="acc-card-title">Faturas</div>
+            <div class="acc-card-sub">Histórico de cobranças</div>
+          </div>
+        </div>
+        ${faturasHtml}
+      </div>
+      <div class="acc-full acc-footer-row">
+        <button class="acc-logout-btn" onclick="logout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${ACC_ICONS.logout}</svg>
+          Sair da conta
+        </button>
       </div>`;
   }catch(e){
-    body.innerHTML='<div class="settings-info">Erro ao carregar dados da conta.</div>';
+    body.innerHTML='<div class="settings-info" style="padding:16px">Erro ao carregar dados da conta.</div>';
   }
 }
 
 async function salvarPerfil(){
-  const msg=document.getElementById('accPerfilMsg'); msg.textContent='';
+  const msg=document.getElementById('accPerfilMsg'); msg.textContent=''; msg.className='acc-msg';
   try{
     const res=await fetch(`${API}/api/usuario/perfil`,{method:'PUT',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({nome:accNome.value.trim(),sobrenome:accSobrenome.value.trim(),telefone:accTelefone.value.trim()})});
+      body:JSON.stringify({nome:accNome.value.trim(),sobrenome:accSobrenome.value.trim(),telefone:accTelefone.value.trim(),cpf:accCpf.value.trim()})});
     const d=await res.json();
     if(!res.ok) throw new Error(d.detail||'Erro ao salvar');
-    msg.textContent='Dados atualizados.'; await carregarMeuUsuario();
-  }catch(e){ msg.textContent=e.message; }
+    msg.textContent='Dados atualizados.'; msg.className='acc-msg ok'; await carregarMeuUsuario();
+  }catch(e){ msg.textContent=e.message; msg.className='acc-msg err'; }
 }
 async function trocarEmail(){
-  const msg=document.getElementById('accEmailMsg'); msg.textContent='';
+  const msg=document.getElementById('accEmailMsg'); msg.textContent=''; msg.className='acc-msg';
   try{
     const res=await fetch(`${API}/api/usuario/trocar-email`,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({novo_email:accNovoEmail.value.trim()})});
     const d=await res.json();
     if(!res.ok) throw new Error(d.detail||'Erro ao solicitar troca');
-    msg.textContent='Enviamos um link de confirmação para o novo e-mail.';
+    msg.textContent='Enviamos um link de confirmação para o novo e-mail.'; msg.className='acc-msg ok';
     document.getElementById('accEmailPendenteInfo').textContent=`Confirmação pendente para ${d.email_pendente}`;
-  }catch(e){ msg.textContent=e.message; }
+  }catch(e){ msg.textContent=e.message; msg.className='acc-msg err'; }
 }
 async function trocarSenha(){
-  const msg=document.getElementById('accSenhaMsg'); msg.textContent='';
+  const msg=document.getElementById('accSenhaMsg'); msg.textContent=''; msg.className='acc-msg';
   try{
     const res=await fetch(`${API}/api/usuario/trocar-senha`,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({senha_atual:accSenhaAtual.value,nova_senha:accSenhaNova.value})});
     const d=await res.json();
     if(!res.ok) throw new Error(d.detail||'Erro ao trocar senha');
-    msg.textContent='Senha alterada com sucesso.'; accSenhaAtual.value=''; accSenhaNova.value='';
-  }catch(e){ msg.textContent=e.message; }
+    msg.textContent='Senha alterada com sucesso.'; msg.className='acc-msg ok'; accSenhaAtual.value=''; accSenhaNova.value='';
+  }catch(e){ msg.textContent=e.message; msg.className='acc-msg err'; }
 }
 
 /* ─── suporte (tickets) ─── */
